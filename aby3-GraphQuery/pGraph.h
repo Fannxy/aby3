@@ -5,7 +5,10 @@
 #include <stdexcept>
 #include <vector>
 #include <array>
+#include <cassert>
 #include <string>
+#include <unordered_map>  
+#include <algorithm>  
 
 struct plainGraph2d{
     size_t v, e;
@@ -32,6 +35,18 @@ struct plainGraph2d{
             for (size_t j = 0; j < l; j++) {
                 edge_block >> edge_block_list[i][j][0] >> edge_block_list[i][j][1];
             }
+        }
+        return;
+    }
+
+    void per_block_sort(){
+        for(size_t i=0; i<edge_list_size; i++){
+            std::sort(edge_block_list[i].begin(), edge_block_list[i].end(), [](const std::array<int, 2>& a, const std::array<int, 2>& b) {
+                if (a[0] == b[0]) {
+                    return a[1] < b[1];
+                }
+                return a[0] < b[0];
+            });
         }
         return;
     }
@@ -106,5 +121,163 @@ struct plainGraph2d{
         }
 
         return node_chunk;
+    }
+
+    std::vector<int> get_outting_neighbors(int starting_node){
+        std::vector<int> neighbors;
+        std::vector<int> node_chunk = get_node_chunk(starting_node);
+        for(size_t i=0; i<b*l; i++){
+            if(node_chunk[i] == starting_node){
+                neighbors.push_back(node_chunk[b*l + i]);
+            }
+        }
+        return neighbors;
+    }
+};
+
+struct plainGraphAdj{
+    size_t v, e;
+    size_t unique_edges = 0;
+    std::vector<int> starting_node_list;
+    std::vector<int> ending_node_list;  
+    std::vector<int> adj_list;
+
+    plainGraphAdj(){}; // default constructor
+
+    plainGraphAdj(const std::string& meta_data_file, const std::string& edge_list_file){
+        // load the graph meta data.
+        std::ifstream meta(meta_data_file);
+        meta >> v >> e;
+        starting_node_list.resize(e);
+        ending_node_list.resize(e);
+
+        // load the edges.
+        std::ifstream edge_list(edge_list_file);
+        for (size_t i = 0; i < e; i++) {
+            edge_list >> starting_node_list[i] >> ending_node_list[i];
+        }
+        return;
+    }
+
+    void generate_adj_list(){
+        assert(!starting_node_list.empty() && !ending_node_list.empty());
+        assert(starting_node_list.size() == ending_node_list.size());
+
+        adj_list.resize(v*v, 0);
+        for(size_t i=0; i<starting_node_list.size(); i++){
+            int start = starting_node_list[i], end = ending_node_list[i];
+            if(adj_list[start*v + end] == 0){
+                unique_edges++;
+            }
+            adj_list[start*v + end] += 1;
+        }
+        return;
+    }
+
+    bool edge_existence(int starting_node, int ending_node){
+        return adj_list[starting_node*v + ending_node] > 0;
+    }
+
+    int outting_neighbors_count(int starting_node){
+        int count = 0;
+        for(size_t i=0; i<v; i++){
+            count += adj_list[starting_node*v + i];
+        }
+        return count;
+    }
+
+    std::vector<int> get_outting_neighbors(int starting_node){
+        std::vector<int> neighbors(v, 0);
+        for(size_t i=0; i<v; i++){
+            if(adj_list[starting_node*v + i] > 0){
+                neighbors[i] = 1;
+            }
+        }
+        return neighbors;
+    }
+
+    void printGraphMeta(){
+        std::cout << "v: " << this->v << std::endl;
+        std::cout << "unique_edges: " << this->unique_edges << std::endl;
+    }
+};
+
+struct plainGraphList{
+    size_t v;
+    size_t e;
+
+    std::vector<int> starting_node_list;
+    std::vector<int> ending_node_list;
+
+    plainGraphList(){}; // default constructor
+
+    plainGraphList(const std::string& meta_data_file, const std::string& edge_list_file){
+        // load the graph meta data.
+        std::ifstream meta(meta_data_file);
+        meta >> v >> e;
+        starting_node_list.resize(e);
+        ending_node_list.resize(e);
+
+        // load the edges.
+        std::ifstream edge_list(edge_list_file);
+        for (size_t i = 0; i < e; i++) {
+            edge_list >> starting_node_list[i] >> ending_node_list[i];
+        }
+        
+        return;
+    }
+
+    bool edge_existence(int starting_node, int ending_node){
+        for(size_t i=0; i<e; i++){
+            if(starting_node_list[i] == starting_node && ending_node_list[i] == ending_node){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int outting_neighbors_count(int starting_node){
+        int count = 0;
+        for(size_t i=0; i<e; i++){
+            if(starting_node_list[i] == starting_node){
+                count++;
+            }
+        }
+        return count;
+    }
+
+    void list_sort(){
+        std::vector<std::array<int, 2>> edge_list(e);
+        for(size_t i=0; i<e; i++){
+            edge_list[i][0] = starting_node_list[i];
+            edge_list[i][1] = ending_node_list[i];
+        }
+        std::sort(edge_list.begin(), edge_list.end(), [](const std::array<int, 2>& a, const std::array<int, 2>& b) {
+            if (a[0] == b[0]) {
+                return a[1] < b[1];
+            }
+            return a[0] < b[0];
+        });
+
+        for(size_t i=0; i<e; i++){
+            starting_node_list[i] = edge_list[i][0];
+            ending_node_list[i] = edge_list[i][1];
+        }
+        return;
+    }
+
+    std::vector<int> get_outting_neighbors(int starting_node){
+        std::vector<int> edge_list(e, 0);
+        std::unordered_map<int, bool> mp;
+
+        for(size_t i=0; i<e; i++){
+            if(mp.find(ending_node_list[i]) == mp.end() && starting_node_list[i] == starting_node){
+                edge_list[i] = ending_node_list[i];
+                mp[ending_node_list[i]] = true;
+            }
+        }
+        std::sort(edge_list.begin(), edge_list.end());
+
+        return edge_list;
     }
 };

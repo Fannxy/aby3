@@ -86,7 +86,8 @@ template<typename T>
 extern void debug_output_vector(std::vector<T> &problem_vec){
     std::ofstream ofs(debugFile, std::ios_base::app);
     ofs << "length: " << problem_vec.size() << std::endl;
-    for(int i=0; i<problem_vec.size(); i++) ofs << problem_vec[i] << " ";
+    int print_length = (problem_vec.size() > 25) ? 25 : problem_vec.size();
+    for(int i=0; i<print_length; i++) ofs << problem_vec[i] << " ";
     ofs << std::endl;
     ofs.close();
 }

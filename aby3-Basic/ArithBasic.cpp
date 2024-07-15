@@ -27,7 +27,7 @@ void arith_aggregation(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &re
         size_t mix_len = roundUpToPowerOfTwo(len);
         size_t left_size = mix_len - len;
 
-        if(pIdx == 0) debug_info("len = " + std::to_string(len) + ", mix_len = " + std::to_string(mix_len) + ", left_size = " + std::to_string(left_size));
+        // if(pIdx == 0) debug_info("len = " + std::to_string(len) + ", mix_len = " + std::to_string(mix_len) + ", left_size = " + std::to_string(left_size));
 
         // for Eigen Matrix data structure.
         sharedA.mShares[0].conservativeResize(mix_len, 1);

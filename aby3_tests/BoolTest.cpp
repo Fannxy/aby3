@@ -325,10 +325,14 @@ int bool_basic_test2(oc::CLP &cmd) {
 
     aby3::i64Matrix trueVal(TEST_SIZE, 1);
     aby3::i64Matrix falseVal(TEST_SIZE, 1);
+    aby3::i64Matrix max_ref(TEST_SIZE, 1);
+    aby3::i64Matrix min_ref(TEST_SIZE, 1);
 
     for (int i = 0; i < TEST_SIZE; i++) {
         trueVal(i, 0) = 5;
         falseVal(i, 0) = 16;
+        max_ref(i, 0) = 16;
+        min_ref(i, 0) = 5;
     }
 
     boolShare tflag(true, role);
@@ -355,14 +359,36 @@ int bool_basic_test2(oc::CLP &cmd) {
     bool_cipher_selector(role, fflag, shared_true, shared_false, test_false,
                          enc, eval, runtime);
 
+    aby3::sbMatrix max_res, min_res;
+    bool_cipher_max(role, shared_true, shared_false, max_res, enc, eval,
+                    runtime);
+    bool_cipher_min(role, shared_true, shared_false, min_res, enc, eval,
+                    runtime);
+
     aby3::i64Matrix res_true(TEST_SIZE, 1);
     aby3::i64Matrix res_false(TEST_SIZE, 1);
     enc.revealAll(runtime, test_true, res_true).get();
     enc.revealAll(runtime, test_false, res_false).get();
 
+    aby3::i64Matrix max_test(TEST_SIZE, 1);
+    aby3::i64Matrix min_test(TEST_SIZE, 1);
+    enc.revealAll(runtime, max_res, max_test).get();
+    enc.revealAll(runtime, min_res, min_test).get();
+
     if (role == 0) {
         check_result("bool selector true", res_true, trueVal);
         check_result("bool selector false", res_false, falseVal);
+        check_result("bool max", max_test, max_ref);
+        check_result("bool min", min_test, min_ref);
+    }
+
+    bool_cipher_max_min_split(role, shared_true, shared_false, max_res, min_res,
+                              enc, eval, runtime);
+    enc.revealAll(runtime, max_res, max_test).get();
+    enc.revealAll(runtime, min_res, min_test).get();
+    if(role == 0){
+        check_result("bool max split", max_test, max_ref);
+        check_result("bool min split", min_test, min_ref);
     }
 
     return 0;
@@ -508,6 +534,59 @@ int bool_aggregation_test(oc::CLP& cmd){
     if(role == 0){
         check_result("aggregation or", test(0, 0), res_agg_or);
         check_result("aggregation add", itest(0, 0), res_agg_add);
+    }
+
+    return 0;
+}
+
+int share_conversion_test(oc::CLP& cmd){
+
+    BASIC_TEST_INIT
+
+    if(role == 0){
+        debug_info("RUN Share conversion test !");
+    }
+
+    // check the bool2arith share conversion.
+    aby3::i64Matrix input_x(TEST_SIZE, 1);
+    aby3::i64Matrix input_y(TEST_SIZE, 1);
+    aby3::i64Matrix lt_res(TEST_SIZE, 1);
+    for(size_t i=0; i<TEST_SIZE; i++){
+        input_x(i, 0) = i;
+        input_y(i, 0) = TEST_SIZE - i;
+        lt_res(i, 0) = (i < (TEST_SIZE - i))? 1: 0;
+    }
+
+    aby3::sbMatrix bsharedX(TEST_SIZE, 64);
+    aby3::sbMatrix bsharedY(TEST_SIZE, 64);
+    aby3::sbMatrix bsharedRes(TEST_SIZE, 1);
+
+    if(role == 0){
+        enc.localBinMatrix(runtime, input_x, bsharedX).get();
+        enc.localBinMatrix(runtime, input_y, bsharedY).get();
+    }
+    else{
+        enc.remoteBinMatrix(runtime, bsharedX).get();
+        enc.remoteBinMatrix(runtime, bsharedY).get();
+    }
+
+    bool_cipher_lt(role, bsharedX, bsharedY, bsharedRes, enc, eval, runtime);
+
+    aby3::si64Matrix test_lt_res(TEST_SIZE, 1);
+    aby3::si64Matrix test_b2a(TEST_SIZE, 1);
+
+    bool2arith(role, bsharedRes, test_lt_res, enc, eval, runtime);
+    bool2arith(role, bsharedX, test_b2a, enc, eval, runtime);
+
+    aby3::i64Matrix res_lt(TEST_SIZE, 1);
+    enc.revealAll(runtime, test_lt_res, res_lt).get();
+
+    aby3::i64Matrix res_b2a(TEST_SIZE, 1);
+    enc.revealAll(runtime, test_b2a, res_b2a).get();
+
+    if(role == 0){
+        check_result("bool2arith lt", res_lt, lt_res);
+        check_result("bool2arith conversion", res_b2a, input_x);
     }
 
     return 0;

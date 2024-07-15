@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
 		bool_basic_test2(cmd);
 		get_first_zero_test(cmd);
 		bool_aggregation_test(cmd);
+		share_conversion_test(cmd);
 	}
 
 	if (cmd.isSet("Arith")){
@@ -48,16 +49,25 @@ int main(int argc, char** argv) {
 
 	if(cmd.isSet("Graph")){
 		graph_loading_test(cmd);
+		adj_graph_loading_test(cmd);
+		graph_sort_test(cmd);
 	}
 
 	if(cmd.isSet("GraphQuery")){
 		graph_block_fetch_test(cmd);
 		basic_graph_query_test(cmd);
+		neighbors_find_test(cmd);
+		adj_basic_graph_query_test(cmd);
+		node_edge_list_basic_graph_query_test(cmd);	
 	}
 
 	if(cmd.isSet("Sort")){
 		bc_sort_test(cmd);
+		bc_sort_corner_test(cmd);
+		bc_sort_multiple_times(cmd);
 		quick_sort_test(cmd);
+		// quick_sort_with_duplicate_elements_test(cmd); // too slow
+		odd_even_merge_test(cmd);
 	}
   return 0;
 }

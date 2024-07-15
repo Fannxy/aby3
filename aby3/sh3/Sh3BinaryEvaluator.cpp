@@ -914,8 +914,8 @@ namespace aby3
 					z = getShares();
 					for (i32 k = 0; k < simdWidth128; k += 8)
 					{
-						
-						// first compute the and gate.
+						// the following OR gate logic is: z = (x & y) ^ (x ^ y).
+						// 1. first comput the and gate.
 						t0[0] = s0_in0[k + 0] & s0_in1[k + 0];
 						t0[1] = s0_in0[k + 1] & s0_in1[k + 1];
 						t0[2] = s0_in0[k + 2] & s0_in1[k + 2];
@@ -961,7 +961,7 @@ namespace aby3
 						t0[6] = t0[6] ^ t1[6];
 						t0[7] = t0[7] ^ t1[7];
 
-						// then xor with the xor-gate.
+						// 2. then comput the xor gate.
 						s0_Out[k + 0] = t0[0] ^ s0_in0[k + 0] ^ s0_in1[k + 0] ^ z[k + 0];
 						s0_Out[k + 1] = t0[1] ^ s0_in0[k + 1] ^ s0_in1[k + 1] ^ z[k + 1];
 						s0_Out[k + 2] = t0[2] ^ s0_in0[k + 2] ^ s0_in1[k + 2] ^ z[k + 2];
@@ -970,7 +970,6 @@ namespace aby3
 						s0_Out[k + 5] = t0[5] ^ s0_in0[k + 5] ^ s0_in1[k + 5] ^ z[k + 5];
 						s0_Out[k + 6] = t0[6] ^ s0_in0[k + 6] ^ s0_in1[k + 6] ^ z[k + 6];
 						s0_Out[k + 7] = t0[7] ^ s0_in0[k + 7] ^ s0_in1[k + 7] ^ z[k + 7];
-
 					}
 
 #ifndef NDEBUG

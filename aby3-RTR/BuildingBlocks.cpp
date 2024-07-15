@@ -13,10 +13,11 @@ using namespace oc;
 #include "./Pair_then_Reduce/include/datatype.h"
 
 // #define LOCAL_TEST
+#define P0_IP "10.5.0.12"
+#define P1_IP "10.5.0.4"
 
 static int BASEPORT=4000;
-#define P0_IP "10.90.0.26"
-#define P1_IP "10.90.0.27"
+
 
 double synchronized_time(int pIdx, double& time_slot, Sh3Runtime &runtime){
   // double sync_time = time_slot;
@@ -150,6 +151,7 @@ void multi_processor_setup(u64 partyIdx, int rank, IOService &ios, Sh3Encryptor 
 }
 #endif
 
+#ifdef LOCAL_TEST
 void basic_setup(u64 partyIdx, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &eval,
            Sh3Runtime &runtime) {
   CommPkg comm;
@@ -180,7 +182,40 @@ void basic_setup(u64 partyIdx, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &
     // Copies the Channels and will use them for later protcols.
     runtime.init(partyIdx, comm);
 }
+#endif
 
+#ifndef LOCAL_TEST
+void basic_setup(u64 partyIdx, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &eval,
+           Sh3Runtime &runtime) {
+  CommPkg comm;
+  switch (partyIdx) {
+    case 0:
+      comm.mNext = Session(ios, std::string(P0_IP) + ":1213", SessionMode::Server, "01")
+                       .addChannel();
+      comm.mPrev = Session(ios, std::string(P0_IP) + ":1214", SessionMode::Server, "02")
+                       .addChannel();
+      break;
+    case 1:
+      comm.mNext = Session(ios, std::string(P1_IP) + ":1215", SessionMode::Server, "12")
+                       .addChannel();
+      comm.mPrev = Session(ios, std::string(P0_IP) + ":1213", SessionMode::Client, "01")
+                       .addChannel();
+      break;
+    default:
+      comm.mNext = Session(ios, std::string(P0_IP) + ":1214", SessionMode::Client, "02")
+                       .addChannel();
+      comm.mPrev = Session(ios, std::string(P1_IP) + ":1215", SessionMode::Client, "12")
+                       .addChannel();
+      break;
+  }
+    // Establishes some shared randomness needed for the later protocols
+    enc.init(partyIdx, comm, sysRandomSeed());
+    // Establishes some shared randomness needed for the later protocols
+    eval.init(partyIdx, comm, sysRandomSeed());
+    // Copies the Channels and will use them for later protcols.
+    runtime.init(partyIdx, comm);
+}
+#endif
 
 int vector_mean_square(int pIdx, const std::vector<aby3::si64>&sharedA, const std::vector<aby3::si64>&sharedB, std::vector<aby3::si64>&res, Sh3Evaluator &eval, Sh3Encryptor& enc, Sh3Runtime &runtime){
   si64Matrix matA(sharedA.size(), 1);

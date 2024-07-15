@@ -14,10 +14,9 @@ using namespace oc;
 using namespace aby3;
 using namespace std;
 
-// #define DEBUG_TEST
-
 const int TEST_SIZE = 16;
 const int TEST_UNIT_SIZE = 10;
+static size_t MAX_COMM_SIZE = 1 << 25;
 
 bool check_result(const std::string &func_name, i64Matrix &test,
                   i64Matrix &res) {
@@ -71,7 +70,6 @@ bool check_result(const std::string& func_name, std::vector<aby3::i64Matrix> tes
     
     }
 }
-
 
 int arith_basic_test(CLP &cmd) {
     // get the configs.
@@ -528,7 +526,7 @@ int large_scale_shuffle_test(oc::CLP &cmd){
     }
 
     if (role == 0) {
-        debug_info("RUN LARGE-SCALE SHUFFLE TEST");
+        debug_info("RUN LARGE-SCALE SHUFFLE TEST \nNote this function will cause 150GB Memory+, BE CAREFUL!");
     }
 
     // setup communications.
@@ -538,28 +536,51 @@ int large_scale_shuffle_test(oc::CLP &cmd){
     Sh3Runtime runtime;
     basic_setup((u64)role, ios, enc, eval, runtime);
 
-    size_t LARGE_SCALE_SIZE = 1 << 20;
-    size_t LARGE_UNIT_SIZE = 1 << 6;
+    size_t LARGE_SCALE_SIZE = 1 << 26;
+    size_t LARGE_UNIT_SIZE = 1;
 
     // generate the test data.
-    std::vector<i64Matrix> input_x(LARGE_SCALE_SIZE);
+    // std::vector<i64Matrix> input_x(LARGE_SCALE_SIZE);
+    // for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
+    //     input_x[i].resize(LARGE_UNIT_SIZE, 1);
+    //     for (size_t j = 0; j < LARGE_UNIT_SIZE; j++) {
+    //         input_x[i](j, 0) = i;
+    //     }
+    // }
+    i64Matrix input_x(LARGE_SCALE_SIZE*LARGE_UNIT_SIZE, 1);
     for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
-        input_x[i].resize(LARGE_UNIT_SIZE, 1);
         for (size_t j = 0; j < LARGE_UNIT_SIZE; j++) {
-            input_x[i](j, 0) = i;
+            input_x(i*LARGE_UNIT_SIZE + j, 0) = i;
         }
     }
+    sbMatrix bsharedXMat(LARGE_SCALE_SIZE*LARGE_UNIT_SIZE, 1);
+    size_t round = (size_t)ceil(LARGE_SCALE_SIZE*LARGE_UNIT_SIZE / (double)MAX_COMM_SIZE);
+    size_t last_len = LARGE_SCALE_SIZE*LARGE_UNIT_SIZE - (round - 1) * MAX_COMM_SIZE;
+    for(size_t i=0; i<round; i++){
+        size_t len = (i == round - 1) ? last_len : MAX_COMM_SIZE;
+        i64Matrix _data = input_x.block(i*MAX_COMM_SIZE, 0, len, 1);
+        sbMatrix _bsharedX(len, 1);
+        if(role == 0){
+            enc.localBinMatrix(runtime, _data, _bsharedX).get();
+        }else{
+            enc.remoteBinMatrix(runtime, _bsharedX).get();
+        }
+        std::memcpy(bsharedXMat.mShares[0].data() + i*MAX_COMM_SIZE, _bsharedX.mShares[0].data(), len*sizeof(_bsharedX.mShares[0](0, 0)));
+        std::memcpy(bsharedXMat.mShares[1].data() + i*MAX_COMM_SIZE, _bsharedX.mShares[1].data(), len*sizeof(_bsharedX.mShares[0](0, 0)));
+    }
+
 
     // encrypt the inputs.
     std::vector<sbMatrix> bsharedX(LARGE_SCALE_SIZE);
     for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
         bsharedX[i].resize(LARGE_UNIT_SIZE, 1);
-        if (role == 0) {
-            enc.localBinMatrix(runtime, input_x[i], bsharedX[i]).get();
-        } else {
-            enc.remoteBinMatrix(runtime, bsharedX[i]).get();
+        for(size_t j=0; j<LARGE_UNIT_SIZE; j++){
+            bsharedX[i].mShares[0](j, 0) = bsharedXMat.mShares[0](i*LARGE_UNIT_SIZE + j, 0);
+            bsharedX[i].mShares[1](j, 0) = bsharedXMat.mShares[1](i*LARGE_UNIT_SIZE + j, 0);
         }
     }
+
+    // if(role == 0) debug_info("after test data construction!");
 
     // generate the permutation.
     block prevSeed = enc.mShareGen.mPrevCommon.getSeed();
@@ -571,10 +592,21 @@ int large_scale_shuffle_test(oc::CLP &cmd){
     get_permutation(len, next_permutation, nextSeed);
 
     std::vector<size_t> other_permutation(len);
-    runtime.mComm.mPrev.asyncSendCopy(next_permutation.data(),
-                                      next_permutation.size());
-    runtime.mComm.mNext.recv(other_permutation.data(),
-                             other_permutation.size());
+
+    // runtime.mComm.mPrev.asyncSendCopy(next_permutation.data(),
+    //                                   next_permutation.size());
+    // runtime.mComm.mNext.recv(other_permutation.data(),
+    //                          other_permutation.size());
+
+    for(size_t i=0; i<round; i++){
+        size_t len = (i == round - 1) ? last_len : MAX_COMM_SIZE;
+        auto sendFu = runtime.mComm.mPrev.asyncSendFuture(next_permutation.data() + i*MAX_COMM_SIZE, len);
+        auto recvFu = runtime.mComm.mNext.asyncRecv(other_permutation.data() + i*MAX_COMM_SIZE, len);
+        sendFu.get();
+        recvFu.get();
+    }
+
+    // if(role == 0) debug_info("after get permutation!");
 
     std::vector<size_t> final_permutation;
     std::vector<std::vector<size_t>> permutation_list;
@@ -595,22 +627,58 @@ int large_scale_shuffle_test(oc::CLP &cmd){
     std::vector<i64Matrix> shuffle_res(LARGE_SCALE_SIZE);
     for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
         shuffle_res[i].resize(LARGE_UNIT_SIZE, 1);
-        shuffle_res[i] = input_x[i];
+        // shuffle_res[i] = input_x[i];
+        for(size_t j=0; j<LARGE_UNIT_SIZE; j++){
+            shuffle_res[i](j, 0) = input_x(i*LARGE_UNIT_SIZE + j, 0);
+        }
     }
     plain_permutate(final_permutation, shuffle_res);
 
     // shuffle with permutation test.
     std::vector<aby3::sbMatrix> bsharedShuffle(LARGE_SCALE_SIZE);
     std::vector<si64> shared_permutation(LARGE_SCALE_SIZE);
+
+    // if(role == 0) debug_info("outter, before in permutation!!!");
     efficient_shuffle_with_random_permutation(
         bsharedX, role, bsharedShuffle, shared_permutation, enc, eval, runtime);
-    
+    // if(role == 0) debug_info("outter, after in permutation!!!");
+
+    // std::vector<i64Matrix> test_res2(LARGE_SCALE_SIZE);
+    // for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
+    //     test_res2[i].resize(LARGE_UNIT_SIZE, 1);
+    //     enc.revealAll(runtime, bsharedShuffle[i], test_res2[i]).get();
+    // }
+
+    i64Matrix test_res2_full(LARGE_SCALE_SIZE*LARGE_UNIT_SIZE, 1);
+    sbMatrix expand_bshared_full(LARGE_SCALE_SIZE*LARGE_UNIT_SIZE, 1);
+    for(size_t i=0; i<LARGE_SCALE_SIZE; i++){
+        for(size_t j=0; j<LARGE_UNIT_SIZE; j++){
+            expand_bshared_full.mShares[0](i*LARGE_UNIT_SIZE + j, 0) = bsharedShuffle[i].mShares[0](j, 0);
+            expand_bshared_full.mShares[1](i*LARGE_UNIT_SIZE + j, 0) = bsharedShuffle[i].mShares[1](j, 0);
+        }
+    }
+
+    for(size_t i=0; i<round; i++){
+        size_t len = (i == round - 1) ? last_len : MAX_COMM_SIZE;
+        sbMatrix target_bshared(len, 1);
+        std::memcpy(target_bshared.mShares[0].data(), expand_bshared_full.mShares[0].data() + i*MAX_COMM_SIZE, len*sizeof(expand_bshared_full.mShares[0](0, 0)));
+        std::memcpy(target_bshared.mShares[1].data(), expand_bshared_full.mShares[1].data() + i*MAX_COMM_SIZE, len*sizeof(expand_bshared_full.mShares[0](0, 0)));
+
+        i64Matrix target_test_res(len, 1);
+        enc.revealAll(runtime, target_bshared, target_test_res).get();
+        test_res2_full.block(i*MAX_COMM_SIZE, 0, len, 1) = target_test_res;
+    }
+
+    // if(role == 0) debug_info("data reveal done!");
 
     std::vector<i64Matrix> test_res2(LARGE_SCALE_SIZE);
     for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
         test_res2[i].resize(LARGE_UNIT_SIZE, 1);
-        enc.revealAll(runtime, bsharedShuffle[i], test_res2[i]).get();
+        for(size_t j=0; j<LARGE_UNIT_SIZE; j++){
+            test_res2[i](j, 0) = test_res2_full(i*LARGE_UNIT_SIZE + j, 0);
+        }
     }
+
     sbMatrix shared_permutation_matrix(LARGE_SCALE_SIZE, 1);
     for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
         shared_permutation_matrix.mShares[0](i) =
@@ -619,7 +687,20 @@ int large_scale_shuffle_test(oc::CLP &cmd){
             shared_permutation[i].mData[1];
     }
     i64Matrix test_permutation(LARGE_SCALE_SIZE, 1);
-    enc.revealAll(runtime, shared_permutation_matrix, test_permutation).get();
+
+    round = (size_t)ceil(LARGE_SCALE_SIZE / (double)MAX_COMM_SIZE);
+    last_len = LARGE_SCALE_SIZE - (round - 1) * MAX_COMM_SIZE;
+
+    for(size_t i=0; i<round; i++){
+        size_t len = (i == round - 1) ? last_len : MAX_COMM_SIZE;
+        sbMatrix target_shared_permutation(len, 1);
+        std::memcpy(target_shared_permutation.mShares[0].data(), shared_permutation_matrix.mShares[0].data() + i*MAX_COMM_SIZE, len*sizeof(shared_permutation_matrix.mShares[0](0, 0)));
+        std::memcpy(target_shared_permutation.mShares[1].data(), shared_permutation_matrix.mShares[1].data() + i*MAX_COMM_SIZE, len*sizeof(shared_permutation_matrix.mShares[0](0, 0)));
+
+        i64Matrix target_test_permutation(len, 1);
+        enc.revealAll(runtime, target_shared_permutation, target_test_permutation).get();
+        test_permutation.block(i*MAX_COMM_SIZE, 0, len, 1) = target_test_permutation;
+    }
 
     bool check_shuffle = true;
     bool check_permutation = true;
@@ -646,11 +727,12 @@ int large_scale_shuffle_test(oc::CLP &cmd){
                 "\033[31m SHUFFLE in in shuffle and permutation CHECK ERROR ! "
                 "\033[0m\n");
             debug_info("True result: \n");
-            for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
+            int print_length = (LARGE_SCALE_SIZE > 25) ? 25 : LARGE_SCALE_SIZE;
+            for (size_t i = 0; i < print_length; i++) {
                 debug_output_matrix(shuffle_res[i]);
             }
             debug_info("Func result: \n");
-            for (size_t i = 0; i < LARGE_SCALE_SIZE; i++) {
+            for (size_t i = 0; i < print_length; i++) {
                 debug_output_matrix(test_res2[i]);
             }
         }
@@ -1061,6 +1143,19 @@ int communication_test(oc::CLP &cmd){
         check_result("Single Communication test ROLE " + std::to_string(role), new_buf, buffer);
     }
 
+    // large-scale communication test, between p1 and p0.
+    if(role == 1){
+        large_data_sending(role, test_a, runtime, false);
+    }
+    if(role == 0){
+        aby3::i64Matrix from1_test(test_size, 1);
+        large_data_receiving(role, from1_test, runtime, false);
+        aby3::i64Matrix res(test_size, 1);
+        std::fill_n(res.data(), test_size, 1);
+        check_result("Large-scale Communication test ROLE " + std::to_string(role), from1_test, res);
+    }
+    double testd = 0;
+    synchronized_time(role, testd, runtime);
 
     return 0;
 }

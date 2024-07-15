@@ -50,7 +50,8 @@ void debug_output_matrix(aby3::sbMatrix& problem_mat, aby3::Sh3Runtime& runtime,
 void debug_output_matrix(aby3::i64Matrix& problem_mat){
   std::ofstream ofs(debugFile, std::ios_base::app);
   int length = problem_mat.rows();
-  for(int i=0; i<length; i++) ofs << problem_mat(i, 0) << " ";
+  int print_length = (length > 100) ? 100 : length;
+  for(int i=0; i<print_length; i++) ofs << problem_mat(i, 0) << " ";
   ofs << std::endl;
   ofs.close();
 }

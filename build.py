@@ -67,6 +67,11 @@ def Build(mainArgs, cmakeArgs,install, prefix, par):
         buildDir = "out/build/linux"
 
     cmakeArgs.append("-DCMAKE_BUILD_TYPE={0}".format(buildType))
+    
+    if "--MPI" in mainArgs:
+        cmakeArgs.append("-DMPI_APP=ON")
+    else:
+        cmakeArgs.append("-DMPI_APP=OFF")
 
     argStr = ""
     for a in cmakeArgs:

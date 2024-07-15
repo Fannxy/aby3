@@ -6,6 +6,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <cmath>
 
 #include "../aby3-RTR/debug.h"
 #include "../aby3-RTR/BuildingBlocks.h"
@@ -161,6 +162,28 @@ void bool_cipher_add(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
     dep.get();
 }
 
+void bool_cipher_sub(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
+                     sbMatrix &res, Sh3Encryptor &enc, Sh3Evaluator &eval,
+                     Sh3Runtime &runtime) {
+    Sh3BinaryEvaluator binEng;
+    CircuitLibrary lib;
+
+    int bitSize = sharedA.bitCount();
+    int i64Size = sharedA.i64Size();
+
+    auto cir = lib.int_int_subtract(bitSize, bitSize, bitSize);
+
+    binEng.setCir(cir, i64Size, eval.mShareGen);
+    binEng.setInput(0, sharedA);
+    binEng.setInput(1, sharedB);
+
+    auto dep = binEng.asyncEvaluate(runtime).then([&](Sh3Task self) {
+        res.resize(i64Size, bitSize);
+        binEng.getOutput(0, res);
+    });
+    dep.get();
+}
+
 void bool_cipher_and(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
                      aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime) {
@@ -201,6 +224,93 @@ void bool_cipher_and(int pIdx, boolShare &sharedA, boolShare &sharedB,
 
     return;
 }
+
+void bool_cipher_max(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime){
+    
+    aby3::sbMatrix comp;
+    bool_cipher_lt(pIdx, sharedA, sharedB, comp, enc, eval, runtime);
+    aby3::sbMatrix tmp1, tmp2;
+
+    comp.resize(comp.rows(), BITSIZE);
+    for(size_t i=0; i<comp.rows(); i++){
+        comp.mShares[0](i, 0) = (comp.mShares[0](i, 0) == 1) ? -1 : -0;
+        comp.mShares[1](i, 0) = (comp.mShares[1](i, 0) == 1) ? -1 : -0;
+    }
+    bool_cipher_and(pIdx, comp, sharedB, tmp1, enc, eval, runtime);
+    bool_cipher_not(pIdx, comp, comp);
+    bool_cipher_and(pIdx, comp, sharedA, tmp2, enc, eval, runtime);
+    res.resize(sharedA.rows(), BITSIZE);
+    for(size_t i=0; i<tmp1.rows(); i++){
+        res.mShares[0](i, 0) = tmp1.mShares[0](i, 0) ^ tmp2.mShares[0](i, 0);
+        res.mShares[1](i, 0) = tmp1.mShares[1](i, 0) ^ tmp2.mShares[1](i, 0);
+    }
+    return;
+}
+
+void bool_cipher_min(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime){
+    aby3::sbMatrix comp;
+    bool_cipher_lt(pIdx, sharedA, sharedB, comp, enc, eval, runtime);
+    aby3::sbMatrix tmp1, tmp2;
+
+    comp.resize(comp.rows(), BITSIZE);
+    for(size_t i=0; i<comp.rows(); i++){
+        comp.mShares[0](i, 0) = (comp.mShares[0](i, 0) == 1) ? -1 : -0;
+        comp.mShares[1](i, 0) = (comp.mShares[1](i, 0) == 1) ? -1 : -0;
+    }
+    bool_cipher_and(pIdx, comp, sharedA, tmp1, enc, eval, runtime);
+    bool_cipher_not(pIdx, comp, comp);
+    bool_cipher_and(pIdx, comp, sharedB, tmp2, enc, eval, runtime);
+    res.resize(sharedA.rows(), BITSIZE);
+    for(size_t i=0; i<tmp1.rows(); i++){
+        res.mShares[0](i, 0) = tmp1.mShares[0](i, 0) ^ tmp2.mShares[0](i, 0);
+        res.mShares[1](i, 0) = tmp1.mShares[1](i, 0) ^ tmp2.mShares[1](i, 0);
+    }
+    return;
+}
+
+void bool_cipher_max_min_split(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                     aby3::sbMatrix &res_max, aby3::sbMatrix &res_min, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime){
+    aby3::sbMatrix comp;
+    bool_cipher_lt(pIdx, sharedA, sharedB, comp, enc, eval, runtime);
+
+    aby3::sbMatrix extend_comp(sharedA.rows()*2, BITSIZE);
+    for(size_t i=0; i<sharedA.rows(); i++){
+        extend_comp.mShares[0](i, 0) = (comp.mShares[0](i, 0) == 1) ? -1 : 0;
+        extend_comp.mShares[1](i, 0) = (comp.mShares[1](i, 0) == 1) ? -1 : 0;
+        extend_comp.mShares[0](i+sharedA.rows(), 0) = (comp.mShares[0](i, 0) == 1) ? -1 : 0;
+        extend_comp.mShares[1](i+sharedA.rows(), 0) = (comp.mShares[1](i, 0) == 1) ? -1 : 0;
+    }
+
+    aby3::sbMatrix extend_AB(sharedA.rows()*2, BITSIZE);
+    for(size_t i=0; i<sharedA.rows(); i++){
+        extend_AB.mShares[0](i, 0) = sharedA.mShares[0](i, 0);
+        extend_AB.mShares[1](i, 0) = sharedA.mShares[1](i, 0);
+        extend_AB.mShares[0](i+sharedA.rows(), 0) = sharedB.mShares[0](i, 0);
+        extend_AB.mShares[1](i+sharedA.rows(), 0) = sharedB.mShares[1](i, 0);
+    }
+
+    aby3::sbMatrix tmp1, tmp2;
+    bool_cipher_and(pIdx, extend_comp, extend_AB, tmp1, enc, eval, runtime);
+    bool_cipher_not(pIdx, extend_comp, extend_comp);
+    bool_cipher_and(pIdx, extend_comp, extend_AB, tmp2, enc, eval, runtime);
+
+    res_max.resize(sharedA.rows(), BITSIZE);
+    res_min.resize(sharedA.rows(), BITSIZE);
+    for(size_t i=0; i<sharedA.rows(); i++){
+        res_min.mShares[0](i, 0) = tmp1.mShares[0](i, 0) ^ tmp2.mShares[0](i + sharedA.rows(), 0);
+        res_min.mShares[1](i, 0) = tmp1.mShares[1](i, 0) ^ tmp2.mShares[1](i + sharedA.rows(), 0);
+        res_max.mShares[0](i, 0) = tmp1.mShares[0](i + sharedA.rows(), 0) ^ tmp2.mShares[0](i, 0);
+        res_max.mShares[1](i, 0) = tmp1.mShares[1](i + sharedA.rows(), 0) ^ tmp2.mShares[1](i, 0);
+    }
+
+    return;
+}
+
 
 void bool_cipher_not(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &res) {
     int i64Size = sharedA.i64Size();
@@ -410,10 +520,74 @@ void bool2arith(int pIdx, aby3::sbMatrix &boolInput, aby3::si64Matrix &res,
     size_t len = boolInput.rows();
     size_t bitSize = boolInput.bitCount();
 
-    aby3::i64Matrix plainInput(len, 1);
-    for(size_t i=0; i<len; i++) plainInput(i, 0) = 1;
+    if(bitSize == 1){
+        aby3::i64Matrix plainInput(len, 1);
+        for(size_t i=0; i<len; i++) plainInput(i, 0) = 1;
+        pi_cb_mul(pIdx, plainInput, boolInput, res, eval, enc, runtime);
+    }
+    else{
+        // 1) p0 and p1 generate the correlated random r.
+        aby3::sbMatrix random_mat(len, bitSize);
+        if(pIdx < 2){
+            aby3::i64Matrix random_r(len, 1);
+            if(pIdx == 0){
+                block seed = enc.mShareGen.mNextCommon.getSeed();
+                PRNG prng(seed);
+                for(size_t i=0; i<len; i++) random_r(i, 0) = (i64)prng.get<int32_t>();
+                std::memcpy(random_mat.mShares[0].data(), random_r.data(), len*sizeof(random_r(0, 0)));
+                std::fill_n(random_mat.mShares[1].data(), len, 0);
+            }
+            else{
+                block seed = enc.mShareGen.mPrevCommon.getSeed();
+                PRNG prng(seed);
+                for(size_t i=0; i<len; i++) random_r(i, 0) = (i64)prng.get<int32_t>();
+                std::memcpy(random_mat.mShares[1].data(), random_r.data(), len*sizeof(random_r(0, 0)));
+                std::fill_n(random_mat.mShares[0].data(), len, 0);
+            }
+        }
+        else{
+            std::fill_n(random_mat.mShares[0].data(), len, 0);
+            std::fill_n(random_mat.mShares[1].data(), len, 0);
+        }
 
-    pi_cb_mul(pIdx, plainInput, boolInput, res, eval, enc, runtime);
+        // 2) compute c = x ADD r.
+        aby3::sbMatrix cipher_mat(len, bitSize);
+        bool_cipher_add(pIdx, boolInput, random_mat, cipher_mat, enc, eval, runtime);
+
+        // 3) reveal c to P2.
+        aby3::si64Matrix arithRes(len, 1);
+        if(pIdx == 0){
+            for(size_t i=0; i<len; i++) arithRes.mShares[0](i, 0) = -1 * random_mat.mShares[0](i, 0);
+            large_data_receiving(pIdx, arithRes.mShares[1], runtime, true);
+        }
+        if(pIdx == 1){
+            aby3::i64Matrix share1(len, 1);
+            std::memcpy(share1.data(), cipher_mat.mShares[1].data(), len*sizeof(cipher_mat.mShares[0](0, 0)));
+            large_data_sending(pIdx, share1, runtime, true);
+            for(size_t i=0; i<len; i++){
+                arithRes.mShares[1](i, 0) = -1 * random_mat.mShares[1](i, 0);
+            }
+            large_data_receiving(pIdx, arithRes.mShares[0], runtime, false);
+        }
+        if(pIdx == 2){
+            aby3::i64Matrix share1(len, 1);
+            large_data_receiving(pIdx, share1, runtime, true);
+            aby3::i64Matrix plain_c(len, 1);
+            for(size_t i=0; i<len; i++){
+                plain_c(i, 0) = (cipher_mat.mShares[0](i, 0) ^ cipher_mat.mShares[1](i, 0) ^ share1(i, 0));
+            }
+            // construct the new shares of the result.
+            for(size_t i=0; i<len; i++){
+                share1(i, 0) = rand();
+                arithRes.mShares[0](i, 0) = plain_c(i, 0) - share1(i, 0);
+                arithRes.mShares[1](i, 0) = share1(i, 0);
+            }
+            large_data_sending(pIdx, arithRes.mShares[0], runtime, true);
+            large_data_sending(pIdx, arithRes.mShares[1], runtime, false);
+        }
+
+        res = arithRes;
+    }
 
     return;
 }
@@ -793,14 +967,38 @@ void get_random_mask(int pIdx, i64Matrix &res, block &seed) {
     return;
 }
 
+void left_shift_and_fill(int pIdx, aby3::sbMatrix& input, int tag_size, int tag_value){
+
+    assert(input.rows() == 1);
+    switch(pIdx) {
+        case 0:
+            input.mShares[0](0, 0) = input.mShares[0](0, 0) << tag_size;
+            input.mShares[1](0, 0) = input.mShares[1](0, 0) << tag_size;
+            break;
+        case 1:
+            input.mShares[0](0, 0) = (input.mShares[0](0, 0) << tag_size) | tag_value;
+            input.mShares[1](0, 0) = input.mShares[1](0, 0) << tag_size;
+            break;
+        case 2:
+            input.mShares[0](0, 0) = input.mShares[0](0, 0) << tag_size;
+            input.mShares[1](0, 0) = (input.mShares[1](0, 0) << tag_size) | tag_value;
+            break;
+        default:
+            THROW_RUNTIME_ERROR("left_shift_and_fill: pIdx out of range.");
+    }
+    return;
+}
+
 void tag_append(int pIdx, std::vector<aby3::sbMatrix>& inputs){
 
     size_t len = inputs.size();
-    size_t bitsize = inputs[0].bitCount();
+    size_t bitsize = inputs[0].bitCount(); // assume that the inputs value and the tag size together is less than 64.
+    size_t tag_size = std::ceil(std::log2(len));
 
-    // 1. generate the log(len)-size bit tag shares.
-
-    // 2. append the tag shares to the inputs.
+    // generate the log(len)-size bit tag shares and append to the inputs.
+    for(size_t i=0; i<len; i++){
+        left_shift_and_fill(pIdx, inputs[i], tag_size, (int) i);
+    }
 
     return;
 }
@@ -811,6 +1009,34 @@ void tag_remove(int pIdx, size_t tag_len, std::vector<aby3::sbMatrix>& inputs){
     size_t bitsize = total_bit_size - tag_len;
 
     // remove the last tag_len bits from the tail of the inputs.
+    for(size_t i=0; i<inputs.size(); i++){
+        inputs[i].mShares[0](0, 0) = inputs[i].mShares[0](0, 0) >> tag_len;
+        inputs[i].mShares[1](0, 0) = inputs[i].mShares[1](0, 0) >> tag_len;
+    }
 
+    return;
+}
+
+void plain_permutate(std::vector<size_t> &permutation, aby3::sbMatrix &data){
+    size_t len = data.rows();
+    size_t bitsize = data.bitCount();
+
+    aby3::sbMatrix res(len, bitsize);
+    for(size_t i=0; i<len; i++){
+        res.mShares[0](i, 0) = data.mShares[0](permutation[i], 0);
+        res.mShares[1](i, 0) = data.mShares[1](permutation[i], 0);
+    }
+    data = res;
+    return;
+}
+
+void plain_permutate(std::vector<size_t> &permutation, aby3::i64Matrix &data){
+    size_t len = data.rows();
+
+    aby3::i64Matrix res(len, 1);
+    for(size_t i=0; i<len; i++){
+        res(i, 0) = data(permutation[i], 0);
+    }
+    data = res;
     return;
 }

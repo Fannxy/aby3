@@ -136,3 +136,89 @@ private:
         }
     }
 };
+
+class CommunicationMeter {
+public:
+    // Singleton pattern.
+    static CommunicationMeter& getInstance() {
+        static CommunicationMeter instance; // Guaranteed to be destroyed.
+                                            // Instantiated on first use.
+        return instance;
+    }
+
+    CommunicationMeter(CommunicationMeter const&) = delete; // you can not copy CommunicationMeter instance.
+    void operator=(CommunicationMeter const&) = delete; // you can not assign CommunicationMeter instance.
+
+    void start(const std::string& key, uint64_t start_communication) {
+        start_communications[key] = start_communication;
+    }
+
+    void end(const std::string& key, uint64_t end_communication) {
+        int start_communication = start_communications[key];
+        communications[key] = end_communication - start_communication;
+    }
+
+    int getCommunication(const std::string& key) {
+        return communications[key];
+    }
+
+    void print(const std::string& key, const std::string& unit = "MB", std::ostream& os = std::cout) {
+        if(communications.find(key) == communications.end()){
+            THROW_RUNTIME_ERROR("Key: " + key + " not found in the timer");
+        }
+        
+        double comm = communications[key];
+        if (unit == "KB") {
+            comm /= 1000;
+        } else if (unit == "MB") {
+            comm /= 1000000;
+        } else if (unit == "GB") {
+            comm /= 1000000000;
+        }
+        os << "Communicaitions of by " << key << ": " << comm << " " << unit << std::endl;
+    }
+
+    void print_records(const std::string& key_prefix, const std::string& unit = "MB", std::ostream& os = std::cout){
+        for(auto& kv : communications){
+            if(kv.first.substr(0, key_prefix.size()) == key_prefix){
+                print(kv.first, unit, os);
+            }
+        }
+    }
+
+    void print_total(const std::string& unit = "MB", std::ostream& os = std::cout){
+        for(auto& kv : communications){
+            print(kv.first, unit, os);
+        }
+    }
+
+    void print_total_per_party(const std::string& unit = "MB", std::ostream& os = std::cout){
+        for(auto& kv : totalCommunications){
+            std::string key = kv.first;
+            double total_comm = 0;
+            uint64_t comm1, comm2, comm3;
+            std::tie(comm1, comm2, comm3) = kv.second; 
+            std::array<uint64_t, 3> comms = {comm1, comm2, comm3};
+            for(size_t i=0; i<3; i++){
+                double party_comm = comms[i];
+                if (unit == "KB") {
+                    party_comm /= 1000;
+                } else if (unit == "MB") {
+                    party_comm /= 1000000;
+                } else if (unit == "GB") {
+                    party_comm /= 1000000000;
+                }
+                total_comm += party_comm;
+                os << "Communications of " << key << " Party - " << std::to_string(i) << " : " << party_comm << " " << unit << std::endl;
+            }
+            os << "Total Communications of " << key << " : " << total_comm << " " << unit << std::endl;
+        }
+        return;
+    }
+
+    CommunicationMeter() {}
+
+    std::map<std::string, uint64_t> start_communications;
+    std::map<std::string, uint64_t> communications;
+    std::map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> totalCommunications;
+};

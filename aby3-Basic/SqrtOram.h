@@ -383,7 +383,10 @@ class ABY3SqrtOram : public SqrtOram<aby3::sbMatrix> {
           pIdx(pIdx),
           enc(&enc),
           runtime(&runtime),
-          eval(&eval) {}
+          eval(&eval) {
+            int sqrt_n = (int) ceil(sqrt(n));
+            if(S > sqrt_n) S = sqrt_n;
+          }
 
     void initiate(std::vector<aby3::sbMatrix> &data) {
         std::vector<aby3::si64> Pi(this->n);

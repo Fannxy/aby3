@@ -10,4 +10,11 @@ inline bool checkPowerOfTwo(size_t num) {
     return true;
 }
 
+inline bool checkEven(size_t num){
+    if(num % 2 != 0){
+        return false;
+    }
+    return true;
+}
+
 #endif

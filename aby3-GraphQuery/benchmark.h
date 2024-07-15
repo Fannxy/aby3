@@ -2,6 +2,7 @@
 #include <chrono>
 #include <random>
 #include <thread>
+#include <tuple>
 #include <aby3/sh3/Sh3Encryptor.h>
 #include <aby3/sh3/Sh3Evaluator.h>
 #include <aby3/sh3/Sh3FixedPoint.h>
@@ -16,4 +17,21 @@
 #include "../aby3-RTR/BuildingBlocks.h"
 #include "Graph.h"
 
-int performance_profiling(oc::CLP& cmd);
+void communication_synchronize(aby3Info &party_info);
+
+int privGraph_performance_profiling(oc::CLP& cmd);
+int adj_performance_profiling(oc::CLP& cmd);
+int list_performance_profiling(oc::CLP& cmd);
+
+int privGraph_integration_profiling(oc::CLP& cmd);
+int adj_integration_profiling(oc::CLP& cmd);
+int list_integration_profiling(oc::CLP& cmd);
+
+int cycle_detection_profiling(oc::CLP& cmd);
+int twohop_neighbor_profiling(oc::CLP& cmd);
+int neighbor_statistics_profiling(oc::CLP& cmd);
+
+// advanced applications for edgelist.
+int cycle_detection_profiling_edgelist(oc::CLP& cmd);
+int twohop_neighbor_profiling_edgelist(oc::CLP& cmd);
+int neighbor_statistics_profiling_edgelist(oc::CLP& cmd);

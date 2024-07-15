@@ -10,6 +10,8 @@ using namespace aby3;
 int main(int argc, char** argv) {
   oc::CLP cmd(argc, argv);
 
+  MPI_Init(&argc, &argv);
+
   if(cmd.isSet("privGraph")){
     privGraph_performance_profiling(cmd);
   }
@@ -53,6 +55,8 @@ int main(int argc, char** argv) {
   if(cmd.isSet("neighbor_stats_edgelist")){
     neighbor_statistics_profiling_edgelist(cmd);
   }
+
+  MPI_Finalize();
 
   return 0;
 }

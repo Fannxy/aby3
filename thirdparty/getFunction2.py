@@ -16,7 +16,7 @@ def getFunction2(install, prefix, par):
     osStr = (platform.system())
     cwd = os.getcwd()
     folder = cwd + "/function2"
-    url = "https://github.com/Naios/function2.git"
+    url = "git@github.com:Naios/function2.git"
 
     if os.path.exists(folder) == False:
         os.system("git clone --depth 1 " + url)

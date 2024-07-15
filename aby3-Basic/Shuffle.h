@@ -16,5 +16,6 @@
  */
 int efficient_shuffle(std::vector<aby3::sbMatrix> &T, int pIdx, std::vector<aby3::sbMatrix> &Tres, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
+int efficient_shuffle(aby3::sbMatrix &T, int pIdx, aby3::sbMatrix &Tres, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 int efficient_shuffle_with_random_permutation(std::vector<aby3::sbMatrix> &T, int pIdx, std::vector<aby3::sbMatrix> &Tres, std::vector<aby3::si64> &Pi, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
