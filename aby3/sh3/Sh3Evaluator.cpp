@@ -93,13 +93,14 @@ namespace aby3
 	{
 		return dependency.then([&](CommPkg& comm, Sh3Task self)
 			{
-				C.mShares[0]
-					= A.mShares[0] * B.mShares[0]
-					+ A.mShares[0] * B.mShares[1]
-					+ A.mShares[1] * B.mShares[0];
+				// C.mShares[0]
+				// 	= A.mShares[0] * B.mShares[0]
+				// 	+ A.mShares[0] * B.mShares[1]
+				// 	+ A.mShares[1] * B.mShares[0];
 
 				for (u64 i = 0; i < C.size(); ++i)
 				{
+					C.mShares[0](i) = A.mShares[0](i) * B.mShares[0](i) + A.mShares[0](i) * B.mShares[1](i) + A.mShares[1](i) * B.mShares[0](i);
 					C.mShares[0](i) += mShareGen.getShare();
 				}
 
@@ -662,6 +663,9 @@ namespace aby3
 				= A.mShares[0] * B.mShares[0]
 				+ A.mShares[0] * B.mShares[1]
 				+ A.mShares[1] * B.mShares[0];
+				
+			for(u64 i=0; i<abMinusR.size(); ++i)
+				abMinusR(i) = A.mShares[0](i) * B.mShares[0](i) + A.mShares[0](i) * B.mShares[1](i) + A.mShares[1](i) * B.mShares[0](i);
 
 			auto truncationTuple = getTruncationTuple(abMinusR.rows(), abMinusR.cols(), shift);
 

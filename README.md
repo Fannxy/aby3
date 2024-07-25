@@ -1,4 +1,28 @@
 # ABY 3 and Applications
+
+## Updates 2024.07.25
+
+### Update modules
+* ``aby3-Basic`` contains the basic functions, like greater-then, bitwise_or, add, sub, sort (quick sort, odd even merge sort), sqrt-oram, constant-round shuffling *etc*. Comparing with the origional version, all the functions here are organized using the following interfaces: 
+
+```c++
+void func(int role, &inputA, &inputB, &res, Encryptor, Evaluator, Runtime)
+```
+
+* ``aby3_tests`` now contains the unit test functions for functions in ``aby3-Basic``. 
+All the test interfaces are in ``./Test.h``.
+
+* ``Eval`` contains the evaluation shells. To run the tests in a single machine (three processes), just run ``./Eval/test.sh`` in ``./aby3/``.
+
+
+### Build and run the tests
+
+1. To make all the tests pass, we have to correct the problem in the [``int_int_sub_msb``](https://github.com/ladnir/cryptoTools/blob/5f90354b499adddbcf6861a3b4463e0724e5f719/cryptoTools/Circuit/BetaLibrary.cpp#L1203) circuit.  Change the ``GateType::Or`` to ``GateType::na_And``, the functional sub circuit should use ``na_And``.
+
+2. Then build the project as normal aby3 ``python ./build.py --setup``.
+
+3. Directly run ``./Eval/test.sh`` in ``./aby3/``. By default, it runs all the tests, we can change the tests by modifying the passed ``test_args`` in ``./Eval/test.sh``.
+
  
 ## Introduction
  

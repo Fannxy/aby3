@@ -67,7 +67,13 @@ def Build(mainArgs, cmakeArgs,install, prefix, par):
         buildDir = "out/build/linux"
 
     cmakeArgs.append("-DCMAKE_BUILD_TYPE={0}".format(buildType))
-
+    
+    if "--DEBUG_FILE" in mainArgs:
+        debug_file = mainArgs[mainArgs.index("--DEBUG_FILE")+1]
+        cmakeArgs.append(f"-DDEBUG_FILE=\"{debug_file}\"")
+        print(">>>>>>>> ", cmakeArgs)
+        
+        
     argStr = ""
     for a in cmakeArgs:
         argStr = argStr + " " + a
