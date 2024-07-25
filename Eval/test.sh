@@ -26,7 +26,7 @@ wait;
 # test_args=" -ORAM -Graph"
 # test_args=" -Graph -GraphQuery -Sort"
 # test_args=" -Sort -GraphQuery"
-test_args=" -GraphQuery"
+test_args=" -Sort"
 # test_args=" -Bool -Comm -Graph -GraphQuery"
 # test_args=" -Comm -Bool -Graph -GraphQuery"
 # test_args=" -Graph"
