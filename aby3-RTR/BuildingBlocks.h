@@ -26,6 +26,8 @@ void basic_setup(aby3::u64 partyIdx, oc::IOService &ios, aby3::Sh3Encryptor &enc
 
 void multi_processor_setup(aby3::u64 partyIdx, int rank, oc::IOService &ios, aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 
+void splitted_setup(aby3::u64 partyIdx, int rank, oc::IOService &ios, aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime, std::string p0_ip, std::string p1_ip);
+
 
 /// basic building block functions.
 /// all functions for aby3 data structures are : cipher_func

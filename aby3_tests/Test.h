@@ -24,6 +24,46 @@
     Sh3Runtime runtime; \
     basic_setup((u64)role, ios, enc, eval, runtime); \
 
+#define SPLITTED_TEST_INIT \ 
+    int role = -1; \
+    if (cmd.isSet("role")) { \
+        auto keys = cmd.getMany<int>("role"); \
+        role = keys[0]; \
+    } \
+    if (role == -1) { \
+        throw std::runtime_error(LOCATION); \
+    } \
+    int rank = -1; \
+    if (cmd.isSet("rank")) { \
+        auto keys = cmd.getMany<int>("rank"); \
+        rank = keys[0]; \
+    } \
+    if (rank == -1) { \
+        throw std::runtime_error(LOCATION); \
+    } \
+    IOService ios; \
+    Sh3Encryptor enc; \
+    Sh3Evaluator eval; \
+    Sh3Runtime runtime; \
+{ \
+    std::string p0_ip = "", p1_ip = ""; \
+    if (cmd.isSet("p0_ip")) { \
+        auto keys = cmd.getMany<std::string>("p0_ip"); \
+        p0_ip = keys[0]; \
+    } \
+    if (p0_ip == "") { \
+        throw std::runtime_error(LOCATION); \
+    } \
+    if (cmd.isSet("p1_ip")) { \
+        auto keys = cmd.getMany<std::string>("p1_ip"); \
+        p1_ip = keys[0]; \
+    } \
+    if (p1_ip == "") { \
+        throw std::runtime_error(LOCATION); \
+    } \
+    splitted_setup((u64)role, rank, ios, enc, eval, runtime, p0_ip, p1_ip); \
+} \
+
 
 #define TEST_INIT \
     int role = -1; \
@@ -84,6 +124,11 @@ int bc_sort_multiple_times(oc::CLP& cmd);
 int quick_sort_test(oc::CLP& cmd);
 int quick_sort_with_duplicate_elements_test(oc::CLP& cmd);
 int odd_even_merge_test(oc::CLP& cmd);
+
+// matrix multiplication tests
+int int_matrix_multiplication_test(oc::CLP& cmd);
+int fixed_matrix_multiplication_test(oc::CLP& cmd);
+int splitted_fixed_matrix_multiplication_test(oc::CLP& cmd);
 
 int correctness_cipher_index_pta(oc::CLP& cmd);
 int correctness_sort_pta(oc::CLP& cmd);

@@ -1,5 +1,5 @@
-args=" -Sort"
-keyword="sort"
+args=" -Matrix -sizeX 1 -sizeY 40000 -sizeZ 1"
+keyword="matrix"
 root_folder=/root/aby3
 
 # Sync the schedule

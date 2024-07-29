@@ -1,4 +1,4 @@
-USER_FOLDER=/home/tsingj_ubuntu/fanxy/PtA/aby3
+USER_FOLDER=/root/aby3
 
 times=5
 

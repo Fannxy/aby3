@@ -69,5 +69,13 @@ int main(int argc, char** argv) {
 		// quick_sort_with_duplicate_elements_test(cmd); // too slow
 		odd_even_merge_test(cmd);
 	}
+
+	if(cmd.isSet("Matrix")){
+		if(cmd.isSet("rank")){
+			splitted_fixed_matrix_multiplication_test(cmd);
+		} else {
+			fixed_matrix_multiplication_test(cmd);
+		}
+	}
   return 0;
 }

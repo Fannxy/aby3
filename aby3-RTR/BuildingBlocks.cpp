@@ -13,10 +13,10 @@ using namespace oc;
 #include "./Pair_then_Reduce/include/datatype.h"
 
 // #define LOCAL_TEST
-#define P0_IP "10.5.0.12"
-#define P1_IP "10.5.0.4"
+#define P0_IP "10.1.0.15"
+#define P1_IP "10.1.0.16"
 
-static int BASEPORT=4000;
+static int BASEPORT=5001;
 
 
 double synchronized_time(int pIdx, double& time_slot, Sh3Runtime &runtime){
@@ -148,6 +148,51 @@ void multi_processor_setup(u64 partyIdx, int rank, IOService &ios, Sh3Encryptor 
   eval.init(partyIdx, comm, sysRandomSeed());
   // Copies the Channels and will use them for later protcols.
   runtime.init(partyIdx, comm);
+}
+#endif
+
+#ifndef LOCAL_TEST
+void splitted_setup(u64 partyIdx, int rank, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &eval, Sh3Runtime &runtime, std::string p0_ip, std::string p1_ip){
+  CommPkg comm;
+  string fport, sport, tport;
+  switch (partyIdx) {
+    case 0:
+      fport = std::to_string(BASEPORT + 3*rank);
+      sport = std::to_string(BASEPORT + 3*rank + 1);
+      comm.mNext = Session(ios, p0_ip + ":" + fport, SessionMode::Server, "01")
+                       .addChannel();
+      comm.mPrev = Session(ios, p0_ip + ":" + sport, SessionMode::Server, "02")
+                       .addChannel();
+      break;
+    case 1:
+      fport = std::to_string(BASEPORT + 3*rank);
+      tport = std::to_string(BASEPORT + 3*rank + 2);
+      comm.mNext = Session(ios, p1_ip + ":" + tport, SessionMode::Server, "12")
+                       .addChannel();
+      comm.mPrev = Session(ios, p0_ip + ":" + fport, SessionMode::Client, "01")
+                       .addChannel();
+      break;
+    default:
+      sport = std::to_string(BASEPORT + 3*rank + 1);
+      tport = std::to_string(BASEPORT + 3*rank + 2);
+      comm.mNext = Session(ios, p0_ip + ":" + sport, SessionMode::Client, "02")
+                       .addChannel();
+      comm.mPrev = Session(ios, p1_ip + ":" + tport, SessionMode::Client, "12")
+                       .addChannel();
+      break;
+  }
+  // Establishes some shared randomness needed for the later protocols
+  enc.init(partyIdx, comm, sysRandomSeed());
+  // Establishes some shared randomness needed for the later protocols
+  eval.init(partyIdx, comm, sysRandomSeed());
+  // Copies the Channels and will use them for later protcols.
+  runtime.init(partyIdx, comm);
+}
+#endif
+
+#ifdef LOCAL_TEST
+void splitted_setup(u64 partyIdx, int rank, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &eval, Sh3Runtime &runtime, std::string p0_ip, std::string p1_ip){
+  multi_processor_setup(partyIdx, rank, ios, enc, eval, runtime);
 }
 #endif
 

@@ -1,4 +1,4 @@
-USER_FOLDER=/home/tsingj_ubuntu/fanxy/PtA/aby3  
+USER_FOLDER=/root/aby3  
 # task_list=("cipher_index" "max" "sort" "metric" "sum")
 # task_list=("metric")
 task_list=("cipher_index")
