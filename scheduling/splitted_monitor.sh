@@ -1,7 +1,7 @@
-args=" -Matrix -sizeX 200 -sizeY 200 -sizeZ 200 -numTasks 3"
-keyword="matrix"
-# options=" --symmetric"
-options=""
+args=" -Matrix -sizeX 200 -sizeY 600 -sizeZ 600 -numTasks 3"
+keyword="matrix2-200x600x600"
+options=" --symmetric"
+# options=""
 root_folder=/root/aby3
 
 # Sync the schedule
