@@ -128,6 +128,7 @@ int odd_even_merge_test(oc::CLP& cmd);
 // matrix multiplication tests
 int fixed_matrix_mult_test(oc::CLP& cmd);
 int splitted_fixed_matrix_mult_test(oc::CLP& cmd);
+// int splitted_fixed_matrix_mult_test_fault(oc::CLP& cmd);
 
 int correctness_cipher_index_pta(oc::CLP& cmd);
 int correctness_sort_pta(oc::CLP& cmd);

@@ -10,7 +10,7 @@
 *.dvi
 
 *debug.txt
-/scheduling/Record_test/*
+./scheduling/Record_test/*
 
 /thirdparty/
 /lib/
