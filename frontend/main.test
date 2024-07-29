@@ -72,7 +72,11 @@ int main(int argc, char** argv) {
 
 	if(cmd.isSet("Matrix")){
 		if(cmd.isSet("rank")){
-			splitted_fixed_matrix_mult_test(cmd);
+			if(not cmd.isSet("fault")) {
+				splitted_fixed_matrix_mult_test(cmd);
+			} else {
+				splitted_fixed_matrix_mult_test_fault(cmd);
+			}
 		} else {
 			fixed_matrix_mult_test(cmd);
 		}
