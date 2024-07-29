@@ -9,6 +9,9 @@
 *.pdf
 *.dvi
 
+*debug.txt
+/scheduling/Record_test/*
+
 /thirdparty/
 /lib/
 /bin/

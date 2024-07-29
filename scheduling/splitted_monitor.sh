@@ -1,5 +1,8 @@
-args=" -Matrix -sizeX 600 -sizeY 600 -sizeZ 600 -numTasks 3"
-keyword="matrix1-600x600x600"
+sizeX=600
+sizeY=600
+sizeZ=600
+args=" -Matrix -sizeX "${sizeX}" -sizeY "${sizeY}" -sizeZ "${sizeZ}" -numTasks 3"
+keyword="matrix1-"${sizeX}"x"${sizeY}"x"${sizeZ}
 # options=" --symmetric"
 options=""
 root_folder=/root/aby3
@@ -8,6 +11,8 @@ root_folder=/root/aby3
 scp -r ./scheduling aby31:${root_folder}/ &
 scp -r ./scheduling aby32:${root_folder}/ &
 wait;
+
+rm -r ./debug.txt
 
 # prepare the test cpp.
 cp ${root_folder}/frontend/main.test ${root_folder}/frontend/main.cpp
