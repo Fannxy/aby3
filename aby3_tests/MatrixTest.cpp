@@ -64,12 +64,16 @@ int splitted_fixed_matrix_mult_test(oc::CLP& cmd) {
 
     u64 sizeX = cmd.getMany<int>("sizeX")[0],
         sizeY = cmd.getMany<int>("sizeY")[0],
-        sizeZ = cmd.getMany<int>("sizeZ")[0];
+        sizeZ = cmd.getMany<int>("sizeZ")[0],
+        numTasks = cmd.getMany<int>("numTasks")[0];
     
+    u64 l = rank * sizeX / numTasks,
+        r = (rank + 1) * sizeX / numTasks;
+    sizeX = r - l;
     f64Matrix<D8> A(sizeX, sizeY);
-    for (u64 i = 0; i < sizeX; ++i)
+    for (u64 i = l; i < r; ++i)
         for (u64 j = 0; j < sizeY; ++j)
-            A(i, j) = double(i + 1) / (i + j + 1);
+            A(i - l, j) = double(i + 1) / (i + j + 1);
     
     f64Matrix<D8> B(sizeY, sizeZ);
     for (u64 i = 0; i < sizeY; ++i)

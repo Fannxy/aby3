@@ -41,9 +41,8 @@ int fixed_matrix_mult(sf64Matrix<D8>& A, sf64Matrix<D8>& B, sf64Matrix<D8>& C, i
 //         THROW_RUNTIME_ERROR("Matrix dimensions do not match.");
 //     }
 
-//     sf64Matrix<D8> repeatCol(A.rows(), A.cols());
-
 //     for(u64 i = 0; i < B.cols(); ++i) {
+//         sf64Matrix<D8> repeatCol(A.rows(), A.cols());
 //         for(u64 j = 0; j < A.rows(); ++j)
 //             for(u64 k = 0; k < A.cols(); ++k)
 //                 repeatCol(j, k, B(k, i));

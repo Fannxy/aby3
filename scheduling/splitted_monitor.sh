@@ -1,4 +1,4 @@
-args=" -Matrix -sizeX 200 -sizeY 600 -sizeZ 600"
+args=" -Matrix -sizeX 600 -sizeY 600 -sizeZ 600 -numTasks 3"
 keyword="matrix1-600x600x600"
 # options=" --symmetric"
 options=""
