@@ -72,9 +72,9 @@ int main(int argc, char** argv) {
 
 	if(cmd.isSet("Matrix")){
 		if(cmd.isSet("rank")){
-			splitted_fixed_matrix_multiplication_test(cmd);
+			splitted_fixed_matrix_mult_test(cmd);
 		} else {
-			fixed_matrix_multiplication_test(cmd);
+			fixed_matrix_mult_test(cmd);
 		}
 	}
   return 0;
