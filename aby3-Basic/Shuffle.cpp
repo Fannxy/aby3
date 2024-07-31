@@ -993,7 +993,7 @@ int efficient_shuffle_with_random_permutation(
         }
     }
 
-    std::ofstream partyfs("/root/aby3/party-" + std::to_string(pIdx) + ".txt", std::ios::app);
+    // std::ofstream partyfs("/root/aby3/party-" + std::to_string(pIdx) + ".txt", std::ios::app);
 
 #ifdef DEBUG_SHUFFLE2
     std::string party_debug_file = "/root/aby3/party-" + std::to_string(pIdx) + ".txt";

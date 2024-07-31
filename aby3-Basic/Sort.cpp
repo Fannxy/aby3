@@ -317,6 +317,7 @@ int quick_sort_different(std::vector<aby3::sbMatrix> &data, int pIdx, aby3::Sh3E
 int quick_sort(std::vector<aby3::sbMatrix> &data, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime, size_t min_size){
 
     tag_append(pIdx, data);
+    efficient_shuffle(data, pIdx, data, enc, eval, runtime);
     quick_sort_different(data, pIdx, enc, eval, runtime, min_size);
     size_t tag_size = std::ceil(std::log2(data.size()));
     tag_remove(pIdx, tag_size, data);

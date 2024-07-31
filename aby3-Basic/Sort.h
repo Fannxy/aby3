@@ -1,4 +1,5 @@
 #include "Basics.h"
+#include "Shuffle.h"
 
 #include <aby3/Circuit/CircuitLibrary.h>
 #include "../aby3-RTR/debug.h"
