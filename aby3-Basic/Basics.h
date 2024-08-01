@@ -1,3 +1,4 @@
+#pragma once
 #include <cmath>
 #include <aby3/sh3/Sh3Encryptor.h>
 #include <aby3/sh3/Sh3Evaluator.h>
@@ -23,7 +24,6 @@ inline size_t roundUpToPowerOfTwo(size_t num) {
     }
     return (size_t) pow(2, ceil(log2(num)));
 }
-
 
 struct boolShare {
     std::array<bool, 2> bshares;
@@ -191,6 +191,11 @@ int large_data_sending(int pIdx, aby3::i64Matrix &sharedA, aby3::Sh3Runtime &run
 // if fromPrev is true, receive from the previous party, otherwise receive from the next party.
 int large_data_receiving(int pIdx, aby3::i64Matrix &res, aby3::Sh3Runtime &runtime, bool fromPrev);
 
+int large_data_encryption(int pIdx, aby3::i64Matrix &plainA, aby3::sbMatrix &sharedA,
+                          aby3::Sh3Encryptor &enc, aby3::Sh3Runtime &runtime);
+
+int large_data_decryption(int pIdx, aby3::sbMatrix &sharedA, aby3::i64Matrix &plainA,
+                          aby3::Sh3Encryptor &enc, aby3::Sh3Runtime &runtime);
 
 void bool_cipher_lt(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
@@ -216,12 +221,28 @@ void bool_cipher_add(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
                      aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 
+void bool_cipher_sub(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+
 void bool_cipher_and(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
                      aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 
 void bool_cipher_and(int pIdx, boolShare &sharedA, boolShare &sharedB,
                      boolShare &res, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+
+void bool_cipher_max(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+
+void bool_cipher_min(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+
+void bool_cipher_max_min_split(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                     aby3::sbMatrix &res_max, aby3::sbMatrix &res_min, aby3::Sh3Encryptor &enc,
                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 
 void bool_cipher_not(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &res);
@@ -291,9 +312,6 @@ std::vector<bool> back2plain(int pIdx, std::vector<boolShare> &cipher_val,
                              aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
                              aby3::Sh3Runtime &runtime);
 
-aby3::i64Matrix back2plain(int pIdx, std::vector<aby3::si64>& cipher_val, aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
-                           aby3::Sh3Runtime &runtime);
-
 void get_permutation(size_t len, std::vector<size_t> &permutation,
                      oc::block &seed);
 
@@ -312,6 +330,10 @@ void plain_permutate(std::vector<size_t> &permutation, std::vector<T> &data) {
     }
     data = tmp;
 }
+
+void plain_permutate(std::vector<size_t> &permutation, aby3::sbMatrix &data);
+
+void plain_permutate(std::vector<size_t> &permutation, aby3::i64Matrix &data);
 
 void get_random_mask(int pIdx, aby3::i64Matrix &res, oc::block &seed);
 
@@ -340,6 +362,8 @@ std::vector<size_t> argwhere(aby3::i64Matrix& input, int target);
 std::vector<size_t> argwhere(std::vector<std::vector<int>>& inputs, int target);
 
 std::vector<size_t> argwhere(std::vector<size_t>& inputs, int target);
+
+void left_shift_and_fill(int pIdx, aby3::sbMatrix &input, int tag_size, int tag_value);
 
 void tag_append(int pIdx, std::vector<aby3::sbMatrix>& inputs);
 

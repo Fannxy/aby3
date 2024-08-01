@@ -1,6 +1,8 @@
 #include "Sort.h"
 #include <numeric>
 
+static const size_t MAX_SENDING_SIZE = 1 << 25;
+
 using namespace oc;
 using namespace aby3;
 
@@ -15,9 +17,6 @@ int bc_sort_different(std::vector<aby3::sbMatrix> &data, std::vector<size_t> &lo
     }
     size_t valid_size = std::min(total_size, max_size);
 
-    // if(pIdx == 0){
-    //     debug_info("bc sorts - num_interval = " + std::to_string(num_interval) + ", total_size = " + std::to_string(total_size) + ", valid_size = " + std::to_string(valid_size));
-    // }
 
     // Prepare the tiling & repeating indices.
     std::vector<size_t> index_tile(valid_size, 0);
@@ -40,7 +39,10 @@ int bc_sort_different(std::vector<aby3::sbMatrix> &data, std::vector<size_t> &lo
             size_t low = lows[start + i], high = highs[start + i];
             size_t after = current + (high - low) * (high - low);
 
-            if(after > valid_size) break;
+            // if(pIdx == 0) debug_info("current after size = " + std::to_string((after - total_current)) + " | after = " + std::to_string(after) + " | total_current = " + std::to_string(total_current));
+            // if(pIdx == 0) debug_info("i = " + std::to_string(i) + " | low = " + std::to_string(low) + " | high = " + std::to_string(high) + " | current = " + std::to_string(current));
+
+            if((after - total_current) > valid_size) break;
 
             // tiling the indices.
             std::vector<size_t> ranging_indices(high - low, 0);
@@ -50,7 +52,6 @@ int bc_sort_different(std::vector<aby3::sbMatrix> &data, std::vector<size_t> &lo
             for(size_t j=0; j<(high - low); j++){
                 ranging_indices_str += std::to_string(ranging_indices[j]) + " ";
             }    
-            // if(pIdx == 0) debug_info("ranging_indices - " + ranging_indices_str);
 
             vector_tile<size_t>(ranging_indices, (high - low), index_tile, current - total_current);
             vector_repeat<size_t>(ranging_indices, (high - low), index_repeat, current - total_current);
@@ -62,7 +63,6 @@ int bc_sort_different(std::vector<aby3::sbMatrix> &data, std::vector<size_t> &lo
             for(size_t i=0; i<index_tile.size(); i++){
                 ranging_indices_str += std::to_string(index_tile[i]) + " ";
             }
-            // debug_info("index_tile indices - " + ranging_indices_str);
         }
 
         // if(pIdx == 0) debug_info("bc sorts - before tiling & repeating data construction.");
@@ -82,8 +82,6 @@ int bc_sort_different(std::vector<aby3::sbMatrix> &data, std::vector<size_t> &lo
         i64Matrix plain_comp(current - total_current, 1);
         enc.revealAll(runtime, data_comp, plain_comp).get();
 
-        // if(pIdx == 0) debug_info("bc sorts - after comparison | size = " + std::to_string(current - total_current));
-
         // compute the location after sorting and construct the data.
         current = total_current;
         size_t next_start = start;
@@ -92,7 +90,7 @@ int bc_sort_different(std::vector<aby3::sbMatrix> &data, std::vector<size_t> &lo
             size_t low = lows[start + i], high = highs[start + i];
             size_t after = current + (high - low) * (high - low);
 
-            if(after > valid_size){
+            if((after - total_current) > valid_size){
                 next_start = start + i;
                 break;
             }
@@ -117,7 +115,6 @@ int bc_sort_different(std::vector<aby3::sbMatrix> &data, std::vector<size_t> &lo
 
         start = next_start;
         total_current = current;
-        
     }
 
     // sort the data.
@@ -282,8 +279,10 @@ int quick_sort_different(std::vector<aby3::sbMatrix> &data, int pIdx, aby3::Sh3E
                 new_highs.push_back(low_pos);
             }
             else{
-                bc_lows.push_back(low);
-                bc_highs.push_back(low_pos);
+                if((low_pos - low) > 1){
+                    bc_lows.push_back(low);
+                    bc_highs.push_back(low_pos);
+                }
             }
 
             if((high - low_pos - 1) > min_size){
@@ -291,8 +290,10 @@ int quick_sort_different(std::vector<aby3::sbMatrix> &data, int pIdx, aby3::Sh3E
                 new_highs.push_back(high);
             }
             else{
-                bc_lows.push_back(low_pos + 1);
-                bc_highs.push_back(high);
+                if((high - low_pos - 1) > 1) {
+                    bc_lows.push_back(low_pos + 1);
+                    bc_highs.push_back(high);
+                }
             }
 
             current = after;
@@ -308,6 +309,320 @@ int quick_sort_different(std::vector<aby3::sbMatrix> &data, int pIdx, aby3::Sh3E
         highs = new_highs;
         num_interval = lows.size();
     }
+
     bc_sort_different(data, bc_lows, bc_highs, pIdx, enc, eval, runtime, 1048576);
+    return 0;
+}
+
+int quick_sort(std::vector<aby3::sbMatrix> &data, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime, size_t min_size){
+
+    tag_append(pIdx, data);
+    quick_sort_different(data, pIdx, enc, eval, runtime, min_size);
+    size_t tag_size = std::ceil(std::log2(data.size()));
+    tag_remove(pIdx, tag_size, data);
+
+    return 0;
+}
+
+int odd_even_merge(aby3::sbMatrix& data1, aby3::sbMatrix& data2, aby3::sbMatrix& res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+
+    int arr1_length = data1.rows();
+    int arr2_length = data2.rows();
+    int length = std::max(arr1_length, arr2_length);
+
+    // init the result.
+    sbMatrix result(length*2, BITSIZE);
+    sbMatrix max_ele, max1, max2;
+    boolIndex max_arr1, max_arr2;
+    max_arr1.indexShares[0] = data1.mShares[0](arr1_length - 1, 0);
+    max_arr1.indexShares[1] = data1.mShares[1](arr1_length - 1, 0);
+    max_arr2.indexShares[0] = data2.mShares[0](arr2_length - 1, 0);
+    max_arr2.indexShares[1] = data2.mShares[1](arr2_length - 1, 0);
+
+    max1 = max_arr1.to_matrix();
+    max2 = max_arr2.to_matrix();
+
+    bool_cipher_max(pIdx, max1, max2, max_ele, enc, eval, runtime);
+    
+    std::fill(result.mShares[0].data(), result.mShares[0].data() + result.mShares[0].size(), max_ele.mShares[0](0, 0));
+    std::fill(result.mShares[1].data(), result.mShares[1].data() + result.mShares[1].size(), max_ele.mShares[1](0, 0));
+
+    // organize the result
+    for(size_t i=0; i<arr1_length; i++){
+        result.mShares[0](i*2, 0) = data1.mShares[0](i, 0);
+        result.mShares[1](i*2, 0) = data1.mShares[1](i, 0);
+    }
+    for(size_t i=0; i<arr2_length; i++){
+        result.mShares[0](i*2 + 1, 0) = data2.mShares[0](i, 0);
+        result.mShares[1](i*2 + 1, 0) = data2.mShares[1](i, 0);
+    }
+
+    // begin the odd_even merge
+    size_t t = (size_t) std::ceil((std::log2((double)length)) + 1);
+    size_t q = std::pow(2, t-1);
+    size_t d = 1;
+    size_t r = 0;
+
+    while(d > 0){
+        // get the to-be-compared indexing mask.
+        std::vector<int> x_mask, y_mask;
+        for(int i=r; i<length*2 - d; i+=2){
+            x_mask.push_back(i);
+            y_mask.push_back(i + d);
+        }
+
+        // get the result into the sbMatrix.
+        sbMatrix x_mask_mat(x_mask.size(), BITSIZE);
+        sbMatrix y_mask_mat(y_mask.size(), BITSIZE);
+        for(int i=0; i<x_mask.size(); i++){
+            x_mask_mat.mShares[0](i, 0) = result.mShares[0](x_mask[i], 0);
+            x_mask_mat.mShares[1](i, 0) = result.mShares[1](x_mask[i], 0);
+            y_mask_mat.mShares[0](i, 0) = result.mShares[0](y_mask[i], 0);
+            y_mask_mat.mShares[1](i, 0) = result.mShares[1](y_mask[i], 0);
+        }
+        sbMatrix max_mat, min_mat;
+        bool_cipher_max_min_split(pIdx, x_mask_mat, y_mask_mat, max_mat, min_mat, enc, eval, runtime);
+        
+        // update the result.
+        for(int i=0; i<x_mask.size(); i++){
+            result.mShares[0](x_mask[i], 0) = min_mat.mShares[0](i, 0);
+            result.mShares[1](x_mask[i], 0) = min_mat.mShares[1](i, 0);
+            result.mShares[0](y_mask[i], 0) = max_mat.mShares[0](i, 0);
+            result.mShares[1](y_mask[i], 0) = max_mat.mShares[1](i, 0);
+        }
+
+        // update the d, r.
+        d = (size_t) (q - 1);
+        q = q >> 1;
+        r = 1;
+    }
+    res.resize(arr1_length+arr2_length, BITSIZE);
+    for(size_t i=0; i<arr1_length+arr2_length; i++){
+        res.mShares[0](i, 0) = result.mShares[0](i, 0);
+        res.mShares[1](i, 0) = result.mShares[1](i, 0);
+    }
+
+    return 0;
+}
+
+/*
+    The odd_even_multi_merge function is used to merge the data sets in the data vector.
+    The data vector contains the data sets to be merged.
+    The sorted_res is the result of the merge.
+*/
+int odd_even_multi_merge(std::vector<aby3::sbMatrix> &data, aby3::sbMatrix& sorted_res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+
+    int k = data.size();
+
+    while(k!=1){
+        if(k%2 != 0){
+            aby3::sbMatrix res;
+            odd_even_merge(data[k-2], data[k-1], res, pIdx, enc, eval, runtime);
+            data[k-2] = res;
+            k -=1;
+        }
+        else{
+            for(int i=0; i<k; i+=2){
+                aby3::sbMatrix res;
+                odd_even_merge(data[i], data[i+1], res, pIdx, enc, eval, runtime);
+                data[i/2] = res;
+            }
+            k = k>>1;
+        }
+    }
+
+    sorted_res = data[0];
+
+    return 0;
+}
+
+int high_dimensional_odd_even_merge(std::vector<aby3::sbMatrix> &data1, std::vector<aby3::sbMatrix>& data2, std::vector<aby3::sbMatrix>& sorted_res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+    size_t dim = data1.size();
+    if(dim != data2.size()){
+        THROW_RUNTIME_ERROR("The dimensions of the two data sets are not equal!");
+    }
+
+    int arr1_length = data1[0].rows();
+    int arr2_length = data2[0].rows();
+    int length = std::max(arr1_length, arr2_length);
+
+    // init the result.
+    std::vector<sbMatrix> result(dim);
+    for(size_t i=0; i<dim; i++){
+        result[i].resize(length*2, BITSIZE);
+    }
+
+    sbMatrix max_ele, max1, max2;
+    max1.resize(dim, BITSIZE);
+    max2.resize(dim, BITSIZE);
+    max_ele.resize(dim, BITSIZE);
+    for(size_t i=0; i<dim; i++){
+        max1.mShares[0](i, 0) = data1[i].mShares[0](arr1_length - 1, 0);
+        max1.mShares[1](i, 0) = data1[i].mShares[1](arr1_length - 1, 0);
+        max2.mShares[0](i, 0) = data2[i].mShares[0](arr2_length - 1, 0);
+        max2.mShares[1](i, 0) = data2[i].mShares[1](arr2_length - 1, 0);
+    }
+
+    size_t round = (size_t) ceil(dim / (double) MAX_SENDING_SIZE);
+    size_t last_len = dim - (round - 1) * MAX_SENDING_SIZE;
+
+    // if(pIdx == 0) debug_info("round = " + std::to_string(round) + " | last_len = " + std::to_string(last_len));
+    for(size_t i=0; i<round; i++){
+        size_t unit_len = (i == round - 1) ? last_len : MAX_SENDING_SIZE;
+        sbMatrix max1_part(unit_len, BITSIZE);
+        sbMatrix max2_part(unit_len, BITSIZE);
+        sbMatrix max_ele_part(unit_len, BITSIZE);
+
+        std::memcpy(max1_part.mShares[0].data(), max1.mShares[0].data() + i * MAX_SENDING_SIZE, unit_len * sizeof(max1.mShares[0](0, 0)));
+        std::memcpy(max1_part.mShares[1].data(), max1.mShares[1].data() + i * MAX_SENDING_SIZE, unit_len * sizeof(max1.mShares[1](0, 0)));
+        std::memcpy(max2_part.mShares[0].data(), max2.mShares[0].data() + i * MAX_SENDING_SIZE, unit_len * sizeof(max2.mShares[0](0, 0)));
+        std::memcpy(max2_part.mShares[1].data(), max2.mShares[1].data() + i * MAX_SENDING_SIZE, unit_len * sizeof(max2.mShares[1](0, 0)));
+
+        bool_cipher_max(pIdx, max1_part, max2_part, max_ele_part, enc, eval, runtime);
+
+        std::memcpy(max_ele.mShares[0].data() + i * MAX_SENDING_SIZE, max_ele_part.mShares[0].data(), unit_len * sizeof(max_ele_part.mShares[0](0, 0)));
+        std::memcpy(max_ele.mShares[1].data() + i * MAX_SENDING_SIZE, max_ele_part.mShares[1].data(), unit_len * sizeof(max_ele_part.mShares[1](0, 0)));
+    }
+    // if(pIdx == 0) debug_info("after bool_max");
+    // bool_cipher_max(pIdx, max1, max2, max_ele, enc, eval, runtime);
+
+    for(size_t i=0; i<dim; i++){
+        std::fill(result[i].mShares[0].data(), result[i].mShares[0].data() + result[i].mShares[0].size(), max_ele.mShares[0](i, 0));
+        std::fill(result[i].mShares[1].data(), result[i].mShares[1].data() + result[i].mShares[1].size(), max_ele.mShares[1](i, 0));
+    }
+
+    // organize the result
+    for(size_t i=0; i<dim; i++){
+        for(size_t k=0; k<arr1_length; k++){
+            result[i].mShares[0](k*2, 0) = data1[i].mShares[0](k, 0);
+            result[i].mShares[1](k*2, 0) = data1[i].mShares[1](k, 0);
+        }
+        for(size_t k=0; k<arr2_length; k++){
+            result[i].mShares[0](k*2 + 1, 0) = data2[i].mShares[0](k, 0);
+            result[i].mShares[1](k*2 + 1, 0) = data2[i].mShares[1](k, 0);
+        }
+    }
+
+    // begin the high-dimensional odd_even merge sort.
+    size_t t = (size_t) std::ceil((std::log2((double)length)) + 1);
+    size_t q = std::pow(2, t-1);
+    size_t d = 1;
+    size_t r = 0;
+
+    while(d > 0){
+        std::vector<int> x_mask, y_mask;
+        for(int i=r; i<length*2 - d; i+=2){
+            x_mask.push_back(i);
+            y_mask.push_back(i + d);
+        }
+        size_t unit_mask_len = x_mask.size();
+
+        // get the result into the sbMatrix.
+        sbMatrix x_mask_mat(unit_mask_len * dim, BITSIZE);
+        sbMatrix y_mask_mat(unit_mask_len * dim, BITSIZE);
+        for(size_t i=0; i<dim; i++){
+            for(size_t j=0; j<unit_mask_len; j++){
+                x_mask_mat.mShares[0](i*unit_mask_len + j, 0) = result[i].mShares[0](x_mask[j], 0);
+                x_mask_mat.mShares[1](i*unit_mask_len + j, 0) = result[i].mShares[1](x_mask[j], 0);
+                y_mask_mat.mShares[0](i*unit_mask_len + j, 0) = result[i].mShares[0](y_mask[j], 0);
+                y_mask_mat.mShares[1](i*unit_mask_len + j, 0) = result[i].mShares[1](y_mask[j], 0);
+            }
+        }
+        // sbMatrix max_mat, min_mat;
+        sbMatrix max_mat(unit_mask_len * dim, BITSIZE);
+        sbMatrix min_mat(unit_mask_len * dim, BITSIZE);
+        // bool_cipher_max_min_split(pIdx, x_mask_mat, y_mask_mat, max_mat, min_mat, enc, eval, runtime);
+        round = (size_t) ceil((unit_mask_len * dim) / (double)MAX_SENDING_SIZE);
+        last_len = unit_mask_len * dim - (round - 1) * MAX_SENDING_SIZE;
+        for(size_t i=0; i<round; i++){
+            size_t unit_len_ = (i == round - 1) ? last_len : MAX_SENDING_SIZE;
+            sbMatrix x_mask_part(unit_len_, BITSIZE);
+            sbMatrix y_mask_part(unit_len_, BITSIZE);
+            sbMatrix max_part(unit_len_, BITSIZE);
+            sbMatrix min_part(unit_len_, BITSIZE);
+
+            std::memcpy(x_mask_part.mShares[0].data(), x_mask_mat.mShares[0].data() + i * MAX_SENDING_SIZE, unit_len_ * sizeof(x_mask_mat.mShares[0](0, 0)));
+            std::memcpy(x_mask_part.mShares[1].data(), x_mask_mat.mShares[1].data() + i * MAX_SENDING_SIZE, unit_len_ * sizeof(x_mask_mat.mShares[1](0, 0)));
+            std::memcpy(y_mask_part.mShares[0].data(), y_mask_mat.mShares[0].data() + i * MAX_SENDING_SIZE, unit_len_ * sizeof(y_mask_mat.mShares[0](0, 0)));
+            std::memcpy(y_mask_part.mShares[1].data(), y_mask_mat.mShares[1].data() + i * MAX_SENDING_SIZE, unit_len_ * sizeof(y_mask_mat.mShares[1](0, 0)));
+
+            bool_cipher_max_min_split(pIdx, x_mask_part, y_mask_part, max_part, min_part, enc, eval, runtime);
+
+            std::memcpy(max_mat.mShares[0].data() + i * MAX_SENDING_SIZE, max_part.mShares[0].data(), unit_len_ * sizeof(max_part.mShares[0](0, 0)));
+            std::memcpy(max_mat.mShares[1].data() + i * MAX_SENDING_SIZE, max_part.mShares[1].data(), unit_len_ * sizeof(max_part.mShares[1](0, 0)));
+            std::memcpy(min_mat.mShares[0].data() + i * MAX_SENDING_SIZE, min_part.mShares[0].data(), unit_len_ * sizeof(min_part.mShares[0](0, 0)));
+            std::memcpy(min_mat.mShares[1].data() + i * MAX_SENDING_SIZE, min_part.mShares[1].data(), unit_len_ * sizeof(min_part.mShares[1](0, 0)));
+        }
+
+        // update the result.
+        for(size_t i=0; i<dim; i++){
+            for(size_t j=0; j<unit_mask_len; j++){
+                result[i].mShares[0](x_mask[j], 0) = min_mat.mShares[0](i*unit_mask_len + j, 0);
+                result[i].mShares[1](x_mask[j], 0) = min_mat.mShares[1](i*unit_mask_len + j, 0);
+                result[i].mShares[0](y_mask[j], 0) = max_mat.mShares[0](i*unit_mask_len + j, 0);
+                result[i].mShares[1](y_mask[j], 0) = max_mat.mShares[1](i*unit_mask_len + j, 0);
+            }
+        }
+
+        // update the d, r.
+        d = (size_t) (q - 1);
+        q = q >> 1;
+        r = 1;
+    }
+
+    sorted_res.resize(dim);
+    for(size_t i=0; i<dim; i++){
+        sorted_res[i].resize(arr1_length+arr2_length, BITSIZE);
+        for(size_t j=0; j<arr1_length+arr2_length; j++){
+            sorted_res[i].mShares[0](j, 0) = result[i].mShares[0](j, 0);
+            sorted_res[i].mShares[1](j, 0) = result[i].mShares[1](j, 0);
+        }
+    }
+
+    return 0;
+}
+
+int high_dimensional_odd_even_multi_merge(std::vector<std::vector<aby3::sbMatrix>> &data,std::vector<aby3::sbMatrix>& sorted_res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+
+    size_t dim = data.size();
+    size_t k = data[0].size(); // the number of data sets in each dimension.
+
+    while(k!=1){
+        if(k%2 != 0){
+            std::vector<aby3::sbMatrix> res;
+            std::vector<aby3::sbMatrix> data1(dim), data2(dim);
+            for(size_t i=0; i<dim; i++){
+                data1[i] = data[i][k-2];
+                data2[i] = data[i][k-1];
+            }
+            high_dimensional_odd_even_merge(data1, data2, res, pIdx, enc, eval, runtime);
+            for(size_t i=0; i<dim; i++){
+                data[i][k-2] = res[i];
+            }
+            k -=1;
+        }
+        else{
+            for(size_t i=0; i<k; i+=2){
+                std::vector<aby3::sbMatrix> res;
+                std::vector<aby3::sbMatrix> data1(dim), data2(dim);
+                for(size_t j=0; j<dim; j++){
+                    data1[j] = data[j][i];
+                    data2[j] = data[j][i+1];
+                }
+                high_dimensional_odd_even_merge(data1, data2, res, pIdx, enc, eval, runtime);
+                for(size_t j=0; j<dim; j++){
+                    data[j][i/2] = res[j];
+                }
+            }
+            k = k>>1;
+        }
+    }
+
+    // sorted_res = data1[0];
+    sorted_res.resize(dim);
+    for(size_t i=0; i<dim; i++){
+        sorted_res[i] = data[i][0];
+    }
+
     return 0;
 }

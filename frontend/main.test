@@ -20,11 +20,11 @@ int main(int argc, char** argv) {
 		bool_basic_test2(cmd);
 		get_first_zero_test(cmd);
 		bool_aggregation_test(cmd);
+		share_conversion_test(cmd);
 	}
 
 	if (cmd.isSet("Arith")){
 		arith_basic_test(cmd);
-		arith_basic_test2(cmd);
 	}
 
 	if (cmd.isSet("Init")){
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 
 	if(cmd.isSet("Shuffle")){
 		shuffle_test(cmd);
-		large_scale_shuffle_test(cmd);
+		// large_scale_shuffle_test(cmd); // large-scale test, costs at least 150GB+ memory.
 	}
 
 	if(cmd.isSet("ORAM")){
@@ -46,18 +46,13 @@ int main(int argc, char** argv) {
 		sqrt_oram_test(cmd);
 	}
 
-	if(cmd.isSet("Graph")){
-		graph_loading_test(cmd);
-	}
-
-	if(cmd.isSet("GraphQuery")){
-		graph_block_fetch_test(cmd);
-		basic_graph_query_test(cmd);
-	}
-
 	if(cmd.isSet("Sort")){
 		bc_sort_test(cmd);
+		bc_sort_corner_test(cmd);
+		bc_sort_multiple_times(cmd);
 		quick_sort_test(cmd);
+		// quick_sort_with_duplicate_elements_test(cmd); // too slow
+		odd_even_merge_test(cmd);
 	}
   return 0;
 }
