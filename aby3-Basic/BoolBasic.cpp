@@ -25,7 +25,6 @@ void bool_cipher_lt(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
 
     int bitSize = sharedA.bitCount();
     int i64Size = sharedA.i64Size();
-
     auto cir = lib.int_int_lt(bitSize, bitSize);
 
     binEng.setCir(cir, i64Size, eval.mShareGen);
@@ -314,6 +313,8 @@ void bool_cipher_max_min_split(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix
 
 void bool_cipher_not(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &res) {
     int i64Size = sharedA.i64Size();
+    int bitsize = sharedA.bitCount();
+    int inv_mask = (1 << bitsize) - 1;
 
     switch (pIdx) {
         case 0:
@@ -324,14 +325,16 @@ void bool_cipher_not(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &res) {
             break;
         case 1:
             for (size_t i = 0; i < i64Size; i++) {
-                res.mShares[0](i, 0) = ~sharedA.mShares[0](i, 0);
+                // res.mShares[0](i, 0) = ~sharedA.mShares[0](i, 0);
+                res.mShares[0](i, 0) = sharedA.mShares[0](i, 0) ^ inv_mask;
                 res.mShares[1](i, 0) = sharedA.mShares[1](i, 0);
             }
             break;
         case 2:
             for (size_t i = 0; i < i64Size; i++) {
                 res.mShares[0](i, 0) = sharedA.mShares[0](i, 0);
-                res.mShares[1](i, 0) = ~sharedA.mShares[1](i, 0);
+                // res.mShares[1](i, 0) = ~sharedA.mShares[1](i, 0);
+                res.mShares[1](i, 0) = sharedA.mShares[1](i, 0) ^ inv_mask;
             }
             break;
         default:

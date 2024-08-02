@@ -54,5 +54,11 @@ int main(int argc, char** argv) {
 		// quick_sort_with_duplicate_elements_test(cmd); // too slow
 		odd_even_merge_test(cmd);
 	}
+
+	if(cmd.isSet("Search")){
+		// constant_dot_test(cmd);
+		binary_search_test(cmd);
+	}
+
   return 0;
 }

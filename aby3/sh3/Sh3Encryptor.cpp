@@ -538,6 +538,7 @@ namespace aby3
     Sh3Task Sh3Encryptor::revealAll(Sh3Task dep, const sbMatrix& x, i64Matrix& dest)
     {
         reveal(dep, (mPartyIdx + 2) % 3, x);
+        dest.resize(x.rows(), x.i64Cols());
         return reveal(dep, x, dest);
     }
     Sh3Task Sh3Encryptor::reveal(Sh3Task dep, u64 partyIdx, const sbMatrix& x)

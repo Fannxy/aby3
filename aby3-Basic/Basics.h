@@ -369,7 +369,7 @@ void tag_append(int pIdx, std::vector<aby3::sbMatrix>& inputs);
 
 void tag_remove(int pIdx, size_t tag_len, std::vector<aby3::sbMatrix>& inputs);
 
-void constant_sint_dot(int pIdx, aby3::si64Matrix& A, aby3::si64Matrix& B, aby3::si64Matrix& res,
+void constant_sint_dot(int pIdx, std::vector<aby3::si64Matrix>& A, std::vector<aby3::si64Matrix>& B, aby3::si64Matrix& res,
               aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 #endif

@@ -103,23 +103,29 @@ aby3::i64Matrix back2plain(int pIdx, std::vector<aby3::si64>& cipher_val, aby3::
     return plain_mat;
 }
 
-void constant_sint_dot(int pIdx, aby3::si64Matrix& A, aby3::si64Matrix& B, aby3::si64Matrix& res,  aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
-    size_t len = A.rows();
-    if(len != B.rows()){
+void constant_sint_dot(int pIdx, std::vector<aby3::si64Matrix>& A, std::vector<aby3::si64Matrix>& B, aby3::si64Matrix& res,  aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+    size_t len = A[0].rows();
+    size_t res_len = A.size();
+    if(len != B[0].rows()){
+        THROW_RUNTIME_ERROR("The size of A and B must be the same!");
+    }
+    if(res_len != B.size()){
         THROW_RUNTIME_ERROR("The size of A and B must be the same!");
     }
 
     // compute all the local mul.
-    res.resize(1, 1);
-    res.mShares[0](0, 0) = A.mShares[0](0, 0) * B.mShares[0](0, 0);
-    for(size_t i=0; i<len; i++){
-        res.mShares[0](0, 0) += (A.mShares[0](i, 0) * B.mShares[0](i, 0));
+    res.resize(res_len, 1);
+    for(size_t i=0; i<res_len; i++){
+        res.mShares[0](i, 0) = A[i].mShares[0](0, 0) * B[i].mShares[0](0, 0) + A[i].mShares[0](0, 0) * B[i].mShares[1](0, 0) + A[i].mShares[1](0, 0) * B[i].mShares[0](0, 0);
+        for(size_t j=1; j<len; j++){
+            res.mShares[0](i, 0) += ((A[i].mShares[0](j, 0) * B[i].mShares[0](j, 0)) + (A[i].mShares[0](j, 0) * B[i].mShares[1](j, 0)) + (A[i].mShares[1](j, 0) * B[i].mShares[0](j, 0)));
+        }
     }
 
     // communication at the same time.
     runtime.mComm.mNext.asyncSendCopy(res.mShares[0].data(), res.mShares[0].size());
     auto fu = runtime.mComm.mPrev.asyncRecv(res.mShares[1].data(), res.mShares[1].size());
     fu.get();
-    
+
     return;
 }
