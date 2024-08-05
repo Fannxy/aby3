@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 	}
 
 	if(cmd.isSet("Search")){
-		// constant_dot_test(cmd);
+		constant_dot_test(cmd);
 		binary_search_test(cmd);
 	}
 

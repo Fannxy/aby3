@@ -7,6 +7,12 @@ int mcompBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMa
 
     // get the length.
     int n = keyset.size();
+    if(n == 1) {
+        boolShare le_res(1, pIdx);
+        res.mShares[0](0, 0) = le_res.bshares[0];
+        res.mShares[1](0, 0) = le_res.bshares[1];
+        return 0;
+    }
     int bitsize = keyset[0].bitCount();
 
     // comp key with keyset - can be compute in parallel.
@@ -162,7 +168,6 @@ int tagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
         THROW_RUNTIME_ERROR("Currently, the size of data should be power of 2!");
     }
     int logn = log2(n);
-
     // get the mid point.
     int p = n/2 - 1;
     sbMatrix c(1, 1);
@@ -173,18 +178,14 @@ int tagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
     si64Matrix pivot(1, 1);
     pivot.mShares[0](0, 0) = data[p].mShares[0](0, 0) - data[n-1].mShares[0](0, 0);
     pivot.mShares[1](0, 0) = data[p].mShares[1](0, 0) - data[n-1].mShares[1](0, 0);
-    eval.asyncMul(runtime, pivot, c, pivot).get();
-    pivot.mShares[0](0, 0) += data[n-1].mShares[0](0, 0);
-    pivot.mShares[1](0, 0) += data[n-1].mShares[1](0, 0);
+    si64Matrix _pivot(1, 1);
+    eval.asyncMul(runtime, pivot, c, _pivot).get();
+    pivot.mShares[0](0, 0) = _pivot.mShares[0](0, 0) + data[n-1].mShares[0](0, 0);
+    pivot.mShares[1](0, 0) = _pivot.mShares[1](0, 0) + data[n-1].mShares[1](0, 0);
 
     aby3::sbMatrix prev_tag(1, 1);
     prev_tag.mShares[0](0, 0) = q.bshares[0];
     prev_tag.mShares[1](0, 0) = q.bshares[1];
-
-    {
-        i64Matrix _pivot(1, 1);
-        enc.revealAll(runtime, pivot, _pivot).get();
-    }
 
     // log-round binary search.
     for(size_t i=1; i<logn; i++){
@@ -263,17 +264,74 @@ int tagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
     return 0;
 }
 
-int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::si64Matrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime, int alpha, int beta){
+int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::si64Matrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime, int alpha){
     int n = data.size();
     int bitsize = keyset[0].bitCount();
+    int beta = n / alpha;
     if(alpha * beta != n) THROW_RUNTIME_ERROR("The size of data should be alpha * beta!");
 
-    // construct the upper-level tree.
-    // call MBS.
 
-    // constant inner product.
+    // construct the upper-level tree.
+    std::vector<sbMatrix> keyset_upper;
+    for(size_t i=0; i<alpha; i++){
+        keyset_upper.push_back(keyset[i*beta + (beta-1)]);
+    }
+
+    // call MBS.
+    aby3::sbMatrix res_upper(alpha, 1); // alpha * 1
+    mcompBS(keyset_upper, key, res_upper, pIdx, enc, eval, runtime);
+    // b2a
+    aby3::si64Matrix all_ones(alpha, 1);
+    init_ones(pIdx, enc, runtime, all_ones, alpha);
+    aby3::si64Matrix res_upper_a(alpha, 1);
+    eval.asyncMul(runtime, all_ones, res_upper, res_upper_a).get();
+
+    // constant inner product for data.
+    std::vector<si64Matrix> data_lowers(beta);
+    std::vector<si64Matrix> tag_lowers(beta);
+    si64Matrix data_res(beta, 1);
+    for(size_t i=0; i<beta; i++){
+        tag_lowers[i] = res_upper_a;
+        data_lowers[i].resize(alpha, 1);
+        for(size_t j=0; j<alpha; j++){
+            data_lowers[i].mShares[0](j, 0) = data[j*beta + i].mShares[0](0, 0);
+            data_lowers[i].mShares[1](j, 0) = data[j*beta + i].mShares[1](0, 0);
+        }
+    }
+    constant_sint_dot(pIdx, data_lowers, tag_lowers, data_res, enc, eval, runtime);
+
+
+    // constant inner product for key.
+    std::vector<sbMatrix> key_lowers(beta);
+    std::vector<sbMatrix> keytag_lowers(beta);
+    sbMatrix key_res(beta, bitsize);
+    for(size_t i=0; i<beta; i++){
+        // keytag_lowers[i] = res_upper;
+        key_lowers[i].resize(alpha, bitsize);
+        keytag_lowers[i].resize(alpha, bitsize);
+        for(size_t j=0; j<alpha; j++){
+            key_lowers[i].mShares[0](j, 0) = keyset[j*beta + i].mShares[0](0, 0);
+            key_lowers[i].mShares[1](j, 0) = keyset[j*beta + i].mShares[1](0, 0);
+            keytag_lowers[i].mShares[0](j, 0) = (res_upper.mShares[0](j, 0) == 1) ? -1 : 0;
+            keytag_lowers[i].mShares[1](j, 0) = (res_upper.mShares[1](j, 0) == 1) ? -1 : 0;
+        }
+    }
+    constant_bool_dot(pIdx, key_lowers, keytag_lowers, key_res, enc, eval, runtime);
 
     // call BS.
+    std::vector<si64Matrix> data_to_be_search(beta);
+    std::vector<sbMatrix> keyset_to_be_search(beta);
+
+    for(size_t i=0; i<beta; i++){
+        data_to_be_search[i].resize(1, 1);
+        keyset_to_be_search[i].resize(1, bitsize);
+        data_to_be_search[i].mShares[0](0, 0) = data_res.mShares[0](i, 0);
+        data_to_be_search[i].mShares[1](0, 0) = data_res.mShares[1](i, 0);
+        keyset_to_be_search[i].mShares[0](0, 0) = key_res.mShares[0](i, 0);
+        keyset_to_be_search[i].mShares[1](0, 0) = key_res.mShares[1](i, 0);
+    }
+
+    tagBS(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime);
 
     return 0;
 }

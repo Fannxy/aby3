@@ -1043,3 +1043,40 @@ void plain_permutate(std::vector<size_t> &permutation, aby3::i64Matrix &data){
     data = res;
     return;
 }
+
+void bool_half_and(int pIdx, aby3::sbMatrix &inputA, aby3::sbMatrix &inputB, aby3::sbMatrix &res){
+    size_t len = inputA.rows();
+    size_t bitsize = inputA.bitCount();
+    res.resize(len, bitsize);
+    for(size_t i=0; i<len; i++){
+        res.mShares[0](i, 0) = (inputA.mShares[0](i, 0) & inputB.mShares[0](i, 0)) ^ (inputA.mShares[1](i, 0) & inputB.mShares[0](i, 0)) ^ (inputA.mShares[0](i, 0) & inputB.mShares[1](i, 0));
+    }
+    // res.mShares[1].setZero();
+
+    return;
+}
+
+void constant_bool_dot(int pIdx, std::vector<sbMatrix>& A, std::vector<sbMatrix>& B, sbMatrix& res,
+              aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+    
+    int len = A[0].rows();
+    int res_len = A.size();
+    int bitsize = A[0].bitCount();
+
+    res.resize(res_len, bitsize);
+    // half gate.
+    for(int i=0; i<res_len; i++){
+        sbMatrix _res(len, bitsize);
+        bool_half_and(pIdx, A[i], B[i], _res);
+        res.mShares[0](i, 0) = _res.mShares[0](0, 0);
+        for(int j=1; j<len; j++){
+            res.mShares[0](i, 0) ^= _res.mShares[0](j, 0);
+        }
+    }
+
+    runtime.mComm.mNext.asyncSendCopy(res.mShares[0].data(), res.mShares[0].size());
+    auto fu = runtime.mComm.mPrev.asyncRecv(res.mShares[1].data(), res.mShares[1].size());
+    fu.get();
+
+    return;
+}

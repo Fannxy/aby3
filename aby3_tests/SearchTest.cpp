@@ -21,12 +21,15 @@ int constant_dot_test(oc::CLP& cmd){
     // compute the dot product of two n*m matrices.
     i64Matrix a(n*m, 1), b(n*m, 1);
     i64Matrix ref_res(n, 1);
+    i64Matrix ref_res_bool(n, 1);
     for(int i = 0; i < n; ++i){
         ref_res(i, 0) = 0;
+        ref_res_bool(i, 0) = 0;
         for(int j = 0; j < m; ++j){
             a(i*m + j, 0) = i + j;
             b(i*m + j, 0) = i + j;
             ref_res(i, 0) += (i + j) * (i + j);
+            ref_res_bool(i, 0) ^= (i + j) & (i + j);
         }
     }
     
@@ -52,18 +55,47 @@ int constant_dot_test(oc::CLP& cmd){
         }
     }
 
+    // generate the ciphertext data for bool vase.
+    sbMatrix enc_a_bool(n*m, 64), enc_b_bool(n*m, 64);
+    if(role == 0){
+        enc.localBinMatrix(runtime, a, enc_a_bool).get();
+        enc.localBinMatrix(runtime, b, enc_b_bool).get();
+    }
+    else{
+        enc.remoteBinMatrix(runtime, enc_a_bool).get();
+        enc.remoteBinMatrix(runtime, enc_b_bool).get();
+    }
+    std::vector<sbMatrix> enc_a_vec_bool(n);
+    std::vector<sbMatrix> enc_b_vec_bool(n);
+    for(int i = 0; i < n; ++i){
+        enc_a_vec_bool[i].resize(m, 16); enc_b_vec_bool[i].resize(m, 16);
+        for(int j=0; j<m; j++){
+            enc_a_vec_bool[i].mShares[0](j, 0) = enc_a_bool.mShares[0](i*m + j, 0);
+            enc_a_vec_bool[i].mShares[1](j, 0) = enc_a_bool.mShares[1](i*m + j, 0);
+            enc_b_vec_bool[i].mShares[0](j, 0) = enc_b_bool.mShares[0](i*m + j, 0);
+            enc_b_vec_bool[i].mShares[1](j, 0) = enc_b_bool.mShares[1](i*m + j, 0);
+        }
+    }
+
 
     // compute the dot product.
     si64Matrix enc_res(n, 1);
     constant_sint_dot(role, enc_a_vec, enc_b_vec, enc_res, enc, eval, runtime);
 
+    // compute the dot product for the bool case.
+    sbMatrix enc_res_bool(n, 64);
+    constant_bool_dot(role, enc_a_vec_bool, enc_b_vec_bool, enc_res_bool, enc, eval, runtime);
+
     // decrypt the result.
     i64Matrix res;
     enc.revealAll(runtime, enc_res, res).get();
+    i64Matrix res_bool;
+    enc.revealAll(runtime, enc_res_bool, res_bool).get();
 
     // check the result.
     if(role == 0){
         bool check_flag = check_result("Sint dot", res, ref_res);
+        check_flag = check_result("Bool dot", res_bool, ref_res_bool);
     }
 
     return 0;
@@ -152,6 +184,14 @@ int binary_search_test(oc::CLP& cmd){
     enc.revealAll(runtime, res_mat2, res2).get();
     if(role == 0){
         bool check_flag = check_result("tagBS", res2, ref_res);
+    }
+
+    int alpha = sqrtToPowerOfTwo(n);
+    // if(role == 0) debug_info("n = " + std::to_string(n) + " alpha = " + std::to_string(alpha) + " key = " + std::to_string(n-2));
+    subHBS(data, keyset, key_mat, res_mat2, role, enc, eval, runtime, alpha);
+    enc.revealAll(runtime, res_mat2, res2).get();
+    if(role == 0){
+        bool check_flag = check_result("subHBS", res2, ref_res);    
     }
 
     return 0;

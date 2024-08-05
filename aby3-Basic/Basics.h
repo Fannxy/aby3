@@ -25,6 +25,14 @@ inline size_t roundUpToPowerOfTwo(size_t num) {
     return (size_t) pow(2, ceil(log2(num)));
 }
 
+inline int sqrtToPowerOfTwo(int x) {
+    assert(x > 0 && (x & (x - 1)) == 0); 
+
+    int log2Value = std::log2(x);
+    int sqrtLog2Value = log2Value / 2;
+    return 1 << sqrtLog2Value;
+}
+
 struct boolShare {
     std::array<bool, 2> bshares;
 
@@ -370,6 +378,12 @@ void tag_append(int pIdx, std::vector<aby3::sbMatrix>& inputs);
 void tag_remove(int pIdx, size_t tag_len, std::vector<aby3::sbMatrix>& inputs);
 
 void constant_sint_dot(int pIdx, std::vector<aby3::si64Matrix>& A, std::vector<aby3::si64Matrix>& B, aby3::si64Matrix& res,
+              aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+
+void bool_half_and(int pIdx, aby3::sbMatrix &inputA, aby3::sbMatrix &inputB, aby3::sbMatrix &res);
+
+void constant_bool_dot(int pIdx, std::vector<aby3::sbMatrix>& A, std::vector<aby3::sbMatrix>& B, aby3::sbMatrix& res,
               aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 #endif
