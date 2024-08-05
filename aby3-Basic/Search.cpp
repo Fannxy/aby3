@@ -3,6 +3,7 @@
 using namespace oc;
 using namespace aby3;
 
+
 int mcompBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMatrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
 
     // get the length.
@@ -69,7 +70,8 @@ int compBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &key
     // compute the result.
     res.resize(1, 1);
     aby3::si64Matrix res_tmp(n, 1);
-    eval.asyncMul(runtime, data_mat, comp_flag, res_tmp).get();
+    // eval.asyncMul(runtime, data_mat, comp_flag, res_tmp).get();
+    arith_bool_mul(pIdx, data_mat, comp_flag, res_tmp, enc, eval, runtime);
 
     res.mShares[0](0, 0) = res_tmp.mShares[0](0, 0);
     res.mShares[1](0, 0) = res_tmp.mShares[1](0, 0);
@@ -80,8 +82,8 @@ int compBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &key
     return 0;
 }
 
-int mtagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMatrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
-    int n = data.size();
+int mtagBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMatrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+    int n = keyset.size();
     int bitsize = keyset[0].bitCount();
 
     if(checkPowerOfTwo(n) == false){
@@ -115,15 +117,19 @@ int mtagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &key
             keytag.mShares[0](j, 0) = (tag.mShares[0](j, 0) == 1) ? -1 : 0;
             keytag.mShares[1](j, 0) = (tag.mShares[1](j, 0) == 1) ? -1 : 0;
         }
-        bool_cipher_and(pIdx, keymat, keytag, res_key_tmp, enc, eval, runtime);
+        // bool_cipher_and(pIdx, keymat, keytag, res_key_tmp, enc, eval, runtime);
 
         aby3::sbMatrix akey(1, bitsize);
-        akey.mShares[0](0, 0) = res_key_tmp.mShares[0](0, 0);
-        akey.mShares[1](0, 0) = res_key_tmp.mShares[1](0, 0);
-        for(size_t j=1; j<tag_size; j++){
-            akey.mShares[0](0, 0) ^= res_key_tmp.mShares[0](j, 0);
-            akey.mShares[1](0, 0) ^= res_key_tmp.mShares[1](j, 0);
-        }
+        // akey.mShares[0](0, 0) = res_key_tmp.mShares[0](0, 0);
+        // akey.mShares[1](0, 0) = res_key_tmp.mShares[1](0, 0);
+        // for(size_t j=1; j<tag_size; j++){
+        //     akey.mShares[0](0, 0) ^= res_key_tmp.mShares[0](j, 0);
+        //     akey.mShares[1](0, 0) ^= res_key_tmp.mShares[1](j, 0);
+        // }
+
+        std::vector<sbMatrix> enc_key_mat = {keymat};
+        std::vector<sbMatrix> enc_key_tag = {keytag};
+        constant_bool_dot(pIdx, enc_key_mat, enc_key_tag, akey, enc, eval, runtime);
 
         bool_cipher_lt(pIdx, akey, key, c, enc, eval, runtime);
         bool_cipher_not(pIdx, c, c);
@@ -179,7 +185,7 @@ int tagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
     pivot.mShares[0](0, 0) = data[p].mShares[0](0, 0) - data[n-1].mShares[0](0, 0);
     pivot.mShares[1](0, 0) = data[p].mShares[1](0, 0) - data[n-1].mShares[1](0, 0);
     si64Matrix _pivot(1, 1);
-    eval.asyncMul(runtime, pivot, c, _pivot).get();
+    arith_bool_mul(pIdx, pivot, c, _pivot, enc, eval, runtime);
     pivot.mShares[0](0, 0) = _pivot.mShares[0](0, 0) + data[n-1].mShares[0](0, 0);
     pivot.mShares[1](0, 0) = _pivot.mShares[1](0, 0) + data[n-1].mShares[1](0, 0);
 
@@ -231,21 +237,26 @@ int tagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
         // compute the result.
         aby3::si64Matrix res_tmp(tag_size, 1);
         aby3::sbMatrix res_key_tmp(tag_size, bitsize);
-        eval.asyncMul(runtime, data_mat, tag, res_tmp).get();
-        bool_cipher_and(pIdx, key_mat, keytag, res_key_tmp, enc, eval, runtime);
+        arith_bool_mul(pIdx, data_mat, tag, res_tmp, enc, eval, runtime);
+        // bool_cipher_and(pIdx, key_mat, keytag, res_key_tmp, enc, eval, runtime);
         
         aby3::si64Matrix a(1, 1);
         aby3::sbMatrix akey(1, bitsize);
         a.mShares[0](0, 0) = res_tmp.mShares[0](0, 0);
         a.mShares[1](0, 0) = res_tmp.mShares[1](0, 0);
-        akey.mShares[0](0, 0) = res_key_tmp.mShares[0](0, 0);
-        akey.mShares[1](0, 0) = res_key_tmp.mShares[1](0, 0);
+        // akey.mShares[0](0, 0) = res_key_tmp.mShares[0](0, 0);
+        // akey.mShares[1](0, 0) = res_key_tmp.mShares[1](0, 0);
         for(size_t j=1; j<tag_size; j++){
             a.mShares[0](0, 0) += res_tmp.mShares[0](j, 0);
             a.mShares[1](0, 0) += res_tmp.mShares[1](j, 0);
-            akey.mShares[0](0, 0) ^= res_key_tmp.mShares[0](j, 0);
-            akey.mShares[1](0, 0) ^= res_key_tmp.mShares[1](j, 0);
+            // akey.mShares[0](0, 0) ^= res_key_tmp.mShares[0](j, 0);
+            // akey.mShares[1](0, 0) ^= res_key_tmp.mShares[1](j, 0);
         }
+
+        std::vector<sbMatrix> enc_key_mat = {key_mat};
+        std::vector<sbMatrix> enc_key_tag = {keytag};
+        constant_bool_dot(pIdx, enc_key_mat, enc_key_tag, akey, enc, eval, runtime);
+
         // update the pivot and the comp to the next level.
         bool_cipher_lt(pIdx, akey, key, c, enc, eval, runtime);
         bool_cipher_not(pIdx, c, c);
@@ -253,7 +264,7 @@ int tagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
         aby3::si64Matrix pivot_tmp(1, 1);
         pivot_tmp.mShares[0](0, 0) = a.mShares[0](0, 0) - pivot.mShares[0](0, 0);
         pivot_tmp.mShares[1](0, 0) = a.mShares[1](0, 0) - pivot.mShares[1](0, 0);
-        eval.asyncMul(runtime, pivot_tmp, c, a).get();
+        arith_bool_mul(pIdx, pivot_tmp, c, a, enc, eval, runtime);
         pivot.mShares[0](0, 0) += a.mShares[0](0, 0);
         pivot.mShares[1](0, 0) += a.mShares[1](0, 0);
     }
@@ -264,12 +275,15 @@ int tagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
     return 0;
 }
 
-int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::si64Matrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime, int alpha){
+int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::si64Matrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime, int alpha, int threshold){
     int n = data.size();
     int bitsize = keyset[0].bitCount();
     int beta = n / alpha;
     if(alpha * beta != n) THROW_RUNTIME_ERROR("The size of data should be alpha * beta!");
 
+    if(n < threshold){
+        return compBS(data, keyset, key, res, pIdx, enc, eval, runtime);
+    }
 
     // construct the upper-level tree.
     std::vector<sbMatrix> keyset_upper;
@@ -284,7 +298,8 @@ int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &key
     aby3::si64Matrix all_ones(alpha, 1);
     init_ones(pIdx, enc, runtime, all_ones, alpha);
     aby3::si64Matrix res_upper_a(alpha, 1);
-    eval.asyncMul(runtime, all_ones, res_upper, res_upper_a).get();
+    // eval.asyncMul(runtime, all_ones, res_upper, res_upper_a).get();
+    arith_bool_mul(pIdx, all_ones, res_upper, res_upper_a, enc, eval, runtime);
 
     // constant inner product for data.
     std::vector<si64Matrix> data_lowers(beta);
@@ -331,7 +346,9 @@ int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &key
         keyset_to_be_search[i].mShares[1](0, 0) = key_res.mShares[1](i, 0);
     }
 
-    tagBS(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime);
+    // tagBS(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime);
+    int sub_alpha = sqrtToPowerOfTwo(beta);
+    subHBS(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime, sub_alpha);
 
     return 0;
 }

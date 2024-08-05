@@ -10,8 +10,24 @@
 #include "../aby3-RTR/debug.h"
 #include "assert.h"
 
+
 #ifndef _ABY3_BASICS_H_
 #define _ABY3_BASICS_H_
+
+#define BASIC_INIT \ 
+    int role = -1; \
+    if (cmd.isSet("role")) { \
+        auto keys = cmd.getMany<int>("role"); \
+        role = keys[0]; \
+    } \
+    if (role == -1) { \
+        throw std::runtime_error(LOCATION); \
+    } \
+    IOService ios; \
+    Sh3Encryptor enc; \
+    Sh3Evaluator eval; \
+    Sh3Runtime runtime; \
+    basic_setup((u64)role, ios, enc, eval, runtime); \
 
 static int BITSIZE = 64;
 
@@ -140,7 +156,11 @@ struct boolIndex {
     }
 
     aby3::sbMatrix to_matrix() {
-        aby3::sbMatrix res(1, BITSIZE);
+        return to_matrix(BITSIZE);
+    }
+
+    aby3::sbMatrix to_matrix(int bitsize) {
+        aby3::sbMatrix res(1, bitsize);
         res.mShares[0](0, 0) = indexShares[0];
         res.mShares[1](0, 0) = indexShares[1];
         return res;
@@ -205,6 +225,13 @@ int large_data_encryption(int pIdx, aby3::i64Matrix &plainA, aby3::sbMatrix &sha
 int large_data_decryption(int pIdx, aby3::sbMatrix &sharedA, aby3::i64Matrix &plainA,
                           aby3::Sh3Encryptor &enc, aby3::Sh3Runtime &runtime);
 
+int large_data_encryption(int pIdx, aby3::i64Matrix &plainA, aby3::si64Matrix &sharedA,
+                          aby3::Sh3Encryptor &enc, aby3::Sh3Runtime &runtime);
+
+void unit_bool_cipher_lt(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                         aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                         aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+
 void bool_cipher_lt(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
@@ -232,6 +259,10 @@ void bool_cipher_add(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
 void bool_cipher_sub(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
                      aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+
+void unit_bool_cipher_and(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                          aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                          aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 
 void bool_cipher_and(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
                      aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
@@ -299,6 +330,9 @@ void bool_shift_and_left(int pIdx, aby3::sbMatrix &sharedA, size_t shift_len,
 
 void bool_shift_and_left(int pIdx, boolIndex &sharedA, size_t shift_len,
                          boolIndex &res_shift, boolIndex &res_left);
+
+
+void arith_bool_mul(int pIdx, aby3::si64Matrix &sharedA, aby3::sbMatrix &sharedB, aby3::si64Matrix &res, aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 
 
 // TODO: support various functions.

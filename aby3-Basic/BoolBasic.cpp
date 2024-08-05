@@ -13,13 +13,14 @@
 #include "Basics.h"
 
 #define DEBUG_BASIC
+static const size_t MAX_UNIT_SIZE = 1 << 25;
 
 using namespace oc;
 using namespace aby3;
 
-void bool_cipher_lt(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
+void unit_bool_cipher_lt(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
                     sbMatrix &res, Sh3Encryptor &enc, Sh3Evaluator &eval,
-                    Sh3Runtime &runtime) {
+                    Sh3Runtime &runtime){
     Sh3BinaryEvaluator binEng;
     CircuitLibrary lib;
 
@@ -36,6 +37,36 @@ void bool_cipher_lt(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
         binEng.getOutput(0, res);
     });
     dep.get();
+    return;
+}
+
+void bool_cipher_lt(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
+                    sbMatrix &res, Sh3Encryptor &enc, Sh3Evaluator &eval,
+                    Sh3Runtime &runtime) {
+    size_t len = sharedA.rows();
+    size_t bitsize = sharedA.bitCount();
+    size_t round = (size_t)ceil(len / (double)MAX_UNIT_SIZE);
+    size_t last_len = len - (round - 1) * MAX_UNIT_SIZE;
+    res.resize(len, 1);
+
+    for(size_t i=0; i<round; i++){
+        size_t sending_len = (i == round - 1) ? last_len : MAX_UNIT_SIZE;
+        aby3::sbMatrix _a(sending_len, bitsize);
+        aby3::sbMatrix _b(sending_len, bitsize);
+
+        std::memcpy(_a.mShares[0].data(), sharedA.mShares[0].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedA.mShares[0](0, 0)));
+        std::memcpy(_a.mShares[1].data(), sharedA.mShares[1].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedA.mShares[1](0, 0)));
+        std::memcpy(_b.mShares[0].data(), sharedB.mShares[0].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedB.mShares[0](0, 0)));
+        std::memcpy(_b.mShares[1].data(), sharedB.mShares[1].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedB.mShares[1](0, 0)));
+
+        aby3::sbMatrix _res(sending_len, 1);
+        unit_bool_cipher_lt(pIdx, _a, _b, _res, enc, eval, runtime);
+
+        std::memcpy(res.mShares[0].data() + i * MAX_UNIT_SIZE, _res.mShares[0].data(), sending_len * sizeof(_res.mShares[0](0, 0)));
+        std::memcpy(res.mShares[1].data() + i * MAX_UNIT_SIZE, _res.mShares[1].data(), sending_len * sizeof(_res.mShares[1](0, 0)));
+    }
+
+    return;
 }
 
 void bool_cipher_eq(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
@@ -183,9 +214,9 @@ void bool_cipher_sub(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
     dep.get();
 }
 
-void bool_cipher_and(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
-                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
-                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime) {
+void unit_bool_cipher_and(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                          aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                          aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime){
     Sh3BinaryEvaluator binEng;
     CircuitLibrary lib;
 
@@ -203,6 +234,35 @@ void bool_cipher_and(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
         binEng.getOutput(0, res);
     });
     dep.get();
+
+    return;
+}
+
+void bool_cipher_and(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
+                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime) {
+    size_t len = sharedA.rows();
+    size_t bitsize = sharedA.bitCount();
+    size_t round = (size_t)ceil(len / (double)MAX_UNIT_SIZE);
+    size_t last_len = len - (round - 1) * MAX_UNIT_SIZE;
+    res.resize(len, 1);
+
+    for(size_t i=0; i<round; i++){
+        size_t sending_len = (i == round - 1) ? last_len : MAX_UNIT_SIZE;
+        aby3::sbMatrix _a(sending_len, bitsize);
+        aby3::sbMatrix _b(sending_len, bitsize);
+
+        std::memcpy(_a.mShares[0].data(), sharedA.mShares[0].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedA.mShares[0](0, 0)));
+        std::memcpy(_a.mShares[1].data(), sharedA.mShares[1].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedA.mShares[1](0, 0)));
+        std::memcpy(_b.mShares[0].data(), sharedB.mShares[0].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedB.mShares[0](0, 0)));
+        std::memcpy(_b.mShares[1].data(), sharedB.mShares[1].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedB.mShares[1](0, 0)));
+
+        aby3::sbMatrix _res(sending_len, 1);
+        unit_bool_cipher_and(pIdx, _a, _b, _res, enc, eval, runtime);
+
+        std::memcpy(res.mShares[0].data() + i * MAX_UNIT_SIZE, _res.mShares[0].data(), sending_len * sizeof(_res.mShares[0](0, 0)));
+        std::memcpy(res.mShares[1].data() + i * MAX_UNIT_SIZE, _res.mShares[1].data(), sending_len * sizeof(_res.mShares[1](0, 0)));
+    }
 
     return;
 }
@@ -1077,6 +1137,35 @@ void constant_bool_dot(int pIdx, std::vector<sbMatrix>& A, std::vector<sbMatrix>
     runtime.mComm.mNext.asyncSendCopy(res.mShares[0].data(), res.mShares[0].size());
     auto fu = runtime.mComm.mPrev.asyncRecv(res.mShares[1].data(), res.mShares[1].size());
     fu.get();
+
+    return;
+}
+
+void arith_bool_mul(int pIdx, aby3::si64Matrix &sharedA, aby3::sbMatrix &sharedB, aby3::si64Matrix &res, aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime){
+    size_t len = sharedA.rows();
+    size_t bitsize = sharedB.bitCount();
+
+    size_t round = (size_t)ceil(len / (double)MAX_UNIT_SIZE);
+    size_t last_len = len - (round - 1) * MAX_UNIT_SIZE;
+    res.resize(len, 1);
+
+    for(size_t i=0; i<round; i++){
+        size_t sending_len = (i == round - 1) ? last_len : MAX_UNIT_SIZE;
+        aby3::si64Matrix _a(sending_len, 1);
+        aby3::sbMatrix _b(sending_len, bitsize);
+
+        std::memcpy(_a.mShares[0].data(), sharedA.mShares[0].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedA.mShares[0](0, 0)));
+        std::memcpy(_a.mShares[1].data(), sharedA.mShares[1].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedA.mShares[1](0, 0)));
+        std::memcpy(_b.mShares[0].data(), sharedB.mShares[0].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedB.mShares[0](0, 0)));
+        std::memcpy(_b.mShares[1].data(), sharedB.mShares[1].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedB.mShares[1](0, 0)));
+
+        aby3::si64Matrix _res(sending_len, 1);
+        // (pIdx, _a, _b, _res, enc, eval, runtime);
+        eval.asyncMul(runtime, _a, _b, _res).get();
+
+        std::memcpy(res.mShares[0].data() + i * MAX_UNIT_SIZE, _res.mShares[0].data(), sending_len * sizeof(_res.mShares[0](0, 0)));
+        std::memcpy(res.mShares[1].data() + i * MAX_UNIT_SIZE, _res.mShares[1].data(), sending_len * sizeof(_res.mShares[1](0, 0)));
+    }
 
     return;
 }

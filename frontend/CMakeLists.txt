@@ -21,6 +21,7 @@ target_link_libraries(frontend oc::tests_cryptoTools)
 target_link_libraries(frontend aby3-RTR)
 target_link_libraries(frontend aby3-Basic)
 target_link_libraries(frontend aby3-GraphQuery)
+target_link_libraries(frontend aby3-Benchmark)
 
 find_package(MPI REQUIRED)  
 target_link_libraries(frontend MPI::MPI_CXX)

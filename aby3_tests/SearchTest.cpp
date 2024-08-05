@@ -109,7 +109,7 @@ int binary_search_test(oc::CLP& cmd){
     }
 
     // prepare the test data, keyset, data, input key.
-    int n = 1 << 3;
+    int n = 1 << 8;
     std::vector<sbMatrix> keyset(n);
     std::vector<si64Matrix> data(n);
 
@@ -164,7 +164,7 @@ int binary_search_test(oc::CLP& cmd){
     }
 
     // test the mBSs, mtagBS.
-    mtagBS(data, keyset, key_mat, res_mat, role, enc, eval, runtime);
+    mtagBS(keyset, key_mat, res_mat, role, enc, eval, runtime);
     enc.revealAll(runtime, res_mat, res).get();
     if(role == 0){
         bool check_flag = check_result("mtagBS", res, ref_mres);
@@ -187,7 +187,6 @@ int binary_search_test(oc::CLP& cmd){
     }
 
     int alpha = sqrtToPowerOfTwo(n);
-    // if(role == 0) debug_info("n = " + std::to_string(n) + " alpha = " + std::to_string(alpha) + " key = " + std::to_string(n-2));
     subHBS(data, keyset, key_mat, res_mat2, role, enc, eval, runtime, alpha);
     enc.revealAll(runtime, res_mat2, res2).get();
     if(role == 0){

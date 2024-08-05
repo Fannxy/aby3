@@ -150,6 +150,14 @@ void multi_processor_setup(u64 partyIdx, int rank, IOService &ios, Sh3Encryptor 
 }
 #endif
 
+#ifndef LOCAL_TEST
+void basic_setup(u64 partyIdx, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &eval,
+           Sh3Runtime &runtime) {
+  distribute_setup(partyIdx, ios, enc, eval, runtime);
+}
+#endif
+
+#ifdef LOCAL_TEST
 void basic_setup(u64 partyIdx, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &eval,
            Sh3Runtime &runtime) {
   CommPkg comm;
@@ -180,6 +188,7 @@ void basic_setup(u64 partyIdx, IOService &ios, Sh3Encryptor &enc, Sh3Evaluator &
     // Copies the Channels and will use them for later protcols.
     runtime.init(partyIdx, comm);
 }
+#endif
 
 
 int vector_mean_square(int pIdx, const std::vector<aby3::si64>&sharedA, const std::vector<aby3::si64>&sharedB, std::vector<aby3::si64>&res, Sh3Evaluator &eval, Sh3Encryptor& enc, Sh3Runtime &runtime){
