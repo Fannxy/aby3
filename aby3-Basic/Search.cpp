@@ -281,7 +281,10 @@ int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &key
     int beta = n / alpha;
     if(alpha * beta != n) THROW_RUNTIME_ERROR("The size of data should be alpha * beta!");
 
+    if(pIdx == 0) debug_info("threshold = " + std::to_string(threshold));
+
     if(n < threshold){
+        if(pIdx == 0) debug_info("In inner round n = " + std::to_string(n) + " - threshold = " + std::to_string(threshold));
         return compBS(data, keyset, key, res, pIdx, enc, eval, runtime);
     }
 
@@ -346,7 +349,7 @@ int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &key
     }
 
     int sub_alpha = sqrtToPowerOfTwo(beta);
-    return subHBS(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime, sub_alpha);
+    return subHBS(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime, sub_alpha, threshold);
 }
 
 int ptaBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::si64Matrix &res, ABY3MPITask<aby3::sb64, aby3::sb64, aby3::si64, aby3::si64, PtABS>* ptaTask){
