@@ -51,6 +51,8 @@ int main(int argc, char** argv) {
     correctness_max_pta(cmd);
     MPI_Barrier(MPI_COMM_WORLD);
     correctness_metric_pta(cmd);
+    MPI_Barrier(MPI_COMM_WORLD);
+    correctness_search_pta(cmd);
   }
 
   if(cmd.isSet("task_profile")){
