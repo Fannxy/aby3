@@ -134,6 +134,11 @@ void binary_search_benchmark(oc::CLP& cmd){
         timer.start("subH");
         subHBS(data, key, target_key, result_data, role, enc, eval, runtime, alpha, threshold);
         timer.end("subH");
+
+        if(role == 0){
+            std::ofstream stream(record_file, std::ios::app);
+            stream << "alpha: " << alpha << ", threshold: " << threshold << std::endl;  
+        }
     }
 
     // print the results.
