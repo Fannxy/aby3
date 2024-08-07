@@ -49,6 +49,8 @@ extern void debug_output_matrix(aby3::si64Matrix& problem_mat, aby3::Sh3Runtime&
 
 extern void debug_output_matrix(aby3::i64Matrix& problem_mat);
 
+extern void debug_output_matrix_mpi(int pIdx, int rank, aby3::i64Matrix& problem_mat);
+
 extern void debug_output_matrix(aby3::sbMatrix& problem_mat, aby3::Sh3Runtime& runtime, aby3::Sh3Encryptor &enc, int pIdx, aby3::Sh3Evaluator& eval);
 
 template <aby3::Decimal D>

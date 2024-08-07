@@ -60,5 +60,11 @@ int main(int argc, char** argv) {
 		binary_search_test(cmd);
 	}
 
+	if(cmd.isSet("MPI-Search")){
+		MPI_Init(&argc, &argv);
+		correctness_search_pta(cmd);
+		MPI_Finalize();
+	}
+
   return 0;
 }
