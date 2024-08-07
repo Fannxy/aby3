@@ -195,3 +195,4 @@ int binary_search_test(oc::CLP& cmd){
 
     return 0;
 }
+

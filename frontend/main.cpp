@@ -3,69 +3,70 @@
 #include <tests_cryptoTools/UnitTests.h>
 #include <map>
 #include <mpi.h>
-#include "aby3-RTR/PtATests.h"
-#include "aby3-RTR/PtAProfile.h"
-#include "eric.h"
 #include "aby3_tests/Test.h"
+#include "aby3_tests/aby3_tests.h"
+#include "eric.h"
 
 using namespace oc;
 using namespace aby3;
 
 int main(int argc, char** argv) {
   oc::CLP cmd(argc, argv);
+  // reinit the environment and then finalize the environment.
 
-  MPI_Init(&argc, &argv);
+  // set the role for this process.
+	if (cmd.isSet("Bool")){
+		bool_basic_test(cmd);
+		bool_basic_test2(cmd);
+		get_first_zero_test(cmd);
+		bool_aggregation_test(cmd);
+		share_conversion_test(cmd);
+	}
 
-  if(cmd.isSet("cipher_index")) {
-	  test_cipher_index_pta(cmd);
-  }
+	if (cmd.isSet("Arith")){
+		arith_basic_test(cmd);
+	}
 
-  if(cmd.isSet("max")){
-    test_max_pta(cmd);
-  }
+	if (cmd.isSet("Init")){
+		initialization_test(cmd);
+		correlation_test(cmd);
+	}
 
-  if(cmd.isSet("sort")){
-    test_sort_pta(cmd);
-  }
+	if(cmd.isSet("Comm")){
+		communication_test(cmd);
+	}
 
-  if(cmd.isSet("sum")){
-    test_sum_pta(cmd);
-  }
+	if(cmd.isSet("Shuffle")){
+		shuffle_test(cmd);
+		// large_scale_shuffle_test(cmd); // large-scale test, costs at least 150GB+ memory.
+	}
 
-  if(cmd.isSet("metric")){
-    test_metric_pta(cmd);
-  }
+	if(cmd.isSet("ORAM")){
+		pos_map_test(cmd);
+		sqrt_oram_test(cmd);
+	}
 
-  if(cmd.isSet("system_profile")){
-    // communication_profile(cmd);
-    pta_system_profile(cmd);
-  }
+	if(cmd.isSet("Sort")){
+		bc_sort_test(cmd);
+		bc_sort_corner_test(cmd);
+		bc_sort_multiple_times(cmd);
+		quick_sort_test(cmd);
+		// quick_sort_with_duplicate_elements_test(cmd); // too slow
+		odd_even_merge_test(cmd);
+	}
 
-  if(cmd.isSet("pta_correctness")){
-    correctness_cipher_index_pta(cmd);
-    MPI_Barrier(MPI_COMM_WORLD);  // Wait for all processes to finish before starting the next test
-    correctness_sort_pta(cmd);
-    MPI_Barrier(MPI_COMM_WORLD);
-    correctness_sum_pta(cmd);
-    MPI_Barrier(MPI_COMM_WORLD);
-    correctness_max_pta(cmd);
-    MPI_Barrier(MPI_COMM_WORLD);
-    correctness_metric_pta(cmd);
-    MPI_Barrier(MPI_COMM_WORLD);
-    correctness_search_pta(cmd);
-  }
+	if(cmd.isSet("Search")){
+		constant_dot_test(cmd);
+		binary_search_test(cmd);
+	}
 
-  if(cmd.isSet("task_profile")){
-    std::vector<std::string> keywords_check_list = {"task", "logFolder", "startB", "gap", "endingB"};
-    for (auto& keyword : keywords_check_list) {
-      if (!cmd.isSet(keyword)) {
-        throw std::runtime_error("Missing keyword: " + keyword);
-      }
-    }
-    task_profile(cmd);
-  }
-
-  MPI_Finalize();
+	if(cmd.isSet("MPI-Search")){
+		MPI_Init(&argc, &argv);
+		correctness_search_pta(cmd);
+		MPI_Barrier(MPI_COMM_WORLD);
+		correctness_msearch_pta(cmd);
+		MPI_Finalize();
+	}
 
   return 0;
 }

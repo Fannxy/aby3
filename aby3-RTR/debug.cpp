@@ -64,7 +64,7 @@ void debug_mpi(int rank, int pIdx, std::string info){
   ofs.close();
 }
 
-void debug_output_matrix_mpi(int pIdx, int rank, aby3::i64Matrix& problem_mat){
+void debug_output_matrix_mpi(int rank, int pIdx, aby3::i64Matrix& problem_mat){
   std::string debugFile_mpi = debugFolder + "DEBUG-role:" + std::to_string(pIdx) + "-rank:" + std::to_string(rank) + ".txt";
   std::ofstream ofs(debugFile_mpi, std::ios_base::app);
   int length = problem_mat.rows();

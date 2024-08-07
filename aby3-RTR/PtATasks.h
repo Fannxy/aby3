@@ -509,3 +509,90 @@ public:
         return;
     }
 };
+
+
+template <typename NUMX, typename NUMY, typename NUMT, typename NUMR>
+class PtAMBS : public PairOnlySubTask<NUMX, NUMY, NUMT, NUMR> {
+public:
+    //aby3 info
+    int pIdx;
+    aby3::Sh3Encryptor* enc;
+    aby3::Sh3Runtime* runtime;
+    aby3::Sh3Evaluator* eval;
+    int key_bitsize = 32;
+
+    using PairOnlySubTask<NUMX, NUMY, NUMT, NUMR>::PairOnlySubTask;
+
+    PtAMBS(const size_t optimal_block, const int task_id, const int pIdx,
+            aby3::Sh3Encryptor& enc, aby3::Sh3Runtime& runtime,
+            aby3::Sh3Evaluator& eval) : 
+        pIdx(pIdx),
+        enc(&enc),
+        runtime(&runtime),
+        eval(&eval),
+        PairOnlySubTask<NUMX, NUMY, NUMT, NUMR>(optimal_block, task_id) {
+            this->have_selective = false;
+            this->lookahead = 1;
+            this->lookahead_axis = 0;
+    }
+
+    void set_key_bitsize(int key_bitsize){
+        if(key_bitsize < 1 || key_bitsize > 53) THROW_RUNTIME_ERROR("Invalid key bitsize.");
+        this->key_bitsize = key_bitsize;
+    }
+
+    virtual void compute_local_table(std::vector<NUMX>& expandX, std::vector<NUMY>& expandY, std::vector<NUMT>& local_table, BlockInfo* binfo) override {
+
+        aby3::u64 block_length = binfo->block_len;
+        aby3::u64 valid_length = binfo->block_len + this->lookahead * this->n;
+        if(binfo->t_start + valid_length >= (this->m * this->n)) valid_length = (this->n * this->m) - binfo->t_start;
+
+        // compute the local table.
+        aby3::sbMatrix one_more_pieces_table(valid_length, 1);
+        aby3::sbMatrix expand_key(valid_length, this->key_bitsize);
+        aby3::sbMatrix expand_keyset(valid_length, this->key_bitsize);
+        for(size_t i=0; i<valid_length; i++){
+            expand_key.mShares[0](i, 0) = expandX[i].mData[0];
+            expand_key.mShares[1](i, 0) = expandX[i].mData[1];
+            expand_keyset.mShares[0](i, 0) = expandY[i].mData[0];
+            expand_keyset.mShares[1](i, 0) = expandY[i].mData[1];
+        }
+
+        bool_cipher_lt(this->pIdx, expand_key, expand_keyset, one_more_pieces_table, *(this->enc), *(this->eval), *(this->runtime));
+        bool_cipher_not(this->pIdx, one_more_pieces_table, one_more_pieces_table);
+
+        // differential substraction!
+        aby3::sbMatrix diff_table(binfo->block_len, 1);
+        if(binfo->t_start < (this->m - 1) * this->n){
+            for(int i=0; i<valid_length - this->n; i++){
+                diff_table.mShares[0](i, 0) = one_more_pieces_table.mShares[0](i+this->n, 0) ^ one_more_pieces_table.mShares[0](i, 0);
+                diff_table.mShares[1](i, 0) = one_more_pieces_table.mShares[1](i+this->n, 0) ^ one_more_pieces_table.mShares[1](i, 0);
+            }
+            for(int i=valid_length - this->n; i<binfo->block_len; i++){
+                diff_table.mShares[0](i, 0) = one_more_pieces_table.mShares[0](i, 0);
+                diff_table.mShares[1](i, 0) = one_more_pieces_table.mShares[1](i, 0);
+            }
+        }
+        else{
+            for(int i=0; i<binfo->block_len; i++){
+                diff_table.mShares[0](i, 0) = one_more_pieces_table.mShares[0](i+this->n, 0) ^ one_more_pieces_table.mShares[0](i, 0);
+                diff_table.mShares[1](i, 0) = one_more_pieces_table.mShares[1](i+this->n, 0) ^ one_more_pieces_table.mShares[1](i, 0);
+            }
+        }
+
+        for(size_t i=0; i<binfo->block_len; i++){
+            local_table[i].mData[0] = diff_table.mShares[0](i, 0);
+            local_table[i].mData[1] = diff_table.mShares[1](i, 0);
+        }
+
+        return;
+    }
+
+    virtual void partical_reduction(std::vector<NUMR>& resLeft,
+                                  std::vector<NUMR>& resRight,
+                                  std::vector<NUMR>& local_res,
+                                  BlockInfo* binfo) override {
+        return;
+    }
+};
+

@@ -457,3 +457,92 @@ int correctness_search_pta(oc::CLP& cmd){
 
     return 0;
 }
+
+int correctness_msearch_pta(oc::CLP& cmd){
+    int n=1, m=1<<10, optB=128;
+
+    SETUP_PROCESS
+
+    // construct the task.
+    auto ptaTask = new ABY3MPIPairOnlyTask<sb64, sb64, sb64, sb64, PtAMBS>(size, optB, role, enc, runtime, eval);
+    // prepare the data pointers.
+    std::vector<sb64> res;
+    i64Matrix target(1, 1); target(0, 0) = m-2;
+    i64Matrix target_mask(m, 1);
+    for(size_t i=0; i<m; i++){
+        target_mask(i, 0) = (i == (m-2));
+    }
+    // aby3::i64Matrix test_res(m, 1);
+    aby3::sbMatrix runtime_res(m, 1);
+    // p0 prepares the data.
+    if(rank == 0){
+        // data loading.
+        i64Matrix plain_data(m, 1);
+        for(size_t i=0; i<m; i++){
+            plain_data(i, 0) = i;
+        }
+        sbMatrix skeyset(m, 1);
+        sbMatrix starget(1, 1);
+
+        if(role == 0){
+            enc.localBinMatrix(runtime, plain_data, skeyset).get();
+            enc.localBinMatrix(runtime, target, starget).get();
+        }
+        else{
+            enc.remoteBinMatrix(runtime, skeyset).get();
+            enc.remoteBinMatrix(runtime, starget).get();
+        }
+
+        std::vector<sb64> inputX(n); std::vector<sb64> inputY(m); 
+        inputX[0].mData[0] = starget.mShares[0](0, 0);
+        inputX[0].mData[1] = starget.mShares[1](0, 0);
+
+        for(size_t i=0; i<m; i++){
+            inputY[i].mData[0] = skeyset.mShares[0](i, 0);
+            inputY[i].mData[1] = skeyset.mShares[1](i, 0);
+        }
+
+        // synchronize with others.
+        ptaTask->signal_data_size(n, m);
+        ptaTask->set_lookahead(1, 0);
+        ptaTask->circuit_construct({n}, {m});
+        ptaTask->subTask->set_key_bitsize(32);
+
+        sb64* _inputx_ptr = inputX.data();
+        sb64* _inputy_ptr = inputY.data();
+        ptaTask->data_sharing<sb64>(_inputx_ptr, 1, 0);
+        ptaTask->data_sharing<sb64>(_inputy_ptr, m, 1);
+        ptaTask->circuit_evaluate(inputX.data(), inputY.data(), nullptr, res.data());
+
+        for(size_t i=0; i<m; i++){
+            runtime_res.mShares[0](i, 0) = ptaTask->table[i].mData[0];
+            runtime_res.mShares[1](i, 0) = ptaTask->table[i].mData[1];
+        }
+    }
+    else{
+        // all the other tasks get the data:
+        ptaTask->signal_data_size(n, m);
+        ptaTask->set_lookahead(1, 0);
+        ptaTask->circuit_construct({n}, {m});
+        ptaTask->subTask->set_key_bitsize(32);
+        int m_size = ptaTask->subTask->get_partial_m_lens();
+
+        sb64* inputX_ptr = new sb64[n];
+        sb64* inputY_ptr = new sb64[m_size];
+        ptaTask->data_sharing<sb64>(inputX_ptr, 1, 0);
+        ptaTask->data_sharing<sb64>(inputY_ptr, m_size, 1);
+
+        ptaTask->circuit_evaluate(inputX_ptr, inputY_ptr, nullptr, res.data());
+        return 0;
+    }
+
+    // p0 get the result.
+    aby3::i64Matrix test_res(m, 1);
+    enc.revealAll(runtime, runtime_res, test_res).get();
+
+    if(rank == 0 && role == 0){
+        check_result("pta msearch", test_res, target_mask);
+    }
+
+    return 0;
+}

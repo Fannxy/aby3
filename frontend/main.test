@@ -63,6 +63,8 @@ int main(int argc, char** argv) {
 	if(cmd.isSet("MPI-Search")){
 		MPI_Init(&argc, &argv);
 		correctness_search_pta(cmd);
+		MPI_Barrier(MPI_COMM_WORLD);
+		correctness_msearch_pta(cmd);
 		MPI_Finalize();
 	}
 
