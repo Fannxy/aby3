@@ -1,6 +1,7 @@
 #include "Test.h"
 
 #include "../aby3-Basic/Search.h"
+#include "../aby3-RTR/PtATests.h"
 #include "../aby3-Basic/Basics.h"
 #include "../aby3-RTR/BuildingBlocks.h"
 
@@ -196,3 +197,95 @@ int binary_search_test(oc::CLP& cmd){
     return 0;
 }
 
+int mpi_binary_search_test(oc::CLP& cmd){
+
+    SETUP_PROCESS
+
+    if (role == 0 && rank == 0) {
+        debug_info("RUN MPI Binary Search TEST");
+    }
+
+    // prepare the test data, keyset, data, input key.
+    std::vector<sbMatrix> keyset;
+    std::vector<si64Matrix> data;
+    sbMatrix starget(1, 32);
+
+    size_t n=1, m=64, optB=16, k=1;
+
+    // prepare the pta tasks.
+    auto ptaBSTask = new ABY3MPITask<sb64, sb64, si64, si64, PtABS>(size, optB, role, enc, runtime, eval);
+    auto ptaMBSTask = new ABY3MPIPairOnlyTask<sb64, sb64, sb64, sb64, PtAMBS>(size, optB, role, enc, runtime, eval);
+
+    i64Matrix target(1, 1); target(0, 0) = m - 2;
+    i64Matrix target_m(m, 1);
+    for(size_t i=0; i<m; i++){
+        target_m(i, 0) = (i == m-2);
+    }
+
+    if(rank == 0){
+        // data preparation.
+        i64Matrix plain_data(m, 1);
+        for(size_t i=0; i<m; i++){
+            plain_data(i, 0) = i;
+        }
+        si64Matrix sdata(m, 1);
+        sbMatrix skeyset(m, 32);
+
+        if(role == 0){
+            enc.localIntMatrix(runtime, plain_data, sdata).get();
+            enc.localBinMatrix(runtime, plain_data, skeyset).get();
+            enc.localBinMatrix(runtime, target, starget).get();
+        }
+        else{
+            enc.remoteIntMatrix(runtime, sdata).get();
+            enc.remoteBinMatrix(runtime, skeyset).get();
+            enc.remoteBinMatrix(runtime, starget).get();
+        }
+        // get the vector data.
+        for(size_t i=0; i<m; i++){
+            aby3::si64Matrix _data(1, 1);
+            aby3::sbMatrix _keyset(1, 32);
+            _data.mShares[0](0, 0) = sdata.mShares[0](i, 0);
+            _data.mShares[1](0, 0) = sdata.mShares[1](i, 0);
+            _keyset.mShares[0](0, 0) = skeyset.mShares[0](i, 0);
+            _keyset.mShares[1](0, 0) = skeyset.mShares[1](i, 0);
+            data.push_back(_data);
+            keyset.push_back(_keyset);
+        }
+    }
+
+    // run the ptaBS.
+    si64Matrix bs_res;
+    sbMatrix bs_res_m;
+    i64Matrix test_bs_res;
+    i64Matrix test_bs_res_m;
+
+    ptaBS(data, keyset, starget, bs_res, ptaBSTask);
+
+    if(rank == 0){
+        enc.revealAll(runtime, bs_res, test_bs_res).get();
+        if(role == 0){
+            bool check_flag = check_result("ptaBS", test_bs_res, target);
+        }
+    }
+
+    ptaMBS(keyset, starget, bs_res_m, ptaMBSTask);
+
+    if(rank == 0){
+        enc.revealAll(runtime, bs_res_m, test_bs_res_m).get();
+        if(role == 0){
+            bool check_flag = check_result("ptaMBS", test_bs_res_m, target_m);
+        }
+    }
+
+    subHBS_with_PtA(data, keyset, starget, bs_res, role, enc, eval, runtime, 16, 16, ptaBSTask, ptaMBSTask);
+
+    if(rank == 0){
+        enc.revealAll(runtime, bs_res, test_bs_res).get();
+        if(role == 0){
+            bool check_flag = check_result("subHBS_with_PtA", test_bs_res, target);
+        }
+    }
+
+    return 0;
+}

@@ -25,8 +25,9 @@ done
 # 9) -Sort : test the sort functions.
 # test_args=" -ORAM -Graph"
 # test_args=" -Sort -Search"
-test_args=" -Search"
-./Eval/basic/dis_exec.sh "${test_args}"
+test_args=" -MPI-Search"
+# ./Eval/basic/dis_exec.sh "${test_args}"
+./Eval/basic/dis_mpi_exec.sh 4 "${test_args}"
 wait;
 
 # scp aby31:~/aby3/debug.txt ./debug-p1.txt

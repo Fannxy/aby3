@@ -9,3 +9,4 @@ python build.py
 ./Eval/basic/dis_mpi_exec.sh 4 "${test_args}"
 
 cat ./debug.txt
+rm ./debug.txt

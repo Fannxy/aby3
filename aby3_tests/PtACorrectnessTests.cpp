@@ -378,7 +378,7 @@ int correctness_search_pta(oc::CLP& cmd){
         // data loading.
         i64Matrix plain_data(m, 1);
         for(size_t i=0; i<m; i++){
-            plain_data(i, 0) = i;
+            plain_data(i, 0) = m-i-1;
         }
         si64Matrix sdata(m, 1);
         sbMatrix skeyset(m, 1);
@@ -479,7 +479,7 @@ int correctness_msearch_pta(oc::CLP& cmd){
         // data loading.
         i64Matrix plain_data(m, 1);
         for(size_t i=0; i<m; i++){
-            plain_data(i, 0) = i;
+            plain_data(i, 0) = m-i-1;
         }
         sbMatrix skeyset(m, 1);
         sbMatrix starget(1, 1);
@@ -515,8 +515,8 @@ int correctness_msearch_pta(oc::CLP& cmd){
         ptaTask->circuit_evaluate(inputX.data(), inputY.data(), nullptr, res.data());
 
         for(size_t i=0; i<m; i++){
-            runtime_res.mShares[0](i, 0) = ptaTask->table[i].mData[0];
-            runtime_res.mShares[1](i, 0) = ptaTask->table[i].mData[1];
+            runtime_res.mShares[0](i, 0) = ptaTask->table[m-i-1].mData[0];
+            runtime_res.mShares[1](i, 0) = ptaTask->table[m-i-1].mData[1];
         }
     }
     else{

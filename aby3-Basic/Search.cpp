@@ -3,6 +3,7 @@
 using namespace oc;
 using namespace aby3;
 
+static int PER_PARTY_MAX = 2;
 
 int mcompBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMatrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
 
@@ -238,19 +239,14 @@ int tagBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
         aby3::si64Matrix res_tmp(tag_size, 1);
         aby3::sbMatrix res_key_tmp(tag_size, bitsize);
         arith_bool_mul(pIdx, data_mat, tag, res_tmp, enc, eval, runtime);
-        // bool_cipher_and(pIdx, key_mat, keytag, res_key_tmp, enc, eval, runtime);
         
         aby3::si64Matrix a(1, 1);
         aby3::sbMatrix akey(1, bitsize);
         a.mShares[0](0, 0) = res_tmp.mShares[0](0, 0);
         a.mShares[1](0, 0) = res_tmp.mShares[1](0, 0);
-        // akey.mShares[0](0, 0) = res_key_tmp.mShares[0](0, 0);
-        // akey.mShares[1](0, 0) = res_key_tmp.mShares[1](0, 0);
         for(size_t j=1; j<tag_size; j++){
             a.mShares[0](0, 0) += res_tmp.mShares[0](j, 0);
             a.mShares[1](0, 0) += res_tmp.mShares[1](j, 0);
-            // akey.mShares[0](0, 0) ^= res_key_tmp.mShares[0](j, 0);
-            // akey.mShares[1](0, 0) ^= res_key_tmp.mShares[1](j, 0);
         }
 
         std::vector<sbMatrix> enc_key_mat = {key_mat};
@@ -348,8 +344,8 @@ int subHBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &key
         keyset_to_be_search[i].mShares[1](0, 0) = key_res.mShares[1](i, 0);
     }
 
-    int sub_alpha = sqrtToPowerOfTwo(beta);
-    return subHBS(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime, sub_alpha, threshold);
+    // int sub_alpha = sqrtToPowerOfTwo(beta);
+    return subHBS(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime, alpha, threshold);
 }
 
 int ptaBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::si64Matrix &res, ABY3MPITask<aby3::sb64, aby3::sb64, aby3::si64, aby3::si64, PtABS>* ptaTask){
@@ -357,20 +353,27 @@ int ptaBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
     int n = 1, m = data.size();
     ptaTask->set_default_value(GET_ZERO_SHARE);
     ptaTask->set_lookahead(1, 0);
-    ptaTask->circuit_construct({n}, {m});
-    ptaTask->subTask->set_key_bitsize(32);
     std::vector<si64> _res(1);
 
     if(ptaTask->rank == 0){
-        std::vector<si64> _data_vec(m);  std::vector<sb64> _keyset_vec(m);
+        
+        ptaTask->signal_data_size(n, m);
+        std::vector<si64> _data_vec(m);  
+        std::vector<sb64> _keyset_vec(m);
         std::vector<sb64> _target_key(1);
+
         _target_key[0].mData[0] = key.mShares[0](0, 0);
         _target_key[0].mData[1] = key.mShares[1](0, 0);
+
         for(int i=0; i<m; i++){
-            _data_vec[i].mData[0] = data[i].mShares[0](0, 0);
-            _keyset_vec[i].mData[1] = keyset[i].mShares[1](0, 0);
+            _data_vec[i].mData[0] = data[m-i-1].mShares[0](0, 0);
+            _data_vec[i].mData[1] = data[m-i-1].mShares[1](0, 0);
+            _keyset_vec[i].mData[1] = keyset[m-i-1].mShares[1](0, 0);
+            _keyset_vec[i].mData[0] = keyset[m-i-1].mShares[0](0, 0);
         }
 
+        ptaTask->circuit_construct({n}, {m});
+        ptaTask->subTask->set_key_bitsize(32);
         // synchronize the data and keyset with others.
         sb64* _inputx_ptr = _target_key.data();
         sb64* _inputy_ptr = _keyset_vec.data();
@@ -383,6 +386,9 @@ int ptaBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
         ptaTask->circuit_evaluate(_target_key.data(), _keyset_vec.data(), _data_vec.data(), _res.data());
     }
     else{
+        ptaTask->signal_data_size(n, m);
+        ptaTask->circuit_construct({n}, {m});
+        ptaTask->subTask->set_key_bitsize(32);
         int m_size = ptaTask->subTask->get_partial_m_lens();
         sb64* _inputx_ptr = new sb64[1];
         sb64* _inputy_ptr = new sb64[m_size];
@@ -406,7 +412,9 @@ int ptaBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
 int ptaMBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMatrix &res, ABY3MPIPairOnlyTask<sb64, sb64, sb64, sb64, PtAMBS>* ptaTask){
     int n = 1, m = keyset.size();
     ptaTask->set_lookahead(1, 0);
+    ptaTask->signal_data_size(n, m);
     ptaTask->circuit_construct({n}, {m});
+
     ptaTask->subTask->set_key_bitsize(32);
     std::vector<sb64> _res;
 
@@ -416,8 +424,8 @@ int ptaMBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMat
         _target_key[0].mData[0] = key.mShares[0](0, 0);
         _target_key[0].mData[1] = key.mShares[1](0, 0);
         for(int i=0; i<m; i++){
-            _keyset_vec[i].mData[0] = keyset[i].mShares[0](0, 0);
-            _keyset_vec[i].mData[1] = keyset[i].mShares[1](0, 0);
+            _keyset_vec[i].mData[0] = keyset[m-i-1].mShares[0](0, 0);
+            _keyset_vec[i].mData[1] = keyset[m-i-1].mShares[1](0, 0);
         }
 
         // synchronize the data and keyset with others.
@@ -439,8 +447,8 @@ int ptaMBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMat
 
     res.resize(m, 1);
     for(int i=0; i<m; i++){
-        res.mShares[0](i, 0) = ptaTask->table[i].mData[0];
-        res.mShares[1](i, 0) = ptaTask->table[i].mData[1];
+        res.mShares[0](i, 0) = ptaTask->table[m-i-1].mData[0];
+        res.mShares[1](i, 0) = ptaTask->table[m-i-1].mData[1];
     }
 
     return 0;
@@ -448,21 +456,32 @@ int ptaMBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMat
 
 int subHBS_with_PtA(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::si64Matrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime, int alpha, int threshold, ABY3MPITask<aby3::sb64, aby3::sb64, aby3::si64, aby3::si64, PtABS>* ptaBSTask, ABY3MPIPairOnlyTask<sb64, sb64, sb64, sb64, PtAMBS>* ptaMBSTask){  
     int n = data.size();
-    int bitsize = keyset[0].bitCount();
+
+    // only for rank0, the size is the correct data size, therefore broadcast.
+    ptaBSTask->signal_data_size(n);
+    if(n < threshold){
+        // for too small input size, only rank0 compute is fine.
+        if(n < ptaBSTask->total_tasks * PER_PARTY_MAX){
+            if(ptaBSTask->rank == 0){
+                return compBS(data, keyset, key, res, pIdx, enc, eval, runtime);
+            }
+            else{
+                return 0;
+            }
+        }
+        // otherwise call the ptaBS.
+        return ptaBS(data, keyset, key, res, ptaBSTask);
+    }
+
+    int bitsize = key.bitCount();
     int beta = n / alpha;
-    if(alpha * beta != n) THROW_RUNTIME_ERROR("The size of data should be alpha * beta!");
+    if(alpha * beta != n) THROW_RUNTIME_ERROR("The size of data should be alpha * beta, while now alpha = " + std::to_string(alpha) + " - beta = " + std::to_string(beta) + " - n = " + std::to_string(n) + " However alpha * beta = " + std::to_string(alpha * beta));
 
     int rank = ptaBSTask->rank;
-
-    // construct the pta task for the following computations.
-    if(n < threshold){
-        ptaBS(data, keyset, key, res, ptaBSTask);
-    }
     std::vector<sbMatrix> keyset_upper;
     sbMatrix res_upper;
     if(rank == 0){
         // construct the upper-level tree.
-        keyset_upper.resize(alpha);
         for(size_t i=0; i<alpha; i++){
             keyset_upper.push_back(keyset[i*beta + (beta-1)]);
         }
@@ -470,8 +489,8 @@ int subHBS_with_PtA(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMat
     ptaMBS(keyset_upper, key, res_upper, ptaMBSTask);
 
     // the p0 task perform the following computation till recursive.
-    std::vector<si64Matrix> data_to_be_search(beta);
-    std::vector<sbMatrix> keyset_to_be_search(beta);
+    std::vector<si64Matrix> data_to_be_search;
+    std::vector<sbMatrix> keyset_to_be_search;
 
     if(rank == 0){
         aby3::si64Matrix all_ones(alpha, 1);
@@ -511,15 +530,16 @@ int subHBS_with_PtA(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMat
         constant_bool_dot(pIdx, key_lowers, keytag_lowers, key_res, enc, eval, runtime);
 
         for(size_t i=0; i<beta; i++){
-            data_to_be_search[i].resize(1, 1);
-            keyset_to_be_search[i].resize(1, bitsize);
-            data_to_be_search[i].mShares[0](0, 0) = data_res.mShares[0](i, 0);
-            data_to_be_search[i].mShares[1](0, 0) = data_res.mShares[1](i, 0);
-            keyset_to_be_search[i].mShares[0](0, 0) = key_res.mShares[0](i, 0);
-            keyset_to_be_search[i].mShares[1](0, 0) = key_res.mShares[1](i, 0);
+            si64Matrix data_tmp(1, 1);
+            sbMatrix key_tmp(1, bitsize);
+            data_tmp.mShares[0](0, 0) = data_res.mShares[0](i, 0);
+            data_tmp.mShares[1](0, 0) = data_res.mShares[1](i, 0);
+            key_tmp.mShares[0](0, 0) = key_res.mShares[0](i, 0);
+            key_tmp.mShares[1](0, 0) = key_res.mShares[1](i, 0);
+            data_to_be_search.push_back(data_tmp);
+            keyset_to_be_search.push_back(key_tmp);
         }
     }
 
-    int sub_alpha = sqrtToPowerOfTwo(beta);
-    return subHBS_with_PtA(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime, sub_alpha, threshold, ptaBSTask, ptaMBSTask);
+    return subHBS_with_PtA(data_to_be_search, keyset_to_be_search, key, res, pIdx, enc, eval, runtime, alpha, threshold, ptaBSTask, ptaMBSTask);
 }

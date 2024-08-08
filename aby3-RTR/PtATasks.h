@@ -459,7 +459,7 @@ public:
             expand_keyset.mShares[1](i, 0) = expandY[i].mData[1];
         }
 
-        bool_cipher_lt(this->pIdx, expand_key, expand_keyset, one_more_pieces_table, *(this->enc), *(this->eval), *(this->runtime));
+        bool_cipher_lt(this->pIdx, expand_keyset, expand_key, one_more_pieces_table, *(this->enc), *(this->eval), *(this->runtime));
         bool_cipher_not(this->pIdx, one_more_pieces_table, one_more_pieces_table);
 
         // differential substraction!
@@ -558,7 +558,7 @@ public:
             expand_keyset.mShares[1](i, 0) = expandY[i].mData[1];
         }
 
-        bool_cipher_lt(this->pIdx, expand_key, expand_keyset, one_more_pieces_table, *(this->enc), *(this->eval), *(this->runtime));
+        bool_cipher_lt(this->pIdx, expand_keyset, expand_key, one_more_pieces_table, *(this->enc), *(this->eval), *(this->runtime));
         bool_cipher_not(this->pIdx, one_more_pieces_table, one_more_pieces_table);
 
         // differential substraction!
