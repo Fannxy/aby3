@@ -15,6 +15,11 @@ int main(int argc, char** argv) {
   if(cmd.isSet("search")){
     binary_search_benchmark(cmd);
   }
+  if(cmd.isSet("pta-search")){
+    MPI_Init(&argc, &argv);
+    pta_binary_search_benchmark(cmd);
+    MPI_Finalize();
+  }
 
   return 0;
 }

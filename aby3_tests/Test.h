@@ -77,6 +77,7 @@ int odd_even_merge_test(oc::CLP& cmd);
 int constant_dot_test(oc::CLP& cmd);
 int binary_search_test(oc::CLP& cmd);
 int mpi_binary_search_test(oc::CLP& cmd);
+int data_generation_test(oc::CLP& cmd);
 
 int correctness_cipher_index_pta(oc::CLP& cmd);
 int correctness_sort_pta(oc::CLP& cmd);

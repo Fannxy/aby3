@@ -1,6 +1,7 @@
 #include "Test.h"
 
 #include "../aby3-Basic/Search.h"
+#include "../aby3-Benchmark/benchmark.h"
 #include "../aby3-RTR/PtATests.h"
 #include "../aby3-Basic/Basics.h"
 #include "../aby3-RTR/BuildingBlocks.h"
@@ -192,6 +193,62 @@ int binary_search_test(oc::CLP& cmd){
     enc.revealAll(runtime, res_mat2, res2).get();
     if(role == 0){
         bool check_flag = check_result("subHBS", res2, ref_res);    
+    }
+
+    return 0;
+}
+
+int data_generation_test(oc::CLP& cmd){
+    SETUP_PROCESS
+
+    if (role == 0 && rank == 0) {   
+        debug_info("RUN Data Generation TEST");
+    }
+
+    int n = 1 << 8;
+    std::vector<si64Matrix> data;
+    std::vector<sbMatrix> data_bool;
+
+    if(rank == 0){
+        generate_data(data, n, 1, role, enc, eval, runtime);
+        generate_data(data_bool, n, 1, 32, role, enc, eval, runtime);
+    }
+
+    std::vector<si64Matrix> p_data;
+    std::vector<sbMatrix> p_data_bool;
+    generate_data_parallel(p_data, n, 1, role, enc, eval, runtime);
+    generate_data_parallel(p_data_bool, n, 1, 32, role, enc, eval, runtime);
+
+    // test whether datas are the same.
+    if(rank == 0){
+        i64Matrix test_data(n, 1);
+        i64Matrix test_data_bool(n, 1);
+        i64Matrix test_p_data(n, 1);
+        i64Matrix test_p_data_bool(n, 1);
+
+        si64Matrix data_mat(n, 1);
+        sbMatrix data_bool_mat(n, 32);
+        si64Matrix p_data_mat(n, 1);
+        sbMatrix p_data_bool_mat(n, 32);
+
+        for(int i=0; i<n; i++){
+            data_mat.mShares[0](i, 0) = data[i].mShares[0](0, 0);
+            data_mat.mShares[1](i, 0) = data[i].mShares[1](0, 0);
+            data_bool_mat.mShares[0](i, 0) = data_bool[i].mShares[0](0, 0);
+            data_bool_mat.mShares[1](i, 0) = data_bool[i].mShares[1](0, 0);
+            p_data_mat.mShares[0](i, 0) = p_data[i].mShares[0](0, 0);
+            p_data_mat.mShares[1](i, 0) = p_data[i].mShares[1](0, 0);
+            p_data_bool_mat.mShares[0](i, 0) = p_data_bool[i].mShares[0](0, 0);
+            p_data_bool_mat.mShares[1](i, 0) = p_data_bool[i].mShares[1](0, 0);
+        }
+
+        enc.revealAll(runtime, data_mat, test_data).get();
+        enc.revealAll(runtime, data_bool_mat, test_data_bool).get();
+        enc.revealAll(runtime, p_data_mat, test_p_data).get();
+        enc.revealAll(runtime, p_data_bool_mat, test_p_data_bool).get();
+
+        check_result("generate data parallel", test_data, test_p_data);
+        check_result("generate data bool parallel", test_data_bool, test_p_data_bool);
     }
 
     return 0;

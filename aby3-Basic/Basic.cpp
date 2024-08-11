@@ -137,7 +137,7 @@ int large_data_encryption(int pIdx, aby3::i64Matrix &plainA, aby3::si64Matrix &s
                           aby3::Sh3Encryptor &enc, aby3::Sh3Runtime &runtime) {
     
     size_t len = plainA.rows();
-    sharedA.resize(len, BITSIZE);
+    sharedA.resize(len, 1);
     size_t round = (size_t)ceil(len / (double)MAX_SENDING_SIZE);
     size_t last_len = len - (round - 1) * MAX_SENDING_SIZE;
 

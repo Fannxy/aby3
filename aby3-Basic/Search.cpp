@@ -3,7 +3,7 @@
 using namespace oc;
 using namespace aby3;
 
-static int PER_PARTY_MAX = 2;
+static int PER_PARTY_MAX = 1 << 4;
 
 int mcompBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMatrix &res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
 
@@ -383,6 +383,9 @@ int ptaBS(std::vector<aby3::si64Matrix> &data, std::vector<aby3::sbMatrix> &keys
         ptaTask->data_sharing<si64>(_selectv_ptr, m, 1);
         _res[0].mData[0] = 0; _res[0].mData[1] = 0;
         ptaTask->set_selective_value(_data_vec.data(), 0);
+
+        debug_mpi(ptaTask->rank, ptaTask->pIdx, "before circuit evaluate!");
+
         ptaTask->circuit_evaluate(_target_key.data(), _keyset_vec.data(), _data_vec.data(), _res.data());
     }
     else{
@@ -433,6 +436,8 @@ int ptaMBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMat
         sb64* _inputy_ptr = _keyset_vec.data();
         ptaTask->data_sharing<sb64>(_inputx_ptr, 1, 0);
         ptaTask->data_sharing<sb64>(_inputy_ptr, m, 1);
+        int m_size = ptaTask->subTask->get_partial_m_lens();
+        _keyset_vec.resize(m_size);
         ptaTask->circuit_evaluate(_target_key.data(), _keyset_vec.data(), nullptr, _res.data());
     }
     else{
@@ -445,6 +450,7 @@ int ptaMBS(std::vector<aby3::sbMatrix> &keyset, aby3::sbMatrix &key, aby3::sbMat
         return 0;
     }
 
+    // reorganize the results.
     res.resize(m, 1);
     for(int i=0; i<m; i++){
         res.mShares[0](i, 0) = ptaTask->table[m-i-1].mData[0];
