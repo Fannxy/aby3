@@ -272,6 +272,7 @@ int mpi_binary_search_test(oc::CLP& cmd){
     // prepare the pta tasks.
     auto ptaBSTask = new ABY3MPITask<sb64, sb64, si64, si64, PtABS>(size, optB, role, enc, runtime, eval);
     auto ptaMBSTask = new ABY3MPIPairOnlyTask<sb64, sb64, sb64, sb64, PtAMBS>(size, optB, role, enc, runtime, eval);
+    auto ptaMBSABTask = new ABY3MPIPairOnlyTask<sb64, sb64, std::pair<si64, sb64>, std::pair<si64, sb64>, PtAMBSAB>(size, optB, role, enc, runtime, eval);
 
     i64Matrix target(1, 1); target(0, 0) = m - 2;
     i64Matrix target_m(m, 1);
@@ -335,7 +336,22 @@ int mpi_binary_search_test(oc::CLP& cmd){
         }
     }
 
-    subHBS_with_PtA(data, keyset, starget, bs_res, role, enc, eval, runtime, 16, 16, ptaBSTask, ptaMBSTask);
+    ptaMBSAB(keyset, starget, bs_res_m, bs_res, ptaMBSABTask);
+
+    if(rank == 0){
+        enc.revealAll(runtime, bs_res, test_bs_res).get();
+        if(role == 0){
+            bool check_flag = check_result("ptaMBSAB - arith result", test_bs_res, target_m);
+        }
+        enc.revealAll(runtime, bs_res_m, test_bs_res_m).get();
+        if(role == 0){
+            bool check_flag = check_result("ptaMBSAB - bool result", test_bs_res_m, target_m);
+        }
+    }
+
+    subHBS_with_PtA(data, keyset, starget, bs_res, role, enc, eval, runtime, 16, 16, ptaBSTask, ptaMBSABTask);
+
+    debug_mpi(rank, role, "success after subHBS!");
 
     if(rank == 0){
         enc.revealAll(runtime, bs_res, test_bs_res).get();

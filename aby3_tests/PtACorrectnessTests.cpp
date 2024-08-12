@@ -510,7 +510,7 @@ int correctness_msearch_pta(oc::CLP& cmd){
 
         sb64* _inputx_ptr = inputX.data();
         sb64* _inputy_ptr = inputY.data();
-        ptaTask->data_sharing<sb64>(_inputx_ptr, 1, 0);
+        ptaTask->data_sharing<sb64>(_inputx_ptr, 1, 0, 1);
         ptaTask->data_sharing<sb64>(_inputy_ptr, m, 1);
         ptaTask->circuit_evaluate(inputX.data(), inputY.data(), nullptr, res.data());
 
@@ -529,7 +529,7 @@ int correctness_msearch_pta(oc::CLP& cmd){
 
         sb64* inputX_ptr = new sb64[n];
         sb64* inputY_ptr = new sb64[m_size];
-        ptaTask->data_sharing<sb64>(inputX_ptr, 1, 0);
+        ptaTask->data_sharing<sb64>(inputX_ptr, 1, 0, 1);
         ptaTask->data_sharing<sb64>(inputY_ptr, m_size, 1);
 
         ptaTask->circuit_evaluate(inputX_ptr, inputY_ptr, nullptr, res.data());

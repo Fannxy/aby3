@@ -203,8 +203,8 @@ void generate_data_parallel(std::vector<aby3::sbMatrix> &data, size_t n, size_t 
         }
     }
     else{
-        MPI_Gatherv(local_data.mShares[0].data(), task_size, MPI_INT64_T, nullptr, nullptr, nullptr, MPI_BYTE, 0, MPI_COMM_WORLD);
-        MPI_Gatherv(local_data.mShares[1].data(), task_size, MPI_INT64_T, nullptr, nullptr, nullptr, MPI_BYTE, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(local_data.mShares[0].data(), task_size, MPI_INT64_T, nullptr, nullptr, nullptr, MPI_INT64_T, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(local_data.mShares[1].data(), task_size, MPI_INT64_T, nullptr, nullptr, nullptr, MPI_INT64_T, 0, MPI_COMM_WORLD);
     }
 
     return;
@@ -301,12 +301,12 @@ void pta_binary_search_benchmark(oc::CLP& cmd){
     std::vector<aby3::si64Matrix> data;
     std::vector<aby3::sbMatrix> key;
 
-    debug_mpi(rank, role, "begin data generation: data size: " + std::to_string(N));
+    // debug_mpi(rank, role, "begin data generation: data size: " + std::to_string(N));
 
     generate_data_parallel(data, N, 1, role, enc, eval, runtime);
     generate_data_parallel(key, N, 1, 32, role, enc, eval, runtime);
 
-    debug_mpi(rank, role, "finish data generation! data size: " + std::to_string(data.size()));
+    // debug_mpi(rank, role, "finish data generation! data size: " + std::to_string(data.size()));
 
     boolIndex _target_key(N/2, role);
     aby3::sbMatrix target_key = _target_key.to_matrix(32);
@@ -315,6 +315,7 @@ void pta_binary_search_benchmark(oc::CLP& cmd){
 
     auto ptaBSTask = new ABY3MPITask<sb64, sb64, si64, si64, PtABS>(size, optB, role, enc, runtime, eval);
     auto ptaMBSTask = new ABY3MPIPairOnlyTask<sb64, sb64, sb64, sb64, PtAMBS>(size, optB, role, enc, runtime, eval);
+    auto ptaMBSABTask = new ABY3MPIPairOnlyTask<sb64, sb64, std::pair<si64, sb64>, std::pair<si64, sb64>, PtAMBSAB>(size, optB, role, enc, runtime, eval);
 
     // benchmark the search function.
     Timer& timer = Timer::getInstance();
@@ -339,7 +340,7 @@ void pta_binary_search_benchmark(oc::CLP& cmd){
         SET_OR_DEFAULT_INT(cmd, threshold, 1<<8);
         MPI_Barrier(MPI_COMM_WORLD);
         timer.start("subH");
-        subHBS_with_PtA(data, key, target_key, result_data, role, enc, eval, runtime, alpha, threshold, ptaBSTask, ptaMBSTask);
+        subHBS_with_PtA(data, key, target_key, result_data, role, enc, eval, runtime, alpha, threshold, ptaBSTask, ptaMBSABTask);
         MPI_Barrier(MPI_COMM_WORLD);
         timer.end("subH");
 

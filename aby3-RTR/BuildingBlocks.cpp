@@ -12,7 +12,7 @@ using namespace oc;
 
 #include "./Pair_then_Reduce/include/datatype.h"
 
-#define LOCAL_TEST
+// #define LOCAL_TEST
 
 static int BASEPORT=4000;
 #define P0_IP "10.5.0.12"
