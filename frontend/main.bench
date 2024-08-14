@@ -20,6 +20,11 @@ int main(int argc, char** argv) {
     pta_binary_search_benchmark(cmd);
     MPI_Finalize();
   }
+  if(cmd.isSet("ndss-search")){
+    MPI_Init(&argc, &argv);
+    ndss22_binary_search_benchmark(cmd);
+    MPI_Finalize();
+  }
 
   return 0;
 }

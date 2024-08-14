@@ -112,8 +112,8 @@ int binary_search_test(oc::CLP& cmd){
 
     // prepare the test data, keyset, data, input key.
     int n = 1 << 8;
-    std::vector<sbMatrix> keyset(n);
-    std::vector<si64Matrix> data(n);
+    std::vector<sb64> keyset(n);
+    std::vector<si64> data(n);
 
     i64Matrix key_and_data(n, 1);
     for(int i=0; i<n; i++){
@@ -132,12 +132,12 @@ int binary_search_test(oc::CLP& cmd){
     }
 
     for(int i=0; i<n; i++){
-        keyset[i].resize(1, 16);
-        data[i].resize(1, 1);
-        keyset[i].mShares[0](0, 0) = keyset_mat.mShares[0](i, 0);
-        keyset[i].mShares[1](0, 0) = keyset_mat.mShares[1](i, 0);
-        data[i].mShares[0](0, 0) = data_mat.mShares[0](i, 0);
-        data[i].mShares[1](0, 0) = data_mat.mShares[1](i, 0);
+        // keyset[i].resize(1, 16);
+        // data[i].resize(1, 1);
+        keyset[i].mData[0] = keyset_mat.mShares[0](i, 0);
+        keyset[i].mData[1] = keyset_mat.mShares[1](i, 0);
+        data[i].mData[0] = data_mat.mShares[0](i, 0);
+        data[i].mData[1] = data_mat.mShares[1](i, 0);
     }
 
     // prepare the input key and the reference result.
@@ -206,16 +206,16 @@ int data_generation_test(oc::CLP& cmd){
     }
 
     int n = 1 << 8;
-    std::vector<si64Matrix> data;
-    std::vector<sbMatrix> data_bool;
+    std::vector<si64> data;
+    std::vector<sb64> data_bool;
 
     if(rank == 0){
         generate_data(data, n, 1, role, enc, eval, runtime);
         generate_data(data_bool, n, 1, 32, role, enc, eval, runtime);
     }
 
-    std::vector<si64Matrix> p_data;
-    std::vector<sbMatrix> p_data_bool;
+    std::vector<si64> p_data;
+    std::vector<sb64> p_data_bool;
     generate_data_parallel(p_data, n, 1, role, enc, eval, runtime);
     generate_data_parallel(p_data_bool, n, 1, 32, role, enc, eval, runtime);
 
@@ -232,14 +232,14 @@ int data_generation_test(oc::CLP& cmd){
         sbMatrix p_data_bool_mat(n, 32);
 
         for(int i=0; i<n; i++){
-            data_mat.mShares[0](i, 0) = data[i].mShares[0](0, 0);
-            data_mat.mShares[1](i, 0) = data[i].mShares[1](0, 0);
-            data_bool_mat.mShares[0](i, 0) = data_bool[i].mShares[0](0, 0);
-            data_bool_mat.mShares[1](i, 0) = data_bool[i].mShares[1](0, 0);
-            p_data_mat.mShares[0](i, 0) = p_data[i].mShares[0](0, 0);
-            p_data_mat.mShares[1](i, 0) = p_data[i].mShares[1](0, 0);
-            p_data_bool_mat.mShares[0](i, 0) = p_data_bool[i].mShares[0](0, 0);
-            p_data_bool_mat.mShares[1](i, 0) = p_data_bool[i].mShares[1](0, 0);
+            data_mat.mShares[0](i, 0) = data[i].mData[0];
+            data_mat.mShares[1](i, 0) = data[i].mData[1];
+            data_bool_mat.mShares[0](i, 0) = data_bool[i].mData[0];
+            data_bool_mat.mShares[1](i, 0) = data_bool[i].mData[1];
+            p_data_mat.mShares[0](i, 0) = p_data[i].mData[0];
+            p_data_mat.mShares[1](i, 0) = p_data[i].mData[1];
+            p_data_bool_mat.mShares[0](i, 0) = p_data_bool[i].mData[0];
+            p_data_bool_mat.mShares[1](i, 0) = p_data_bool[i].mData[1];
         }
 
         enc.revealAll(runtime, data_mat, test_data).get();
@@ -263,8 +263,8 @@ int mpi_binary_search_test(oc::CLP& cmd){
     }
 
     // prepare the test data, keyset, data, input key.
-    std::vector<sbMatrix> keyset;
-    std::vector<si64Matrix> data;
+    std::vector<sb64> keyset;
+    std::vector<si64> data;
     sbMatrix starget(1, 32);
 
     size_t n=1, m=64, optB=16, k=1;
@@ -300,15 +300,13 @@ int mpi_binary_search_test(oc::CLP& cmd){
             enc.remoteBinMatrix(runtime, starget).get();
         }
         // get the vector data.
+        data.resize(m);
+        keyset.resize(m);
         for(size_t i=0; i<m; i++){
-            aby3::si64Matrix _data(1, 1);
-            aby3::sbMatrix _keyset(1, 32);
-            _data.mShares[0](0, 0) = sdata.mShares[0](i, 0);
-            _data.mShares[1](0, 0) = sdata.mShares[1](i, 0);
-            _keyset.mShares[0](0, 0) = skeyset.mShares[0](i, 0);
-            _keyset.mShares[1](0, 0) = skeyset.mShares[1](i, 0);
-            data.push_back(_data);
-            keyset.push_back(_keyset);
+            data[i].mData[0] = sdata.mShares[0](i, 0);
+            data[i].mData[1] = sdata.mShares[1](i, 0);
+            keyset[i].mData[0] = skeyset.mShares[0](i, 0);
+            keyset[i].mData[1] = skeyset.mShares[1](i, 0);
         }
     }
 
@@ -349,9 +347,32 @@ int mpi_binary_search_test(oc::CLP& cmd){
         }
     }
 
-    subHBS_with_PtA(data, keyset, starget, bs_res, role, enc, eval, runtime, 16, 16, ptaBSTask, ptaMBSABTask);
+    // test the parallel NDSS computations.
+    mcompBSTGL(keyset, starget, bs_res_m, role, enc, eval, runtime);
+    if(rank == 0){
+        enc.revealAll(runtime, bs_res_m, test_bs_res_m).get();
+        if(role == 0){
+            bool check_flag = check_result("mcompBSTGL", test_bs_res_m, target_m);
+        }
+    }
 
-    debug_mpi(rank, role, "success after subHBS!");
+    compBSTGL(data, keyset, starget, bs_res, role, enc, eval, runtime);
+    if(rank == 0){
+        enc.revealAll(runtime, bs_res, test_bs_res).get();
+        if(role == 0){
+            bool check_flag = check_result("compBSTGL", test_bs_res, target);
+        }
+    }
+
+    subHBS_with_TGL(data, keyset, starget, bs_res, role, enc, eval, runtime, 16, 16);
+    if(rank == 0){
+        enc.revealAll(runtime, bs_res, test_bs_res).get();
+        if(role == 0){
+            bool check_flag = check_result("subHBS_with_TGL", test_bs_res, target);
+        }
+    }
+
+    subHBS_with_PtA(data, keyset, starget, bs_res, role, enc, eval, runtime, 16, 16, ptaBSTask, ptaMBSABTask);
 
     if(rank == 0){
         enc.revealAll(runtime, bs_res, test_bs_res).get();

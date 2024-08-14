@@ -1160,7 +1160,6 @@ void arith_bool_mul(int pIdx, aby3::si64Matrix &sharedA, aby3::sbMatrix &sharedB
         std::memcpy(_b.mShares[1].data(), sharedB.mShares[1].data() + i * MAX_UNIT_SIZE, sending_len * sizeof(sharedB.mShares[1](0, 0)));
 
         aby3::si64Matrix _res(sending_len, 1);
-        // (pIdx, _a, _b, _res, enc, eval, runtime);
         eval.asyncMul(runtime, _a, _b, _res).get();
 
         std::memcpy(res.mShares[0].data() + i * MAX_UNIT_SIZE, _res.mShares[0].data(), sending_len * sizeof(_res.mShares[0](0, 0)));

@@ -13,6 +13,7 @@ using namespace oc;
 #include "./Pair_then_Reduce/include/datatype.h"
 
 // #define LOCAL_TEST
+static const size_t MAX_UNIT_SIZE = 1 << 25;
 
 static int BASEPORT=4000;
 #define P0_IP "10.5.0.12"
@@ -839,14 +840,25 @@ int init_zeros(int pIdx, Sh3Encryptor &enc, Sh3Runtime &runtime, si64Matrix &res
 
 
 int init_ones(int pIdx, Sh3Encryptor &enc, Sh3Runtime &runtime, si64Matrix &res, int n){
-    i64Matrix ones(n, 1);
-    for(int i=0; i<n; i++) ones(i, 0) = 1;
+    // i64Matrix ones(n, 1);
+    // for(int i=0; i<n; i++) ones(i, 0) = 1;
     res.resize(n, 1);
-    if(pIdx == 0) {
-        enc.localIntMatrix(runtime, ones, res).get();
-    }
-    else{
-        enc.remoteIntMatrix(runtime, res).get();
+
+    size_t round = (size_t)ceil((double)n / (double)MAX_UNIT_SIZE);
+    size_t last_len = n - (round - 1) * MAX_UNIT_SIZE;
+    for(size_t i=0; i<round; i++){
+      size_t unit_len = (i == round - 1) ? last_len : MAX_UNIT_SIZE;
+      i64Matrix ones(unit_len, 1);  
+      for(int j=0; j<unit_len; j++) ones(j, 0) = 1;
+      aby3::si64Matrix _res(unit_len, 1);
+      if(pIdx == 0) {
+          enc.localIntMatrix(runtime, ones, _res).get();
+      }
+      else{
+          enc.remoteIntMatrix(runtime, _res).get();
+      }
+      std::memcpy(res.mShares[0].data() + i * MAX_UNIT_SIZE, _res.mShares[0].data(), unit_len * sizeof(i64));
+      std::memcpy(res.mShares[1].data() + i * MAX_UNIT_SIZE, _res.mShares[1].data(), unit_len * sizeof(i64));
     }
     return 0;
 }

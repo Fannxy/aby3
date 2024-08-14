@@ -490,7 +490,7 @@ public:
 
         // cipher mul.
         aby3::si64Matrix table_res(binfo->block_len, 1);
-        (*this->eval).asyncMul((*this->runtime), expandV, diff_table, table_res).get();
+        arith_bool_mul(this->pIdx, expandV, diff_table, table_res, *(this->enc), *(this->eval), *(this->runtime));
         for(size_t i=0; i<binfo->block_len; i++){
             local_table[i].mData[0] = table_res.mShares[0](i, 0);
             local_table[i].mData[1] = table_res.mShares[1](i, 0);
