@@ -26,6 +26,7 @@ done
 # test_args=" -ORAM -Graph"
 # test_args=" -Sort -Search"
 test_args=" -MPI-Search"
+# test_args=" -Search"
 # ./Eval/basic/dis_exec.sh "${test_args}"
 ./Eval/basic/dis_mpi_exec.sh 4 "${test_args}"
 wait;
