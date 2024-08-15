@@ -104,7 +104,6 @@ def get_usage_dict(monitor_log):
     
     return usage_dict
 
-
 class SystemMonitor:
     
     def __init__(self, interval):

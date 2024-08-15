@@ -5,7 +5,7 @@
 using namespace oc;
 using namespace aby3;
 
-#define FUNCTIONAL
+// #define FUNCTIONAL
 
 static int PER_PARTY_MAX = 1 << 4;
 
@@ -321,7 +321,6 @@ int mcompBSTGL(std::vector<aby3::sb64> &keyset, aby3::sbMatrix &key, aby3::sbMat
     int n, bitsize;
     if(rank == 0){
         n = keyset.size();
-        // bitsize = keyset[0].bitCount();
         bitsize = key.bitCount();
     }
     // broadcast the sizes.
@@ -342,7 +341,7 @@ int mcompBSTGL(std::vector<aby3::sb64> &keyset, aby3::sbMatrix &key, aby3::sbMat
     aby3::sbMatrix final_diff_res(local_n, 1);
     distribute_mcompBSTGL(keyset, key, final_diff_res, pIdx, enc, eval, runtime);
 
-    // sync and then gather the result -> all the ranks synchronize the result to rank0.
+    MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0){
         res.resize(n, 1);
         std::copy(final_diff_res.mShares[0].data(), final_diff_res.mShares[0].data() + local_n, res.mShares[0].data());
