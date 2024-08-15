@@ -1,10 +1,10 @@
 dataSize=1024
 binSize=32
 symmetric=1
-repeat=20
+repeat=1
 
 args=" -Sort -dataSize "${dataSize}" -binSize "${binSize}
-keyword="sort-repeat-temp"${symmetric}"-"${dataSize}"-"${binSize}
+keyword="sort-"${symmetric}"-"${dataSize}"-"${binSize}
 if [ ${symmetric} -eq 0 ]; then
     options=" --order 0,1,2 --order 0,1,2 --order 0,1,2 --repeat "${repeat}
 else 
