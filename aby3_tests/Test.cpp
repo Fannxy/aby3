@@ -325,6 +325,69 @@ int initialization_test(CLP &cmd) {
     return 0;
 }
 
+int splitted_shuffle_test(oc::CLP &cmd){
+    SPLITTED_TEST_INIT
+
+    if(role == 0){
+        debug_info("RUN Shuffle TEST");
+    }
+
+    // prepare the data.
+    size_t data_size;
+    if(cmd.isSet("dataSize")){
+        data_size = cmd.getMany<int>("dataSize")[0];
+    } else {
+        throw std::runtime_error(LOCATION);
+    }
+    size_t bin_size;
+    if(cmd.isSet("binSize")){
+        bin_size = cmd.getMany<int>("binSize")[0];
+    } else {
+        throw std::runtime_error(LOCATION);
+    }
+    aby3::i64Matrix data_plain(data_size, 1);
+    aby3::i64Matrix data_res(data_size, 1);
+    std::vector<int> data_res_vec(data_size);
+
+    for(size_t i=0; i<data_size; i++){
+        data_plain(i, 0) = (data_size - i) % bin_size;
+        data_res_vec[i] = (i+1) % bin_size;
+    }
+
+    std::sort(data_res_vec.begin(), data_res_vec.end());
+    for(size_t i=0; i<data_size; i++){
+        data_res(i, 0) = data_res_vec[i];
+    }
+
+    // todo - add the deplication tags.
+    aby3::sbMatrix enc_data(data_size, 64);
+    if(role == 0){
+        enc.localBinMatrix(runtime, data_plain, enc_data).get();
+    }else{
+        enc.remoteBinMatrix(runtime, enc_data).get();
+    }
+
+    std::vector<aby3::sbMatrix> enc_data_vec(data_size);
+    for(size_t i=0; i<data_size; i++){
+        aby3::sbMatrix tmp(1, 64);
+        tmp.mShares[0](0, 0) = enc_data.mShares[0](i, 0);
+        tmp.mShares[1](0, 0) = enc_data.mShares[1](i, 0);
+        enc_data_vec[i] = tmp;
+    }
+
+    efficient_shuffle(enc_data_vec, role, enc_data_vec, enc, eval, runtime);
+
+    aby3::sbMatrix enc_test(data_size, 64);
+    for(size_t i=0; i<data_size; i++){
+        enc_test.mShares[0](i, 0) = enc_data_vec[i].mShares[0](0, 0);
+        enc_test.mShares[1](i, 0) = enc_data_vec[i].mShares[1](0, 0);
+    }
+
+    aby3::i64Matrix test(data_size, 1);
+    enc.revealAll(runtime, enc_test, test).get();
+    return 0;
+}
+
 int shuffle_test(oc::CLP &cmd) {
     // get the configs.
     int role = -1;

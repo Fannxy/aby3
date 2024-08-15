@@ -1,10 +1,15 @@
-sizeX=600
-sizeY=600
-sizeZ=600
-args=" -Matrix -sizeX "${sizeX}" -sizeY "${sizeY}" -sizeZ "${sizeZ}" -numTasks 3"
-keyword="matrix1-"${sizeX}"x"${sizeY}"x"${sizeZ}
-# options=" --symmetric"
-options=""
+dataSize=1024
+binSize=32
+symmetric=1
+repeat=20
+
+args=" -Sort -dataSize "${dataSize}" -binSize "${binSize}
+keyword="sort-repeat-temp"${symmetric}"-"${dataSize}"-"${binSize}
+if [ ${symmetric} -eq 0 ]; then
+    options=" --order 0,1,2 --order 0,1,2 --order 0,1,2 --repeat "${repeat}
+else 
+    options=" --order 0,1,2 --order 1,2,0 --order 2,0,1 --repeat "${repeat}
+fi
 root_folder=/root/aby3
 
 # Sync the schedule
@@ -19,8 +24,6 @@ cp ${root_folder}/frontend/main.test ${root_folder}/frontend/main.cpp
 python ${root_folder}/build.py
 scp -r ${root_folder}/out/build/linux/frontend/frontend aby31:${root_folder}/out/build/linux/frontend/ &
 scp -r ${root_folder}/out/build/linux/frontend/frontend aby32:${root_folder}/out/build/linux/frontend/ &
-scp -r ${root_folder}/scheduling/monitor_dis_run_multitask.py aby31:${root_folder}/scheduling/monitor_dis_run_multitask.py &
-scp -r ${root_folder}/scheduling/monitor_dis_run_multitask.py aby32:${root_folder}/scheduling/monitor_dis_run_multitask.py &
 wait;
 
 # run the tests with monitor.

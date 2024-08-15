@@ -38,8 +38,12 @@ int main(int argc, char** argv) {
 	}
 
 	if(cmd.isSet("Shuffle")){
-		shuffle_test(cmd);
-		large_scale_shuffle_test(cmd);
+		if(cmd.isSet("rank")){
+			splitted_shuffle_test(cmd);
+		} else {
+			shuffle_test(cmd);
+			large_scale_shuffle_test(cmd);
+		}
 	}
 
 	if(cmd.isSet("ORAM")){
@@ -62,12 +66,16 @@ int main(int argc, char** argv) {
 	}
 
 	if(cmd.isSet("Sort")){
-		bc_sort_test(cmd);
-		bc_sort_corner_test(cmd);
-		bc_sort_multiple_times(cmd);
-		quick_sort_test(cmd);
-		// quick_sort_with_duplicate_elements_test(cmd); // too slow
-		odd_even_merge_test(cmd);
+		if(cmd.isSet("rank")){
+			splitted_quick_sort_with_duplicate_elements_test(cmd);
+		} else {
+			// bc_sort_test(cmd);
+			// bc_sort_corner_test(cmd);
+			// bc_sort_multiple_times(cmd);
+			// quick_sort_test(cmd);
+			quick_sort_with_duplicate_elements_test(cmd); // too slow
+			// odd_even_merge_test(cmd);
+		}
 	}
 
 	if(cmd.isSet("Matrix")){

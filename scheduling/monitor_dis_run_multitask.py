@@ -14,6 +14,12 @@ NETWORK_INTERFACE2 = "ens121f0"
 IP_ADDRESS0 = "10.1.0.15"
 IP_ADDRESS1 = "10.1.0.16"
 IP_ADDRESS2 = "10.1.0.17"
+# NETWORK_INTERFACE0 = "ens110"
+# NETWORK_INTERFACE1 = "ens11"
+# NETWORK_INTERFACE2 = "ens11"
+# IP_ADDRESS0 = "10.5.0.15"
+# IP_ADDRESS1 = "10.5.0.16"
+# IP_ADDRESS2 = "10.5.0.17"
 
 def run_command(command):
     os.system(command)
@@ -26,6 +32,8 @@ if __name__ == "__main__":
     parser.add_argument('--role', type=int, help='role')
     parser.add_argument('--analysis', action='store_true', help='analysis')
     parser.add_argument('--symmetric', action='store_true', help='symmetric')
+    parser.add_argument('--order', type=str, action='append', help='order')
+    parser.add_argument('--repeat', type=int, help='repeat')
     
     args = parser.parse_args()
         
@@ -41,15 +49,17 @@ if __name__ == "__main__":
         monitor.start_all(interface=NETWORK_INTERFACE)
 
         threads = []
-        for rank in range(3):
-            role = args.role
-            p0_ip = IP_ADDRESS0
-            p1_ip = IP_ADDRESS1
-            if(args.symmetric):
-                # print("symmetric")
-                role = (args.role + rank) % 3
-                p0_ip = eval(f"IP_ADDRESS{(3 - rank) % 3}")
-                p1_ip = eval(f"IP_ADDRESS{(4 - rank) % 3}")
+        role_assignments = []
+        for role_assignment in args.order:
+            role_assignments.append(list(map(int, role_assignment.split(','))))
+        role_assignments = role_assignments * args.repeat
+        for rank, role_assignment in enumerate(role_assignments):
+            role = role_assignment[args.role]
+            index = list(range(3))
+            for i in range(3):
+                index[role_assignment[i]] = i
+            p0_ip = eval(f"IP_ADDRESS{index[0]}")
+            p1_ip = eval(f"IP_ADDRESS{index[1]}")
             command = f"{root_folder}out/build/linux/frontend/frontend -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
             print(command)
             thread = threading.Thread(target=run_command, args=(command,))

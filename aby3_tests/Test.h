@@ -97,6 +97,7 @@ int shuffle_test(oc::CLP& cmd);
 int large_scale_shuffle_test(oc::CLP& cmd);
 int correlation_test(oc::CLP& cmd);
 int communication_test(oc::CLP& cmd);
+int splitted_shuffle_test(oc::CLP& cmd);
 
 // oram tests
 int pos_map_test(oc::CLP& cmd);
@@ -124,11 +125,11 @@ int bc_sort_multiple_times(oc::CLP& cmd);
 int quick_sort_test(oc::CLP& cmd);
 int quick_sort_with_duplicate_elements_test(oc::CLP& cmd);
 int odd_even_merge_test(oc::CLP& cmd);
+int splitted_quick_sort_with_duplicate_elements_test(oc::CLP& cmd);
 
 // matrix multiplication tests
 int fixed_matrix_mult_test(oc::CLP& cmd);
 int splitted_fixed_matrix_mult_test(oc::CLP& cmd);
-// int splitted_fixed_matrix_mult_test_fault(oc::CLP& cmd);
 
 int correctness_cipher_index_pta(oc::CLP& cmd);
 int correctness_sort_pta(oc::CLP& cmd);
