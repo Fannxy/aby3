@@ -72,8 +72,9 @@ int main(int argc, char** argv) {
 			// bc_sort_test(cmd);
 			// bc_sort_corner_test(cmd);
 			// bc_sort_multiple_times(cmd);
-			// quick_sort_test(cmd);
-			quick_sort_with_duplicate_elements_test(cmd); // too slow
+			quick_sort_test(cmd);
+			arith_sort_test(cmd);
+			// quick_sort_with_duplicate_elements_test(cmd); // too slow
 			// odd_even_merge_test(cmd);
 		}
 	}

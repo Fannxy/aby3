@@ -24,7 +24,8 @@ wait;
 # 8) -Comm : test inter-party communication.
 # 9) -Sort : test the sort functions.
 # test_args=" -ORAM -Graph"
-test_args=" -Sort -ORAM -Bool -Arith -Shuffle -Init"
+# test_args=" -Sort -ORAM -Bool -Arith -Shuffle -Init"
+test_args=" -Bool -Sort"
 ./Eval/basic/dis_exec.sh "${test_args}"
 wait;
 

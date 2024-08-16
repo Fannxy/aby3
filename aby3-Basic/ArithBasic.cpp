@@ -116,3 +116,12 @@ void arith2bool(int pIdx, aby3::si64Matrix &arithInput, aby3::sbMatrix &res,
     runtime.runNext(); // note that we need to run two times to get the result!
     return;
 }
+
+void arith_cipher_lt(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &sharedB,
+                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
+                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime){
+    size_t len = sharedA.rows();
+    si64Matrix diff = sharedA - sharedB;
+    fetch_msb(pIdx, diff, res, eval, runtime);
+    return;
+}

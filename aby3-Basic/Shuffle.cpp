@@ -232,6 +232,7 @@ int efficient_shuffle(aby3::sbMatrix &T, int pIdx, aby3::sbMatrix &Tres, aby3::S
     block prevSeed = enc.mShareGen.mPrevCommon.getSeed();
     block nextSeed = enc.mShareGen.mNextCommon.getSeed();
     size_t len = T.rows();
+    size_t bitsize = T.bitCount();
     size_t unit_size = (T.bitCount() + 63) / 64;
 
     // generate the prev, next - correlated randomness.
@@ -274,7 +275,7 @@ int efficient_shuffle(aby3::sbMatrix &T, int pIdx, aby3::sbMatrix &Tres, aby3::S
         large_data_sending(pIdx, sharedX2, runtime, true);
 
         // compute the final shares.
-        Tres.resize(len, unit_size);
+        Tres.resize(len, bitsize);
         for(size_t i=0; i<len; i++){
             Tres.mShares[1](i, 0) = maskA(i, 0);
             Tres.mShares[0](i, 0) = maskB(i, 0);
@@ -327,7 +328,7 @@ int efficient_shuffle(aby3::sbMatrix &T, int pIdx, aby3::sbMatrix &Tres, aby3::S
         large_data_sending(pIdx, maskedC1, runtime, true);
 
         // compute the final shares.
-        Tres.resize(len, unit_size);
+        Tres.resize(len, bitsize);
         for(size_t i=0; i<len; i++){
             Tres.mShares[1](i, 0) = maskB(i, 0);
             Tres.mShares[0](i, 0) = maskedC1(i, 0) ^ maskedC2(i, 0);
@@ -374,7 +375,7 @@ int efficient_shuffle(aby3::sbMatrix &T, int pIdx, aby3::sbMatrix &Tres, aby3::S
         }
 
         // compute the final shares.
-        Tres.resize(len, unit_size);
+        Tres.resize(len, bitsize);
         for(size_t i=0; i<len; i++){
             Tres.mShares[1](i, 0) = maskC(i, 0);
             Tres.mShares[0](i, 0) = maskA(i, 0);

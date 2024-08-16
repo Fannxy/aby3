@@ -331,6 +331,13 @@ int quick_sort_test(oc::CLP &cmd){
         enc.remoteBinMatrix(runtime, enc_data).get();
     }
 
+    aby3::si64Matrix enc_data_si64(data_size, 1);
+    if(role == 0){
+        enc.localIntMatrix(runtime, data_plain, enc_data_si64).get();
+    }else{
+        enc.remoteIntMatrix(runtime, enc_data_si64).get();
+    }
+
     std::vector<aby3::sbMatrix> enc_data_vec(data_size);
     for(size_t i=0; i<data_size; i++){
         aby3::sbMatrix tmp(1, 64);
@@ -354,6 +361,19 @@ int quick_sort_test(oc::CLP &cmd){
 
     if(role == 0){
         check_result("Quick Sort Test", test, data_res);
+    }
+
+    quick_sort_different(enc_data_si64, role, enc, eval, runtime, min_size);
+    aby3::i64Matrix test_si64(data_size, 1);
+    enc.revealAll(runtime, enc_data_si64, test_si64).get();
+    if(role == 0){
+        check_result("Quick Sort Test with si64", test_si64, data_res);
+    }
+
+    quick_sort(enc_data_si64, role, enc, eval, runtime, min_size);
+    enc.revealAll(runtime, enc_data_si64, test_si64).get();
+    if(role == 0){
+        check_result("Quick Sort Test with si64 (including shuffle)", test_si64, data_res);
     }
 
     return 0;
@@ -552,6 +572,46 @@ int odd_even_merge_test(oc::CLP& cmd){
         check_result("High Dimensional Odd Even Multi Merge Sort Test 2", hd_multi_test2, hd_multi_res2_);
     }
 
+
+    return 0;
+}
+
+int arith_sort_test(oc::CLP& cmd){
+
+    BASIC_TEST_INIT
+
+    if(role == 0){
+        debug_info("RUN ARITHMETIC SORT TEST");
+    }
+
+    // prepare the data.
+    size_t data_size = 1 << 10;
+    aby3::i64Matrix data_plain(data_size, 1);
+    aby3::i64Matrix data_res(data_size, 1);
+
+    for(size_t i=0; i<data_size; i++){
+        data_plain(i, 0) = data_size - i;
+        data_res(i, 0) = i + 1;
+    }
+
+    // enc the data.
+    aby3::si64Matrix enc_data(data_size, 1);
+    if(role == 0){
+        enc.localIntMatrix(runtime, data_plain, enc_data).get();
+    }else{
+        enc.remoteIntMatrix(runtime, enc_data).get();
+    }
+
+    // sort the data.
+    size_t min_size = (1 << 5);
+    quick_sort(enc_data, role, enc, eval, runtime, min_size);
+
+    aby3::i64Matrix test(data_size, 1);
+    enc.revealAll(runtime, enc_data, test).get();
+
+    if(role == 0){
+        check_result("Arithmetic Sort Test", test, data_res);
+    }
 
     return 0;
 }

@@ -126,6 +126,7 @@ int quick_sort_test(oc::CLP& cmd);
 int quick_sort_with_duplicate_elements_test(oc::CLP& cmd);
 int odd_even_merge_test(oc::CLP& cmd);
 int splitted_quick_sort_with_duplicate_elements_test(oc::CLP& cmd);
+int arith_sort_test(oc::CLP& cmd);
 
 // matrix multiplication tests
 int fixed_matrix_mult_test(oc::CLP& cmd);
