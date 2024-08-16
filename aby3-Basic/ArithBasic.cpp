@@ -9,6 +9,7 @@
 
 #include "../aby3-RTR/debug.h"
 #include "../aby3-RTR/BuildingBlocks.h"
+#include "aby3/sh3/Sh3Converter.h"
 #include "Basics.h"
 
 #define DEBUG_BASIC
@@ -102,4 +103,16 @@ aby3::i64Matrix back2plain(int pIdx, std::vector<aby3::si64>& cipher_val, aby3::
     enc.revealAll(runtime, cipher_mat, plain_mat).get();
 
     return plain_mat;
+}
+
+void arith2bool(int pIdx, aby3::si64Matrix &arithInput, aby3::sbMatrix &res,
+                aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
+                aby3::Sh3Runtime &runtime){
+    
+    aby3::Sh3Converter convt;
+    convt.init(runtime, enc.mShareGen);
+    convt.toBinaryMatrix(runtime, arithInput, res).get();
+    runtime.runNext();
+    runtime.runNext(); // note that we need to run two times to get the result!
+    return;
 }

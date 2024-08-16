@@ -589,5 +589,24 @@ int share_conversion_test(oc::CLP& cmd){
         check_result("bool2arith conversion", res_b2a, input_x);
     }
 
+
+    aby3::si64Matrix asharedX(TEST_SIZE, 1);
+    if(role == 0){
+        enc.localIntMatrix(runtime, input_x, asharedX).get();
+    }
+    else{
+        enc.remoteIntMatrix(runtime, asharedX).get();
+    }
+
+    aby3::sbMatrix test_a2b(TEST_SIZE, 64);
+    arith2bool(role, asharedX, test_a2b, enc, eval, runtime);
+
+    aby3::i64Matrix res_a2b(TEST_SIZE, 1);
+    enc.revealAll(runtime, test_a2b, res_a2b).get();
+
+    if(role == 0){
+        check_result("arith2bool conversion", res_a2b, input_x);
+    }
+
     return 0;
 }

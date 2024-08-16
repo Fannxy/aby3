@@ -1,6 +1,7 @@
 #include "Sh3Converter.h"
 #include <libOTe/Tools/Tools.h>
 #include "Sh3BinaryEvaluator.h"
+#include "../../aby3-RTR/debug.h"
 
 using namespace oc;
 
@@ -86,10 +87,12 @@ namespace aby3
 				//    = in.1
 				sbMatrix& x1 = state->x1;
 				x1.resize(in.rows(), dest.bitCount());
+				x1.mShares[0].setZero();
+				x1.mShares[1].setZero();
 
 				for (u64 i = 0; i < x0.mShares[0].size(); ++i)
 				{
-					x0.mShares[1](i) = mRandGen->mPrevCommon.get<i64>();
+					x0.mShares[1](i) = mRandGen->mPrevCommon.get<i64>(); // r0
 					x0.mShares[0](i) = (in.mShares[0](i) + in.mShares[1](i)) ^ x0.mShares[1](i);
 				}
 
@@ -104,11 +107,10 @@ namespace aby3
 					}
 				}
 
-
-				comm.mNext.asyncSend(x0.mShares[0].data(), x0.mShares[1].size());
+				comm.mNext.asyncSendCopy(x0.mShares[0].data(), x0.mShares[0].size());
 
 				mCir = getArithToBinCircuit(64, dest.bitCount());
-				mBin.asyncEvaluate(self, &mCir, *mRandGen, { &x0,&x1 }, { &dest }).then([state](Sh3Task) {});
+				mBin.asyncEvaluate(self, &mCir, *mRandGen, { &x0,&x1 }, { &dest }).then([state](Sh3Task) {});	
 
 				break;
 			}
@@ -127,6 +129,7 @@ namespace aby3
 				//    = in.1
 				sbMatrix& x1 = state->x1;
 				x1.resize(in.rows(), dest.bitCount());
+				x1.mShares[1].setZero();
 
 
 				x0.mShares[0].setZero();
@@ -147,8 +150,6 @@ namespace aby3
 				}
 
 				auto f = comm.mPrev.asyncRecv(x0.mShares[1].data(), x0.mShares[1].size());
-
-
 
 				mCir = getArithToBinCircuit(64, dest.bitCount());
 
@@ -171,9 +172,7 @@ namespace aby3
 				//    = in.1
 				sbMatrix& x1 = state->x1;
 				x1.resize(in.rows(), dest.bitCount());
-
-
-
+				x1.mShares[0].setZero();
 				x0.mShares[1].setZero();
 
 				for (u64 i = 0; i < x0.mShares[0].size(); ++i)
@@ -399,7 +398,7 @@ namespace aby3
 				out.mWires.begin() + begin,
 				out.mWires.begin() + end);
 
-			//lib.int_int_add_build_do(cir, words0[i], words1[i], oWords[i]);
+			// lib.int_int_add_build_do(cir, words0[i], words1[i], oWords[i]);
 			lib.add_build(cir, words0[i], words1[i], oWords[i], temp,
 				oc::BetaLibrary::IntType::TwosComplement,
 				oc::BetaLibrary::Optimized::Depth
