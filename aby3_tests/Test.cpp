@@ -256,6 +256,72 @@ int arith_basic_test2(CLP& cmd){
     return 0;
 }
 
+int arith_basic_test3(CLP& cmd){
+    // get the configs.
+    BASIC_TEST_INIT
+
+    if(role == 0){
+        debug_info("RUN ARITH TEST3");
+    }
+
+    // generate the test data.
+    i64Matrix input_x(TEST_SIZE, 1);
+    i64Matrix input_y(TEST_SIZE, 1);
+
+    i64Matrix max_res(TEST_SIZE, 1);
+    i64Matrix min_res(TEST_SIZE, 1);
+
+    for(int i=0; i<TEST_SIZE; i++){
+        input_x(i, 0) = i;
+        input_y(i, 0) = TEST_SIZE - i;
+        if(i>TEST_SIZE-i){
+            max_res(i, 0) = i;
+            min_res(i, 0) = TEST_SIZE - i;
+        }else{
+            max_res(i, 0) = TEST_SIZE - i;
+            min_res(i, 0) = i;
+        }
+    }
+
+    // encrypt the inputs.
+    si64Matrix sharedX(TEST_SIZE, 1);
+    si64Matrix sharedY(TEST_SIZE, 1);
+
+    if(role == 0){
+        enc.localIntMatrix(runtime, input_x, sharedX).get();
+        enc.localIntMatrix(runtime, input_y, sharedY).get();
+    }else{
+        enc.remoteIntMatrix(runtime, sharedX).get();
+        enc.remoteIntMatrix(runtime, sharedY).get();
+    }
+
+    // compute for the result.
+    si64Matrix shared_max(TEST_SIZE, 1);
+    si64Matrix shared_min(TEST_SIZE, 1);
+
+    arith_cipher_max(role, sharedX, sharedY, shared_max, enc, eval, runtime);
+
+    i64Matrix test_max(TEST_SIZE, 1);
+    enc.revealAll(runtime, shared_max, test_max).get();
+
+    if(role == 0){
+        check_result("arith cipher max", test_max, max_res);
+    }
+
+    arith_cipher_max_min_split(role, sharedX, sharedY, shared_max, shared_min, enc, eval, runtime);
+
+    i64Matrix test_min(TEST_SIZE, 1);
+    enc.revealAll(runtime, shared_min, test_min).get();
+    enc.revealAll(runtime, shared_max, test_max).get();
+
+    if(role == 0){
+        check_result("arith cipher max min split", test_max, max_res);
+        check_result("arith cipher max min split", test_min, min_res);
+    }
+
+    return 0;
+}
+
 int initialization_test(CLP &cmd) {
     // get the configs.
     int role = -1;

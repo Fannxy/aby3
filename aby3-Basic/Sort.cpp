@@ -719,6 +719,13 @@ int odd_even_merge(aby3::sbMatrix& data1, aby3::sbMatrix& data2, aby3::sbMatrix&
     return 0;
 }
 
+int odd_even_merge(aby3::si64Matrix& data1, aby3::si64Matrix& data2, aby3::si64Matrix& res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+
+    
+
+    return 0;
+}
+
 /*
     The odd_even_multi_merge function is used to merge the data sets in the data vector.
     The data vector contains the data sets to be merged.

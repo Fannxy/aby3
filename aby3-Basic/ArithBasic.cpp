@@ -125,3 +125,56 @@ void arith_cipher_lt(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &shar
     fetch_msb(pIdx, diff, res, eval, runtime);
     return;
 }
+
+void arith_cipher_max(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &sharedB,
+                      aby3::si64Matrix &res, aby3::Sh3Encryptor &enc,
+                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime){
+    size_t len = sharedA.rows();
+    sbMatrix compMatrix(len, 1);
+    arith_cipher_lt(pIdx, sharedA, sharedB, compMatrix, enc, eval, runtime);
+    si64Matrix diff_ab = sharedB - sharedA;
+    eval.asyncMul(runtime, diff_ab, compMatrix, res).get();
+    res = res + sharedA;
+    return;
+}
+
+void arith_cipher_max_min_split(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &sharedB,
+                      aby3::si64Matrix &res_max, aby3::si64Matrix &res_min, aby3::Sh3Encryptor &enc,
+                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime){
+    size_t len = sharedA.rows();
+
+    sbMatrix compMatrix(len, 1);
+    arith_cipher_lt(pIdx, sharedA, sharedB, compMatrix, enc, eval, runtime);
+    sbMatrix extend_comp(len*2, 1);
+    // extend_comp.mShares[0].
+    std::memcpy(extend_comp.mShares[0].data(), compMatrix.mShares[0].data(), len * sizeof(compMatrix.mShares[0](0, 0)));
+    std::memcpy(extend_comp.mShares[1].data(), compMatrix.mShares[1].data(), len * sizeof(compMatrix.mShares[1](0, 0)));
+    std::memcpy(extend_comp.mShares[0].data() + len, compMatrix.mShares[0].data(), len * sizeof(compMatrix.mShares[0](0, 0)));
+    std::memcpy(extend_comp.mShares[1].data() + len, compMatrix.mShares[1].data(), len * sizeof(compMatrix.mShares[1](0, 0)));
+
+    si64Matrix diff_ab = sharedB - sharedA;
+    si64Matrix diff_ba = sharedA - sharedB;
+    si64Matrix extand_diff(len*2, 1);
+    std::memcpy(extand_diff.mShares[0].data(), diff_ab.mShares[0].data(), len * sizeof(diff_ab.mShares[0](0, 0)));
+    std::memcpy(extand_diff.mShares[1].data(), diff_ab.mShares[1].data(), len * sizeof(diff_ab.mShares[1](0, 0)));
+    std::memcpy(extand_diff.mShares[0].data() + len, diff_ba.mShares[0].data(), len * sizeof(diff_ba.mShares[0](0, 0)));
+    std::memcpy(extand_diff.mShares[1].data() + len, diff_ba.mShares[1].data(), len * sizeof(diff_ba.mShares[1](0, 0)));
+
+    si64Matrix extend_tmp(len*2, 1);
+    eval.asyncMul(runtime, extand_diff, extend_comp, extend_tmp).get();
+
+    std::memcpy(extand_diff.mShares[0].data(), sharedA.mShares[0].data(), len * sizeof(extend_tmp.mShares[0](0, 0)));
+    std::memcpy(extand_diff.mShares[1].data(), sharedA.mShares[1].data(), len * sizeof(extend_tmp.mShares[1](0, 0)));
+    std::memcpy(extand_diff.mShares[0].data() + len, sharedB.mShares[0].data(), len * sizeof(extend_tmp.mShares[0](0, 0)));
+    std::memcpy(extand_diff.mShares[1].data() + len, sharedB.mShares[1].data(), len * sizeof(extend_tmp.mShares[1](0, 0)));
+
+    extend_tmp = extend_tmp + extand_diff;
+
+    res_max.resize(len, 1);  res_min.resize(len, 1);
+    std::memcpy(res_max.mShares[0].data(), extend_tmp.mShares[0].data(), len * sizeof(extend_tmp.mShares[0](0, 0)));
+    std::memcpy(res_max.mShares[1].data(), extend_tmp.mShares[1].data(), len * sizeof(extend_tmp.mShares[1](0, 0)));
+    std::memcpy(res_min.mShares[0].data(), extend_tmp.mShares[0].data() + len, len * sizeof(extend_tmp.mShares[0](0, 0)));
+    std::memcpy(res_min.mShares[1].data(), extend_tmp.mShares[1].data() + len, len * sizeof(extend_tmp.mShares[1](0, 0)));
+
+    return;
+}

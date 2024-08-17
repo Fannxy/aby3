@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
 	if (cmd.isSet("Arith")){
 		arith_basic_test(cmd);
 		arith_basic_test2(cmd);
+		arith_basic_test3(cmd);
 	}
 
 	if (cmd.isSet("Init")){

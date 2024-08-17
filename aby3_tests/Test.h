@@ -86,6 +86,7 @@
 
 int arith_basic_test(oc::CLP& cmd);
 int arith_basic_test2(oc::CLP& cmd);
+int arith_basic_test3(oc::CLP& cmd);
 int bool_basic_test(oc::CLP& cmd);
 int bool_basic_test2(oc::CLP& cmd);
 int bool_aggregation_test(oc::CLP& cmd);

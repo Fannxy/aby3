@@ -300,6 +300,15 @@ void arith_cipher_lt(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &shar
                      aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 
+void arith_cipher_max(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &sharedB,
+                      aby3::si64Matrix &res, aby3::Sh3Encryptor &enc,
+                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+
+
+void arith_cipher_max_min_split(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &sharedB,
+                      aby3::si64Matrix &res_max, aby3::si64Matrix &res_min, aby3::Sh3Encryptor &enc,
+                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+
 
 // TODO: support various functions.
 void bool_aggregation(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &res,
