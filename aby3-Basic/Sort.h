@@ -22,6 +22,8 @@ int odd_even_merge(aby3::si64Matrix& data1, aby3::si64Matrix& data2, aby3::si64M
 
 int odd_even_multi_merge(std::vector<aby3::sbMatrix> &data, aby3::sbMatrix& sorted_res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
+int odd_even_multi_merge(std::vector<aby3::si64Matrix> &data, aby3::si64Matrix& sorted_res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
 /*
 data1: k * m1.
 data2: k * m2.
