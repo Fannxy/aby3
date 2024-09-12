@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
 	if (cmd.isSet("Arith")){
 		arith_basic_test(cmd);
 		arith_basic_test2(cmd);
+		arith_basic_test3(cmd);
 	}
 
 	if (cmd.isSet("Init")){
@@ -67,13 +68,15 @@ int main(int argc, char** argv) {
 
 	if(cmd.isSet("Sort")){
 		if(cmd.isSet("rank")){
-			splitted_quick_sort_with_duplicate_elements_test(cmd);
+			splitted_arith_merge_sort_test(cmd);
 		} else {
 			// bc_sort_test(cmd);
 			// bc_sort_corner_test(cmd);
 			// bc_sort_multiple_times(cmd);
 			// quick_sort_test(cmd);
-			quick_sort_with_duplicate_elements_test(cmd); // too slow
+			// arith_sort_test(cmd);
+			arith_merge_sort_test(cmd);
+			// quick_sort_with_duplicate_elements_test(cmd); // too slow
 			// odd_even_merge_test(cmd);
 		}
 	}

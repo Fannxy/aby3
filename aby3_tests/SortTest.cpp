@@ -12,73 +12,104 @@
 using namespace oc;
 using namespace aby3;
 
-int splitted_quick_sort_with_duplicate_elements_test(oc::CLP &cmd){
+int splitted_arith_merge_sort_test(oc::CLP& cmd){
+
     SPLITTED_TEST_INIT
 
     if(role == 0){
-        debug_info("RUN Quick Sort With Duplicate Elements TEST");
+        debug_info("RUN SPLITTED ARITHMETIC MERGE SORT TEST");
     }
 
     // prepare the data.
+    // prepare the data.
     size_t data_size;
-    if(cmd.isSet("dataSize")){
-        data_size = cmd.getMany<int>("dataSize")[0];
+    if (cmd.isSet("dataSize")) {
+        auto keys = cmd.getMany<size_t>("dataSize");
+        data_size = keys[0];
     } else {
         throw std::runtime_error(LOCATION);
     }
-    size_t bin_size;
-    if(cmd.isSet("binSize")){
-        bin_size = cmd.getMany<int>("binSize")[0];
-    } else {
-        throw std::runtime_error(LOCATION);
-    }
-    aby3::i64Matrix data_plain(data_size, 1);
-    aby3::i64Matrix data_res(data_size, 1);
-    std::vector<int> data_res_vec(data_size);
+    size_t arr1_len = data_size / 4,
+        arr2_len = data_size / 2,
+        arr3_len = data_size / 4,
+        arr4_len = data_size / 2;
 
-    for(size_t i=0; i<data_size; i++){
-        data_plain(i, 0) = (data_size - i) % bin_size;
-        data_res_vec[i] = (i+1) % bin_size;
+    aby3::i64Matrix arr1(arr1_len, 1);
+    aby3::i64Matrix arr2(arr2_len, 1);
+    aby3::i64Matrix arr3(arr3_len, 1);
+    aby3::i64Matrix arr4(arr4_len, 1);
+
+    std::vector<int> ref_res(arr1_len + arr2_len);
+    aby3::i64Matrix res_res_(arr1_len + arr2_len, 1);
+
+    std::vector<int> multi_ref_res(arr1_len + arr2_len + arr3_len + arr4_len);
+    aby3::i64Matrix multi_res_res_(arr1_len + arr2_len + arr3_len + arr4_len, 1);
+
+    for(size_t i=0; i<arr1_len; i++){
+        arr1(i, 0) = i + 10;
+        ref_res[i] = i + 10;
+        multi_ref_res[i] = i + 10;
+    }
+    for(size_t i=0; i<arr2_len; i++){
+        arr2(i, 0) = i + 20;
+        ref_res[i + arr1_len] = i + 20;
+        multi_ref_res[i + arr1_len] = i + 20;
+    }
+    for(size_t i=0; i<arr3_len; i++){
+        arr3(i, 0) = i + 30;
+        multi_ref_res[i + arr1_len + arr2_len] = i + 30;
+    }
+    for(size_t i=0; i<arr4_len; i++){
+        arr4(i, 0) = i + 40;
+        multi_ref_res[i + arr1_len + arr2_len + arr3_len] = i + 40;
     }
 
-    std::sort(data_res_vec.begin(), data_res_vec.end());
-    for(size_t i=0; i<data_size; i++){
-        data_res(i, 0) = data_res_vec[i];
-    }
+    std::sort(ref_res.begin(), ref_res.end());
+    for(size_t i=0; i<arr1_len + arr2_len; i++) res_res_(i, 0) = ref_res[i];
 
-    // todo - add the deplication tags.
-    aby3::sbMatrix enc_data(data_size, 64);
+    std::sort(multi_ref_res.begin(), multi_ref_res.end());
+    for(size_t i=0; i<arr1_len + arr2_len + arr3_len + arr4_len; i++) multi_res_res_(i, 0) = multi_ref_res[i];
+
+    // enc the data.
+    aby3::si64Matrix enc_arr1(arr1_len, 1);
+    aby3::si64Matrix enc_arr2(arr2_len, 1);
+    aby3::si64Matrix enc_arr3(arr3_len, 1);
+    aby3::si64Matrix enc_arr4(arr4_len, 1);
+
     if(role == 0){
-        enc.localBinMatrix(runtime, data_plain, enc_data).get();
+        enc.localIntMatrix(runtime, arr1, enc_arr1).get();
+        enc.localIntMatrix(runtime, arr2, enc_arr2).get();
+        enc.localIntMatrix(runtime, arr3, enc_arr3).get();
+        enc.localIntMatrix(runtime, arr4, enc_arr4).get();
     }else{
-        enc.remoteBinMatrix(runtime, enc_data).get();
+        enc.remoteIntMatrix(runtime, enc_arr1).get();
+        enc.remoteIntMatrix(runtime, enc_arr2).get();
+        enc.remoteIntMatrix(runtime, enc_arr3).get();
+        enc.remoteIntMatrix(runtime, enc_arr4).get();
     }
 
-    std::vector<aby3::sbMatrix> enc_data_vec(data_size);
-    for(size_t i=0; i<data_size; i++){
-        aby3::sbMatrix tmp(1, 64);
-        tmp.mShares[0](0, 0) = enc_data.mShares[0](i, 0);
-        tmp.mShares[1](0, 0) = enc_data.mShares[1](i, 0);
-        enc_data_vec[i] = tmp;
-    }
-    size_t min_size = (1 << 3);
+    aby3::si64Matrix sort_test;
+    odd_even_merge(enc_arr1, enc_arr2, sort_test, role, enc, eval, runtime);
 
-    // tag append, assume that max(data) + log(n) << 64bits, otherwise need to change the tag size.
-    quick_sort(enc_data_vec, role, enc, eval, runtime, min_size);
-
-
-    aby3::sbMatrix enc_test(data_size, 64);
-    for(size_t i=0; i<data_size; i++){
-        enc_test.mShares[0](i, 0) = enc_data_vec[i].mShares[0](0, 0);
-        enc_test.mShares[1](i, 0) = enc_data_vec[i].mShares[1](0, 0);
-    }
-
-    aby3::i64Matrix test(data_size, 1);
-    enc.revealAll(runtime, enc_test, test).get();
+    aby3::i64Matrix test(arr1_len + arr2_len, 1);
+    enc.revealAll(runtime, sort_test, test).get();
 
     if(role == 0){
-        check_result("Quick Sort with Duplicated Elements Test", test, data_res);
+        check_result("Arithmetic Merge Sort Test", test, res_res_);
     }
+
+    aby3::si64Matrix multi_sort_test;
+    std::vector<aby3::si64Matrix> enc_data_vec = {enc_arr1, enc_arr2, enc_arr3, enc_arr4};
+    odd_even_multi_merge(enc_data_vec, multi_sort_test, role, enc, eval, runtime);
+
+    aby3::i64Matrix multi_test(arr1_len + arr2_len + arr3_len + arr4_len, 1);
+    enc.revealAll(runtime, multi_sort_test, multi_test).get();
+
+    if(role == 0){
+        check_result("Arithmetic Multi Merge Sort Test", multi_test, multi_res_res_);
+    }
+
+
     return 0;
 }
 
@@ -585,7 +616,7 @@ int arith_sort_test(oc::CLP& cmd){
     }
 
     // prepare the data.
-    size_t data_size = 1 << 10;
+    size_t data_size = 1 << 15;
     aby3::i64Matrix data_plain(data_size, 1);
     aby3::i64Matrix data_res(data_size, 1);
 

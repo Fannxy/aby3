@@ -8,18 +8,18 @@ from system_monitor import *
 root_folder = "/root/aby3/"
 server1="aby31"
 server2="aby32"
-NETWORK_INTERFACE0 = "ens121f0"
-NETWORK_INTERFACE1 = "ens121f0"
-NETWORK_INTERFACE2 = "ens121f0"
-IP_ADDRESS0 = "10.1.0.15"
-IP_ADDRESS1 = "10.1.0.16"
-IP_ADDRESS2 = "10.1.0.17"
-# NETWORK_INTERFACE0 = "ens110"
-# NETWORK_INTERFACE1 = "ens11"
-# NETWORK_INTERFACE2 = "ens11"
-# IP_ADDRESS0 = "10.5.0.15"
-# IP_ADDRESS1 = "10.5.0.16"
-# IP_ADDRESS2 = "10.5.0.17"
+# NETWORK_INTERFACE0 = "ens121f0"
+# NETWORK_INTERFACE1 = "ens121f0"
+# NETWORK_INTERFACE2 = "ens121f0"
+# IP_ADDRESS0 = "10.1.0.15"
+# IP_ADDRESS1 = "10.1.0.16"
+# IP_ADDRESS2 = "10.1.0.17"
+NETWORK_INTERFACE0 = "ibs110"
+NETWORK_INTERFACE1 = "ibs110"
+NETWORK_INTERFACE2 = "ibs110"
+IP_ADDRESS0 = "10.3.0.15"
+IP_ADDRESS1 = "10.3.0.16"
+IP_ADDRESS2 = "10.3.0.17"
 
 def run_command(command):
     os.system(command)
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument('--analysis', action='store_true', help='analysis')
     parser.add_argument('--symmetric', action='store_true', help='symmetric')
     parser.add_argument('--order', type=str, action='append', help='order')
-    parser.add_argument('--repeat', type=int, help='repeat')
+    parser.add_argument('--repeat', type=int, default=1, help='repeat')
     
     args = parser.parse_args()
         
@@ -84,5 +84,3 @@ if __name__ == "__main__":
                 usage_dict = get_usage_dict(args.record_folder + f"/monitor-{args.keyword}-{i}.log")
                 # print(usage_dict)
                 draw_usage_graph(usage_dict, args.record_folder + f"/{args.keyword}-{i}.png")
-    
-    

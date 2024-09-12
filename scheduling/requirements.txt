@@ -39,6 +39,7 @@ prompt-toolkit==3.0.47
 psutil==6.0.0
 ptyprocess==0.7.0
 pure-eval==0.2.2
+pycairo==1.26.1
 pygments==2.18.0
 PyGObject==3.36.0
 pyparsing==3.1.2
