@@ -12,13 +12,28 @@ HOSTNAME = ["10.1.0.15", "10.1.0.16", "10.1.0.17"]
 NETWORK_INTERFACE = ["ibs110", "ibs110", "ibs110"]
 IP_ADDRESS = ["10.3.0.15", "10.3.0.16", "10.3.0.17"]
 
-def get_bandwidth(server_host, ip_address, time):
+# def get_bandwidth(server_host, ip_address, time):
+#     os.system(f"ssh {server_host} 'iperf3 -s -D'")
+#     result = os.popen(f"ssh {server_host} 'iperf3 -c {ip_address} -t {time} -J'").read()
+#     data = json.loads(result)
+    
+#     print("test data: ", data)
+    
+#     bandwidth = data["end"]["sum_received"]["bits_per_second"] / (2**30)
+#     os.system(f"ssh {server_host} 'pkill iperf3'")
+#     return bandwidth
+
+def get_bandwidth(i, time):
+    server_host = SERVER_HOST[i]
+    ip_address = IP_ADDRESS[i]
+    test_server = SERVER_HOST[(i+1)%3] # same-node iperf will cause error, as all the same-node communication are handled with different network interfaces. the original code lead to 30+Gbps bandwidith for all cases.
     os.system(f"ssh {server_host} 'iperf3 -s -D'")
-    result = os.popen(f"ssh {server_host} 'iperf3 -c {ip_address} -t {time} -J'").read()
+    result = os.popen(f"ssh {test_server} 'iperf3 -c {ip_address} -t {time} -J'").read()
     data = json.loads(result)
     bandwidth = data["end"]["sum_received"]["bits_per_second"] / (2**30)
     os.system(f"ssh {server_host} 'pkill iperf3'")
     return bandwidth
+    
 
 def run_command(command):
     os.system(command)
@@ -67,14 +82,19 @@ if __name__ == "__main__":
     parser.add_argument('--run_tasks', action='store_true', help='run tasks')
 
     args = parser.parse_args()
+    
+    # mkdir the record folder.
+    if not os.path.exists(args.record_folder):
+        os.makedirs(args.record_folder)
 
     # get bandwidth
     print("Getting bandwidth")
     bandwidth = []
     for i in range(3):
-        bandwidth.append(get_bandwidth(SERVER_HOST[i], IP_ADDRESS[i], args.get_bandwidth_time))
+        bandwidth.append(get_bandwidth(i, args.get_bandwidth_time))
     for i in range(3):
         print(f"{SERVER_HOST[i]}: {bandwidth[i]}Gb/s")
+    
     
     # collect network usage
     print("Collecting network usage")
