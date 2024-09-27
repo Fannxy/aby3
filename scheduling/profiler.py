@@ -12,17 +12,6 @@ HOSTNAME = ["10.1.0.15", "10.1.0.16", "10.1.0.17"]
 NETWORK_INTERFACE = ["ibs110", "ibs110", "ibs110"]
 IP_ADDRESS = ["10.3.0.15", "10.3.0.16", "10.3.0.17"]
 
-# def get_bandwidth(server_host, ip_address, time):
-#     os.system(f"ssh {server_host} 'iperf3 -s -D'")
-#     result = os.popen(f"ssh {server_host} 'iperf3 -c {ip_address} -t {time} -J'").read()
-#     data = json.loads(result)
-    
-#     print("test data: ", data)
-    
-#     bandwidth = data["end"]["sum_received"]["bits_per_second"] / (2**30)
-#     os.system(f"ssh {server_host} 'pkill iperf3'")
-#     return bandwidth
-
 def get_bandwidth(i, time):
     server_host = SERVER_HOST[i]
     ip_address = IP_ADDRESS[i]
