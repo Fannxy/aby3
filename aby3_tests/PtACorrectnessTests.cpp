@@ -9,6 +9,8 @@
 using namespace oc;
 using namespace aby3;
 
+int DEFAULT_OPTB = -1;
+
 
 int correctness_cipher_index_pta(oc::CLP& cmd){
     size_t n = 1, m=1<<10, optB=128;
@@ -70,6 +72,64 @@ int correctness_cipher_index_pta(oc::CLP& cmd){
     if(rank == 0 && role == 0){
         check_result("pta cipher_index", test_res, pinput_x);
     }
+    return 0;
+}
+
+int splitted_cipher_index_pta(oc::CLP& cmd){
+
+    SPLITTED_MPI_TEST_INIT
+
+    if(role == 0){
+        debug_info("RUN SPLITTED CIPHER INDEX TEST");
+    }
+
+    // prepare the data.
+    size_t data_size;
+    if (cmd.isSet("dataSize")) {
+        auto keys = cmd.getMany<size_t>("dataSize");
+        data_size = keys[0];
+    } else {
+        throw std::runtime_error(LOCATION);
+    }
+
+    size_t optB = DEFAULT_OPTB;
+    if(cmd.isSet("optB")){
+        auto keys = cmd.getMany<size_t>("optB");
+        optB = keys[0];
+    }
+    if(optB == -1) optB = data_size / task_num;
+
+    int n = 1;
+    int m = data_size;
+
+    // construct the task.
+    auto ptaTask = new ABY3MPITask<si64, int, si64, si64, CipherIndex>(task_num, optB, role, enc, runtime, eval);
+    ptaTask->circuit_construct({n}, {m});
+    ptaTask->set_default_value(GET_ZERO_SHARE);
+
+    // data loading.
+    std::vector<si64> inputX; std::vector<int> inputY; 
+    std::vector<si64> inputV; std::vector<si64> res(n);
+    std::tie(inputX, inputY, inputV) = ptaTask->subTask->data_loading();
+
+    // evaluate the task.
+    ptaTask->set_selective_value(inputV.data(), 0);
+    ptaTask->circuit_evaluate(inputX.data(), inputY.data(), inputV.data(), res.data());
+
+    // // check the result.   
+    // aby3::i64Matrix test_res(1, 1);
+    // aby3::si64Matrix runtime_res(1, 1);
+    // // runtime_res(0, 0) = res[0];
+    // runtime_res.mShares[0](0, 0) = res[0].mData[0];
+    // runtime_res.mShares[1](0, 0) = res[0].mData[1];
+    // enc.revealAll(runtime, runtime_res, test_res).get();
+
+    // if(rank == 0 && role == 0){
+    //     check_result("pta cipher_index", test_res, input_x);
+    // }
+
+    MPI_Finalize();
+
     return 0;
 }
 
@@ -233,7 +293,6 @@ int correctness_sum_pta(oc::CLP& cmd){
     return 0;
 }
 
-
 int correctness_max_pta(oc::CLP& cmd){
     size_t n = 1, m=1<<10, optB=128;
     int task_num;
@@ -290,6 +349,61 @@ int correctness_max_pta(oc::CLP& cmd){
     if(rank == 0 && role == 0){
         check_result("pta max", test_res, max);
     }
+
+    return 0;
+}
+
+int splitted_max_pta(oc::CLP& cmd){
+
+    SPLITTED_MPI_TEST_INIT
+
+    if(role == 0){
+        debug_info("RUN SPLITTED MAX TEST");
+    }
+
+    // prepare the data.
+    size_t data_size;
+    if (cmd.isSet("dataSize")) {
+        auto keys = cmd.getMany<size_t>("dataSize");
+        data_size = keys[0];
+    } else {
+        throw std::runtime_error(LOCATION);
+    }
+
+    size_t optB = DEFAULT_OPTB;
+    if(cmd.isSet("optB")){
+        auto keys = cmd.getMany<size_t>("optB");
+        optB = keys[0];
+    }
+    if(optB == -1) optB = data_size / task_num;
+
+    int n = 1;
+    int m = data_size;
+
+    // construct the task.
+    auto ptaTask = new ABY3MPITask<int, si64, si64, si64, Max>(task_num, optB, role, enc, runtime, eval);
+    ptaTask->set_default_value(GET_ZERO_SHARE);
+    ptaTask->circuit_construct({n}, {m});
+
+    std::vector<si64> partialX = ptaTask->subTask->data_loading();
+    std::vector<si64> res(n);
+    std::vector<int> inputX(1);
+
+    // evaluate the task.
+    ptaTask->circuit_evaluate(inputX.data(), partialX.data(), nullptr, res.data());
+
+    // // check the result.
+    // aby3::i64Matrix test_res(1, 1);
+    // aby3::si64Matrix runtime_res(1, 1);
+    // runtime_res.mShares[0](0, 0) = res[0].mData[0];
+    // runtime_res.mShares[1](0, 0) = res[0].mData[1];
+    // enc.revealAll(runtime, runtime_res, test_res).get();
+
+    // if(rank == 0 && role == 0){
+    //     check_result("pta max", test_res, max);
+    // }
+
+    MPI_Finalize();
 
     return 0;
 }
@@ -360,3 +474,54 @@ int correctness_metric_pta(oc::CLP& cmd){
     return 0;
 }
 
+int splitted_metric_pta(oc::CLP& cmd){
+    SPLITTED_MPI_TEST_INIT
+
+    if(role == 0){
+        debug_info("RUN SPLITTED METRIC TEST");
+    }
+
+    // prepare the data.
+    size_t data_size;
+    if (cmd.isSet("dataSize")) {
+        auto keys = cmd.getMany<size_t>("dataSize");
+        data_size = keys[0];
+    } else {
+        throw std::runtime_error(LOCATION);
+    }
+
+    size_t optB = DEFAULT_OPTB;
+    if(cmd.isSet("optB")){
+        auto keys = cmd.getMany<size_t>("optB");
+        optB = keys[0];
+    }
+    if(optB == -1) optB = data_size / task_num;
+
+    int n = 1;
+    int m = data_size;
+
+    // construct the task.
+    auto ptaTask = new ABY3MPITask<std::vector<si64>, std::vector<si64>, si64, si64, BioMetric>(task_num, optB, role, enc, runtime, eval);
+    ptaTask->set_default_value(get_share(role, m+1));
+    ptaTask->circuit_construct({n}, {m});
+
+    std::vector<std::vector<si64>> inputX; std::vector<std::vector<si64>> inputY;
+    std::tie(inputX, inputY) = ptaTask->subTask->data_loading();
+    std::vector<si64> res(n);
+
+    // evaluate the task.
+    ptaTask->circuit_evaluate(inputX.data(), inputY.data(), nullptr, res.data());
+
+    // // check the result.
+    // aby3::i64Matrix test_res(1, 1);
+    // aby3::si64Matrix runtime_res(1, 1);
+    // runtime_res.mShares[0](0, 0) = res[0].mData[0];
+    // runtime_res.mShares[1](0, 0) = res[0].mData[1];
+    // enc.revealAll(runtime, runtime_res, test_res).get();
+
+    // if(rank == 0 && role == 0){
+    //     check_result("pta metric", test_res, min_dis);
+    // }
+
+    return 0;
+}

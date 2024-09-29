@@ -7,9 +7,9 @@ scp -r ./scheduling aby31:${root_folder}/ &
 scp -r ./scheduling aby32:${root_folder}/ &
 wait;
 
-# prepare the test cpp.
+# # prepare the test cpp.
 cp ${root_folder}/frontend/main.test ${root_folder}/frontend/main.cpp
-python ${root_folder}/build.py
+python ${root_folder}/build.py;
 scp -r ${root_folder}/out/build/linux/frontend/frontend aby31:${root_folder}/out/build/linux/frontend/ &
 scp -r ${root_folder}/out/build/linux/frontend/frontend aby32:${root_folder}/out/build/linux/frontend/ &
 wait;

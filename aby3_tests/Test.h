@@ -65,6 +65,43 @@
 } \
 
 
+#define SPLITTED_MPI_TEST_INIT \
+    int role = -1; \
+    if (cmd.isSet("role")) { \
+        auto keys = cmd.getMany<int>("role"); \
+        role = keys[0]; \
+    } \
+    if (role == -1) { \
+        throw std::runtime_error(LOCATION); \
+    } \
+    int rank, task_num;  \
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);  \
+    MPI_Comm_size(MPI_COMM_WORLD, &task_num); \
+    debug_info("rank = " + std::to_string(rank)); \
+    IOService ios; \
+    Sh3Encryptor enc; \
+    Sh3Evaluator eval; \
+    Sh3Runtime runtime; \
+{ \
+    std::string p0_ip = "", p1_ip = ""; \
+    if (cmd.isSet("p0_ip")) { \
+        auto keys = cmd.getMany<std::string>("p0_ip"); \
+        p0_ip = keys[0]; \
+    } \
+    if (p0_ip == "") { \
+        throw std::runtime_error(LOCATION); \
+    } \
+    if (cmd.isSet("p1_ip")) { \
+        auto keys = cmd.getMany<std::string>("p1_ip"); \
+        p1_ip = keys[0]; \
+    } \
+    if (p1_ip == "") { \
+        throw std::runtime_error(LOCATION); \
+    } \
+    splitted_setup((u64)role, rank, ios, enc, eval, runtime, p0_ip, p1_ip); \
+} \
+
+
 #define TEST_INIT \
     int role = -1; \
     if (cmd.isSet("role")) { \
@@ -139,6 +176,11 @@ int correctness_sort_pta(oc::CLP& cmd);
 int correctness_sum_pta(oc::CLP& cmd);
 int correctness_max_pta(oc::CLP& cmd);
 int correctness_metric_pta(oc::CLP& cmd);
+
+// TODO split tests
+int splitted_cipher_index_pta(oc::CLP& cmd);
+int splitted_max_pta(oc::CLP& cmd);
+int splitted_metric_pta(oc::CLP& cmd);
 
 bool check_result(const std::string& func_name, aby3::i64Matrix& test,
                   aby3::i64Matrix& res);

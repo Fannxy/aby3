@@ -1,9 +1,10 @@
-dataSize=33554432
-symmetric=0
-repeat=1
+dataSize=$1
+symmetric=$2
+repeat=$3
+task=$4 # possible options: "Index, Max, Metric"
 
-args=" -Sort -dataSize "${dataSize}
-keyword="sort-"${symmetric}"-"${dataSize}
+args=" -"${task}" -dataSize "${dataSize}
+keyword=${task}"-"${symmetric}"-"${dataSize}
 if [ ${symmetric} -eq 0 ]; then
     options=" --order 0,1,2 --order 0,1,2 --order 0,1,2 --repeat "${repeat}
 else 
@@ -26,9 +27,9 @@ scp -r ${root_folder}/out/build/linux/frontend/frontend aby32:${root_folder}/out
 wait;
 
 # run the tests with monitor.
-python ${root_folder}/scheduling/monitor_dis_run_multitask.py --keyword ${keyword} --record_folder ${root_folder}/scheduling/Record_test --role 0 --args "${args}" ${options} &
-ssh aby31 "cd ./aby3/; python ${root_folder}/scheduling/monitor_dis_run_multitask.py --keyword ${keyword} --record_folder ./scheduling/Record_test --role 1 --args \"${args}\" ${options}" &
-ssh aby32 "cd ./aby3/; python ${root_folder}/scheduling/monitor_dis_run_multitask.py --keyword ${keyword} --record_folder ./scheduling/Record_test --role 2 --args \"${args}\" ${options}" &
+python ${root_folder}/scheduling/monitor_dis_run_multitask.py --keyword ${keyword} --record_folder ${root_folder}/scheduling/Record_test --role 0 --args "${args}" ${options} --MPI &
+ssh aby31 "cd ./aby3/; python ${root_folder}/scheduling/monitor_dis_run_multitask.py --keyword ${keyword} --record_folder ./scheduling/Record_test --role 1 --args \"${args}\" ${options} --MPI" &
+ssh aby32 "cd ./aby3/; python ${root_folder}/scheduling/monitor_dis_run_multitask.py --keyword ${keyword} --record_folder ./scheduling/Record_test --role 2 --args \"${args}\" ${options} --MPI" &
 wait;
 
 # analyze the records.

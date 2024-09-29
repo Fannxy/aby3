@@ -7,9 +7,9 @@ from system_monitor import *
 root_folder = "/root/aby3/"
 server1="aby31"
 server2="aby32"
-NETWORK_INTERFACE0 = "ens121f0"
-NETWORK_INTERFACE1 = "ens121f0"
-NETWORK_INTERFACE2 = "ens121f0"
+NETWORK_INTERFACE0 = "ens110"
+NETWORK_INTERFACE1 = "ens11"
+NETWORK_INTERFACE2 = "ens11"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

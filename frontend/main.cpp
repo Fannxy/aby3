@@ -88,5 +88,35 @@ int main(int argc, char** argv) {
 			fixed_matrix_mult_test(cmd);
 		}
 	}
+
+	if(cmd.isSet("Index")){
+		if(cmd.isSet("rank")){
+			MPI_Init(&argc, &argv);
+			splitted_cipher_index_pta(cmd);
+		}
+		else{
+			debug_info("The Index test is only applicable with rank specified!");
+		}
+	}
+
+	if(cmd.isSet("Max")){
+		if(cmd.isSet("rank")){
+			MPI_Init(&argc, &argv);
+			splitted_max_pta(cmd);
+		}
+		else{
+			debug_info("The Max test is only applicable with rank specified!");
+		}
+	}
+
+	if(cmd.isSet("Metric")){
+		if(cmd.isSet("rank")){
+			MPI_Init(&argc, &argv);
+			splitted_metric_pta(cmd);
+		}
+		else{
+			debug_info("The Metric test is only applicable with rank specified!");
+		}
+	}
   return 0;
 }

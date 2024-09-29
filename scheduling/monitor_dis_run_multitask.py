@@ -8,18 +8,18 @@ from system_monitor import *
 root_folder = "/root/aby3/"
 server1="aby31"
 server2="aby32"
-# NETWORK_INTERFACE0 = "ens121f0"
-# NETWORK_INTERFACE1 = "ens121f0"
-# NETWORK_INTERFACE2 = "ens121f0"
-# IP_ADDRESS0 = "10.1.0.15"
-# IP_ADDRESS1 = "10.1.0.16"
-# IP_ADDRESS2 = "10.1.0.17"
-NETWORK_INTERFACE0 = "ibs110"
-NETWORK_INTERFACE1 = "ibs110"
-NETWORK_INTERFACE2 = "ibs110"
-IP_ADDRESS0 = "10.3.0.15"
-IP_ADDRESS1 = "10.3.0.16"
-IP_ADDRESS2 = "10.3.0.17"
+NETWORK_INTERFACE0 = "ens110"
+NETWORK_INTERFACE1 = "ens11"
+NETWORK_INTERFACE2 = "ens11"
+IP_ADDRESS0 = "10.5.0.12"
+IP_ADDRESS1 = "10.5.0.14"
+IP_ADDRESS2 = "10.5.0.4"
+# NETWORK_INTERFACE0 = "ibs110"
+# NETWORK_INTERFACE1 = "ibs110"
+# NETWORK_INTERFACE2 = "ibs110"
+# IP_ADDRESS0 = "10.3.0.15"
+# IP_ADDRESS1 = "10.3.0.16"
+# IP_ADDRESS2 = "10.3.0.17"
 
 def run_command(command):
     os.system(command)
@@ -34,9 +34,10 @@ if __name__ == "__main__":
     parser.add_argument('--symmetric', action='store_true', help='symmetric')
     parser.add_argument('--order', type=str, action='append', help='order')
     parser.add_argument('--repeat', type=int, default=1, help='repeat')
+    parser.add_argument('--MPI', action='store_true', help='run in MPI')
     
     args = parser.parse_args()
-        
+
     # if(os.path.exi args.record_folder)
     if(not os.path.exists(args.record_folder)):
         os.makedirs(args.record_folder)
@@ -48,26 +49,56 @@ if __name__ == "__main__":
         monitor = SystemMonitor(0.01)
         monitor.start_all(interface=NETWORK_INTERFACE)
 
-        threads = []
-        role_assignments = []
-        for role_assignment in args.order:
-            role_assignments.append(list(map(int, role_assignment.split(','))))
-        role_assignments = role_assignments * args.repeat
-        for rank, role_assignment in enumerate(role_assignments):
-            role = role_assignment[args.role]
-            index = list(range(3))
-            for i in range(3):
-                index[role_assignment[i]] = i
-            p0_ip = eval(f"IP_ADDRESS{index[0]}")
-            p1_ip = eval(f"IP_ADDRESS{index[1]}")
-            command = f"{root_folder}out/build/linux/frontend/frontend -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
-            print(command)
-            thread = threading.Thread(target=run_command, args=(command,))
-            threads.append(thread)
-            thread.start()
+        if(not args.MPI):
+            threads = []
+            role_assignments = []
+            for role_assignment in args.order:
+                role_assignments.append(list(map(int, role_assignment.split(','))))
+            role_assignments = role_assignments * args.repeat
+            for rank, role_assignment in enumerate(role_assignments):
+                role = role_assignment[args.role]
+                index = list(range(3))
+                for i in range(3):
+                    index[role_assignment[i]] = i
+                p0_ip = eval(f"IP_ADDRESS{index[0]}")
+                p1_ip = eval(f"IP_ADDRESS{index[1]}")
+                command = f"{root_folder}out/build/linux/frontend/frontend -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
+                print(command)
+                thread = threading.Thread(target=run_command, args=(command,))
+                threads.append(thread)
+                thread.start()
 
-        for thread in threads:
-            thread.join()
+            for thread in threads:
+                thread.join()
+        
+        if(args.MPI):
+            task_num = len(args.order)
+            exec_args_prefix = f" -np 1 {root_folder}out/build/linux/frontend/frontend {args.args}"
+            
+            role_assignments = []
+            for role_assignment in args.order:
+                role_assignments.append(list(map(int, role_assignment.split(','))))
+            role_assignments = role_assignments * args.repeat
+            rank_command_list = []
+            for rank, role_assignment in enumerate(role_assignments):
+                role = role_assignment[args.role]
+                index = list(range(3))
+                for i in range(3):
+                    index[role_assignment[i]] = i
+                p0_ip = eval(f"IP_ADDRESS{index[0]}")
+                p1_ip = eval(f"IP_ADDRESS{index[1]}")
+                rank_command = f" -role {role} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
+                rank_command_list.append(rank_command)
+            
+            mpi_command = "mpirun"
+            for i in range(len(rank_command_list)):
+                if(i != len(rank_command_list) - 1):
+                    command = exec_args_prefix + rank_command_list[i] + " : "
+                else:
+                    command = exec_args_prefix + rank_command_list[i]
+                mpi_command += command 
+
+            run_command(mpi_command)
 
         monitor.stop_and_output(args.record_folder + f"/monitor-{args.keyword}.log")
         exit(0)
