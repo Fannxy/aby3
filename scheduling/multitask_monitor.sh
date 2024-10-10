@@ -1,9 +1,10 @@
-dataSize=33554432
-symmetric=0
-repeat=1
+dataSize=$1
+symmetric=$2
+repeat=$3
+task=$4
 
-args=" -Sort -dataSize "${dataSize}
-keyword="sort-"${symmetric}"-"${dataSize}
+args=" -"${task}" -dataSize "${dataSize}
+keyword=${task}"-"${symmetric}"-"${dataSize}
 if [ ${symmetric} -eq 0 ]; then
     options=" --order 0,1,2 --order 0,1,2 --order 0,1,2 --repeat "${repeat}
 else 

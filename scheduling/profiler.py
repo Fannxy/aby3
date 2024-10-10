@@ -3,33 +3,34 @@ import os
 import argparse
 import threading
 import re
+import math
+from task_assigning import assign_task
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'PtA_deploy')))
 from system_monitor import *
 
 root_folder = "/root/aby3/"
-SERVER_HOST = ["aby30", "aby31", "aby32"]
-HOSTNAME = ["10.1.0.15", "10.1.0.16", "10.1.0.17"]
-NETWORK_INTERFACE = ["ibs110", "ibs110", "ibs110"]
-IP_ADDRESS = ["10.3.0.15", "10.3.0.16", "10.3.0.17"]
+NETWORK_INTERFACE = "ibs110"
 
-def get_bandwidth(i, time):
-    server_host = SERVER_HOST[i]
-    ip_address = IP_ADDRESS[i]
-    test_server = SERVER_HOST[(i+1)%3] # same-node iperf will cause error, as all the same-node communication are handled with different network interfaces. the original code lead to 30+Gbps bandwidith for all cases.
+def calculate_expression(n, expression):
+    allowed_functions = {name: getattr(math, name) for name in dir(math) if not name.startswith("__")}
+    allowed_functions['n'] = n
+    result = eval(expression, allowed_functions)
+    return result
+
+def get_bandwidth(i, time, server_host, ip_address, test_server):
     os.system(f"ssh {server_host} 'iperf3 -s -D'")
     result = os.popen(f"ssh {test_server} 'iperf3 -c {ip_address} -t {time} -J'").read()
     data = json.loads(result)
     bandwidth = data["end"]["sum_received"]["bits_per_second"] / (2**30)
     os.system(f"ssh {server_host} 'pkill iperf3'")
     return bandwidth
-    
 
 def run_command(command):
     os.system(command)
 
-def collect_network_usage(data_size, role, args, record_folder, keyword):
+def collect_network_usage(data_size, role, args, record_folder, keyword, server_host, ip_address):
     monitor = SystemMonitor(0.01)
-    monitor.start_all(interface=NETWORK_INTERFACE[0])
+    monitor.start_all(interface=NETWORK_INTERFACE)
 
     threads = []
     role_assignment = [role, (role + 1) % 3, (role + 2) % 3]
@@ -37,9 +38,9 @@ def collect_network_usage(data_size, role, args, record_folder, keyword):
     for i in range(3):
         index[role_assignment[i]] = i
     for i in range(3):
-        command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {data_size} -role {role_assignment[i]} {args} -p0_ip {IP_ADDRESS[index[0]]} -p1_ip {IP_ADDRESS[index[1]]} -rank 0"
+        command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {data_size} -role {role_assignment[i]} {args} -p0_ip {ip_address[index[0]]} -p1_ip {ip_address[index[1]]} -rank 0"
         if i != 0:
-            command = f"ssh {SERVER_HOST[i]} " + command
+            command = f"ssh {server_host[i]} " + command
         print(command)
         thread = threading.Thread(target=run_command, args=(command,))
         threads.append(thread)
@@ -61,29 +62,33 @@ if __name__ == "__main__":
     parser.add_argument('--args', type=str, help='run args')
     parser.add_argument('--record_folder', type=str, help='record folder')
     parser.add_argument('--keyword', type=str, help='keyword')
+    parser.add_argument('--num_parties', type=int, default=3, help='number of parties')
+    parser.add_argument('--server_host', type=str, nargs='+', default=["aby30", "aby31", "aby32"], help='server host')
+    parser.add_argument('--ip_address', type=str, nargs='+', default=["10.3.0.15", "10.3.0.16", "10.3.0.17"], help='ip address')
     parser.add_argument('--data_size', type=int, help='data size')
     parser.add_argument('--get_bandwidth_time', type=int, default=5, help='get bandwidth time')
     parser.add_argument('--skip_monitor', action='store_true', help='skip monitor')
     parser.add_argument('--fitting_length', type=int, default=10, help='fitting length')
     parser.add_argument('--fitting_step', type=int, default=100, help='fitting step')
-    parser.add_argument('--fitting_degree', type=int, default=1, help='fitting degree')
+    parser.add_argument('--complexity', type=str, nargs='+', default=['1', 'n'], help='communication complexity of each stage')
     parser.add_argument('--parallelism_limit', type=int, default=64, help='parallelism limit')
     parser.add_argument('--run_tasks', action='store_true', help='run tasks')
 
     args = parser.parse_args()
+    n = args.num_parties
+    data_size = args.data_size
     
     # mkdir the record folder.
     if not os.path.exists(args.record_folder):
         os.makedirs(args.record_folder)
-
+    
     # get bandwidth
     print("Getting bandwidth")
     bandwidth = []
-    for i in range(3):
-        bandwidth.append(get_bandwidth(i, args.get_bandwidth_time))
-    for i in range(3):
-        print(f"{SERVER_HOST[i]}: {bandwidth[i]}Gb/s")
-    
+    for i in range(n):
+        bandwidth.append(get_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], args.server_host[(i+1)%n]))
+    for i in range(n):
+        print(f"{args.server_host[i]}: {bandwidth[i]}Gb/s")
     
     # collect network usage
     print("Collecting network usage")
@@ -93,12 +98,11 @@ if __name__ == "__main__":
         for role in range(3):
             sizes = range(step, step * length + 1, step)
             for size in sizes:
-                collect_network_usage(size, role, args.args, args.record_folder, f"{args.keyword}-{role}-{size}")
+                collect_network_usage(size, role, args.args, args.record_folder, f"{args.keyword}-{role}-{size}", args.server_host, args.ip_address)
                 time.sleep(0.5)
     
-    # fit network usage with polynomial
+    # fit network usage with given expression
     print("Fitting network usage")
-    degree = args.fitting_degree
     coef_recv = []
     coef_send = []
     for role in range(3):
@@ -109,69 +113,58 @@ if __name__ == "__main__":
             network_recv, network_send = get_network_usage(args.record_folder, f"{args.keyword}-{role}-{size}")
             mean_recv.append(np.mean(network_recv))
             mean_send.append(np.mean(network_send))
-            # print(f"Data size: {size} Mean recv: {mean_recv[-1]} Mean send: {mean_send[-1]}")
-        coef_recv.append(np.polyfit(np.log(sizes), mean_recv, degree))
-        coef_send.append(np.polyfit(np.log(sizes), mean_send, degree))
-        # print(f"Data size: {np.array(sizes)}")
-        # print(f"Mean recv: {np.array(mean_recv)}")
-        # print(f"Mean send: {np.array(mean_send)}")
-        # print(f"MSE recv: {np.mean((np.polyval(coef_recv[-1], np.log(sizes)) - mean_recv)**2)}")
-        # print(f"MSE send: {np.mean((np.polyval(coef_send[-1], np.log(sizes)) - mean_send)**2)}")
-    # print("Coef recv:")
-    # print(coef_recv)
-    # print("Coef send:")
-    # print(coef_send)
 
-    # decide the degree of parallelism
-    sum_coef_recv = np.zeros(degree + 1)
-    sum_coef_send = np.zeros(degree + 1)
+        complexity_matrix = np.array([
+            [calculate_expression(size, complexity_expr) for complexity_expr in args.complexity]
+            for size in sizes
+        ])
+
+        coef_recv.append(np.linalg.lstsq(complexity_matrix, mean_recv, rcond=None)[0])
+        coef_send.append(np.linalg.lstsq(complexity_matrix, mean_send, rcond=None)[0])
+
+    expr_recv = ["0"] * n
+    expr_send = ["0"] * n
+
     for i in range(3):
-        sum_coef_recv += coef_recv[i]
-        sum_coef_send += coef_send[i]
+        expr_recv[i] = " + ".join(f"({coef}) * ({complexity_expr})" for coef, complexity_expr in zip(coef_recv[i], args.complexity))
+        expr_send[i] = " + ".join(f"({coef}) * ({complexity_expr})" for coef, complexity_expr in zip(coef_send[i], args.complexity))
     
-    data_size = args.data_size
-    left = 1
-    right = min(data_size // (3 * step), args.parallelism_limit)
-    while left < right:
-        mid = (left + right) // 2
-        sum_recv = np.polyval(sum_coef_recv, np.log(data_size / (mid * 3)))
-        sum_send = np.polyval(sum_coef_send, np.log(data_size / (mid * 3)))
-        bandwidth_usage = max(sum_recv, sum_send) * mid
-        if bandwidth_usage <= bandwidth[0]:
-            left = mid + 1
-        else:
-            right = mid
-    task_num = left
-    subtask_data_size = []
-    for i in range(task_num * 3):
-        subtask_data_size.append((data_size + i) // (task_num * 3))
-    print(f"Degree of parallelism: {task_num}")
+    print(expr_recv)
+    print(expr_send)
+
+    # assign tasks
+    
+    res = assign_task(bandwidth, expr_recv, expr_send, data_size)
+    print("Task assignment:", res)
 
     # run the tasks
     if args.run_tasks:
         print("Running tasks")
         monitor = SystemMonitor(0.01)
-        monitor.start_all(interface=NETWORK_INTERFACE[0])
+        monitor.start_all(interface=NETWORK_INTERFACE)
 
         threads = []
-        commands = [[] for i in range(3)]
-        for node in range(3):
-            for rank in range(task_num):
-                for role in range(3):
-                    index = list(range(3))
-                    for i in range(3):
-                        index[(role + i) % 3] = i
-                    p0_ip = IP_ADDRESS[index[0]]
-                    p1_ip = IP_ADDRESS[index[1]]
-                    subtask_size = subtask_data_size[rank * 3 + role]
-                    command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {(role + node) % 3} {args.args} -rank {rank * 3 + role} -p0_ip {p0_ip} -p1_ip {p1_ip}"
-                    commands[node].append(command)
+        commands = [[] for i in range(n)]
+        for rank, param in enumerate(res):
+            role_assignment = param[0]
+            subtask_size = param[1]
+            party_id = []
+            for role in range(3):
+                for i in range(n):
+                    if role_assignment[i] == role:
+                        party_id.append(i)
+                        break
+            for role in range(3):
+                p0_ip = args.ip_address[party_id[0]]
+                p1_ip = args.ip_address[party_id[1]]
+                command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
+                commands[party_id[role]].append(command)
         
         threads = []
-        for node in range(3):
+        for node in range(n):
             command = " & ".join(commands[node]) + " & wait"
             if node != 0:
-                command = f"ssh {SERVER_HOST[node]} '{command}'"
+                command = f"ssh {args.server_host[node]} '{command}'"
             print(command)
             thread = threading.Thread(target=run_command, args=(command,))
             threads.append(thread)
