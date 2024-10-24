@@ -95,5 +95,3 @@ if __name__ == "__main__":
     
     with open(network_res_file, "w") as f:
         json.dump(bandwidth_dict, f)
-    
-    

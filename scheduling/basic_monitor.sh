@@ -1,4 +1,4 @@
-args=" -Sort -dataSize 1000 -p0_ip 10.3.0.15 -p1_ip 10.3.0.16 -rank 0"
+args=" -Sort -dataSize 1048576 -p0_ip 10.3.0.15 -p1_ip 10.3.0.16 -rank 0"
 keyword="sort"
 root_folder=/root/aby3
 

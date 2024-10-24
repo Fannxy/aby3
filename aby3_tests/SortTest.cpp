@@ -29,84 +29,50 @@ int splitted_arith_merge_sort_test(oc::CLP& cmd){
     } else {
         throw std::runtime_error(LOCATION);
     }
-    size_t arr1_len = data_size / 4,
-        arr2_len = data_size / 2,
-        arr3_len = data_size / 4,
-        arr4_len = data_size / 2;
+    size_t arr_len = 1024;
+    if(arr_len > data_size) arr_len = data_size;
+    size_t arr_num = data_size / arr_len;
 
-    aby3::i64Matrix arr1(arr1_len, 1);
-    aby3::i64Matrix arr2(arr2_len, 1);
-    aby3::i64Matrix arr3(arr3_len, 1);
-    aby3::i64Matrix arr4(arr4_len, 1);
-
-    std::vector<int> ref_res(arr1_len + arr2_len);
-    aby3::i64Matrix res_res_(arr1_len + arr2_len, 1);
-
-    std::vector<int> multi_ref_res(arr1_len + arr2_len + arr3_len + arr4_len);
-    aby3::i64Matrix multi_res_res_(arr1_len + arr2_len + arr3_len + arr4_len, 1);
-
-    for(size_t i=0; i<arr1_len; i++){
-        arr1(i, 0) = i + 10;
-        ref_res[i] = i + 10;
-        multi_ref_res[i] = i + 10;
-    }
-    for(size_t i=0; i<arr2_len; i++){
-        arr2(i, 0) = i + 20;
-        ref_res[i + arr1_len] = i + 20;
-        multi_ref_res[i + arr1_len] = i + 20;
-    }
-    for(size_t i=0; i<arr3_len; i++){
-        arr3(i, 0) = i + 30;
-        multi_ref_res[i + arr1_len + arr2_len] = i + 30;
-    }
-    for(size_t i=0; i<arr4_len; i++){
-        arr4(i, 0) = i + 40;
-        multi_ref_res[i + arr1_len + arr2_len + arr3_len] = i + 40;
+    std::vector<aby3::i64Matrix> arr;
+    for(size_t i = 0; i < arr_num; i++) {
+        arr.push_back(aby3::i64Matrix(arr_len, 1));
     }
 
+    std::vector<int> ref_res(arr_num * arr_len);
+    for(size_t i = 0; i < arr_num; i++) {
+        for(size_t j = 0; j < arr_len; j++) {
+            arr[i](j, 0) = i * 10 + j;
+            ref_res[i * arr_len + j] = i * 10 + j;
+        }
+    }
+
+    aby3::i64Matrix res_res_(arr_num * arr_len, 1);
     std::sort(ref_res.begin(), ref_res.end());
-    for(size_t i=0; i<arr1_len + arr2_len; i++) res_res_(i, 0) = ref_res[i];
-
-    std::sort(multi_ref_res.begin(), multi_ref_res.end());
-    for(size_t i=0; i<arr1_len + arr2_len + arr3_len + arr4_len; i++) multi_res_res_(i, 0) = multi_ref_res[i];
+    for(size_t i = 0; i < arr_num * arr_len; i++) res_res_(i, 0) = ref_res[i];
 
     // enc the data.
-    aby3::si64Matrix enc_arr1(arr1_len, 1);
-    aby3::si64Matrix enc_arr2(arr2_len, 1);
-    aby3::si64Matrix enc_arr3(arr3_len, 1);
-    aby3::si64Matrix enc_arr4(arr4_len, 1);
-
-    if(role == 0){
-        enc.localIntMatrix(runtime, arr1, enc_arr1).get();
-        enc.localIntMatrix(runtime, arr2, enc_arr2).get();
-        enc.localIntMatrix(runtime, arr3, enc_arr3).get();
-        enc.localIntMatrix(runtime, arr4, enc_arr4).get();
-    }else{
-        enc.remoteIntMatrix(runtime, enc_arr1).get();
-        enc.remoteIntMatrix(runtime, enc_arr2).get();
-        enc.remoteIntMatrix(runtime, enc_arr3).get();
-        enc.remoteIntMatrix(runtime, enc_arr4).get();
+    std::vector<aby3::si64Matrix> enc_arr;
+    for(size_t i = 0; i < arr_num; i++) {
+        enc_arr.push_back(aby3::si64Matrix(arr_len, 1));
     }
-
-    aby3::si64Matrix sort_test;
-    odd_even_merge(enc_arr1, enc_arr2, sort_test, role, enc, eval, runtime);
-
-    aby3::i64Matrix test(arr1_len + arr2_len, 1);
-    enc.revealAll(runtime, sort_test, test).get();
-
     if(role == 0){
-        check_result("Arithmetic Merge Sort Test", test, res_res_);
+        for(size_t i = 0; i < arr_num; i++) {
+            enc.localIntMatrix(runtime, arr[i], enc_arr[i]).get();
+        }
+    }else{
+        for(size_t i = 0; i < arr_num; i++) {
+            enc.remoteIntMatrix(runtime, enc_arr[i]).get();
+        }
     }
 
     aby3::si64Matrix multi_sort_test;
-    std::vector<aby3::si64Matrix> enc_data_vec = {enc_arr1, enc_arr2, enc_arr3, enc_arr4};
-    odd_even_multi_merge(enc_data_vec, multi_sort_test, role, enc, eval, runtime);
+    odd_even_multi_merge(enc_arr, multi_sort_test, role, enc, eval, runtime);
 
-    aby3::i64Matrix multi_test(arr1_len + arr2_len + arr3_len + arr4_len, 1);
+    aby3::i64Matrix multi_test(arr_num * arr_len, 1);
     enc.revealAll(runtime, multi_sort_test, multi_test).get();
 
     if(role == 0){
-        check_result("Arithmetic Multi Merge Sort Test", multi_test, multi_res_res_);
+        check_result("Arithmetic Multi Merge Sort Test", multi_test, res_res_);
     }
 
 

@@ -9,7 +9,7 @@ def calculate_expression(n, expression):
     result = eval(expression, allowed_functions)
     return result
 
-def assign_task(bandwidth, expr_recv, expr_send, data_size):
+def assign_task(bandwidth, expr_recv, expr_send, parallelism, data_size):
     num_parties = len(bandwidth)
     assert(len(expr_recv) == num_parties)
     assert(len(expr_send) == num_parties)
@@ -48,14 +48,22 @@ def assign_task(bandwidth, expr_recv, expr_send, data_size):
     opt_t = res.x[-1]
     opt_x = res.x[:-1]
 
-    threshold = max(opt_x) / num_parties
+    threshold = 1e-6
     indices = [i for i, x in enumerate(opt_x) if x >= threshold]
     sum_opt_x = sum(opt_x)
     remaining_data_size = data_size
+    remaining_task_num = parallelism
+    subtask_data_size = [0] * len(perms)
+    task_num = [0] * len(perms)
+    for i in indices:
+        subtask_data_size[i] = round(opt_x[i] / sum_opt_x * remaining_data_size)
+        task_num[i] = round(opt_x[i] / sum_opt_x * remaining_task_num)
+        sum_opt_x -= opt_x[i]
+        remaining_data_size -= subtask_data_size[i]
+        remaining_task_num -= task_num[i]
+    
     result = []
     for i in indices:
-        subtask_data_size = round(opt_x[i] / sum_opt_x * remaining_data_size)
-        sum_opt_x -= opt_x[i]
-        remaining_data_size -= subtask_data_size
-        result.append([perms[i], subtask_data_size])
+        for rank in range(task_num[i]):
+            result.append([perms[i], (subtask_data_size[i] + rank) // task_num[i]])
     return result
