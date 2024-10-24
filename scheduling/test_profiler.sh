@@ -10,7 +10,7 @@ fitting_length=16
 fitting_step=128
 complexity="1 n"
 get_bandwidth_time=1
-parallelism_limit=64
+parallelism_limit=96
 
 # Sync the schedule
 scp -r ./scheduling aby31:${root_folder}/ &

@@ -20,10 +20,10 @@ fitting_length=16
 fitting_step=128
 complexity="1 n"
 get_bandwidth_time=1
-parallelism_limit=64
+parallelism_limit=96
 
 task_list=("Index" "Max" "Metric")
-data_size=268435456
+data_size=1073741824
 
 for task in ${task_list[@]}; do
     python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${task} \
