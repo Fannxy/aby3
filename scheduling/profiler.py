@@ -153,16 +153,20 @@ if __name__ == "__main__":
     min_bandwidth = min(bandwidth)
     min_bandwidth_index = bandwidth.index(min_bandwidth)
     while parallelism > 2:
+        size = data_size // parallelism
         if not args.skip_monitor:
-            usage_dict = collect_network_usage(data_size // parallelism, min_bandwidth_index, args.args, args.record_folder, f"{args.keyword}-{min_bandwidth_index}-{data_size}", args.server_host, args.ip_address, args.network_interface)
+            usage_dict = collect_network_usage(size, min_bandwidth_index, args.args, args.record_folder, f"{args.keyword}-profile-{size}", args.server_host, args.ip_address, args.network_interface)
         else:
-            usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-{min_bandwidth_index}-{data_size}.log")
+            usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-profile-{size}.log")
         network_recv, network_send = usage_dict["network_recv"], usage_dict["network_send"]
         network_usage = [max(recv, send) for recv, send in zip(network_recv, network_send)]
         tmp = [np.mean(network_usage[i:i+64]) for i in range(0, len(network_usage), 64)]
         tmp = [x for x in tmp if x > min_bandwidth / 64]
-        mean_usage = np.mean(tmp)
-        if mean_usage * parallelism < min_bandwidth:
+        mean_network_usage = np.mean(tmp)
+        if mean_network_usage * parallelism < min_bandwidth:
+            break
+        mean_cpu_usage = np.mean(usage_dict["cpu"])
+        if mean_cpu_usage * parallelism < 100:
             break
         parallelism //= 2
     parallelism *= 2

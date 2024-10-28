@@ -1,5 +1,5 @@
-keyword="Sort"
-args=" -Sort"
+keyword="Matrix"
+args=" -Matrix"
 root_folder=/root/aby3
 num_parties=3
 server_host="aby30 aby31 aby32"
@@ -10,7 +10,7 @@ fitting_length=16
 fitting_step=128
 complexity="1 n"
 get_bandwidth_time=1
-parallelism_limit=96
+parallelism_limit=48
 
 # Sync the schedule
 scp -r ./scheduling aby31:${root_folder}/ &

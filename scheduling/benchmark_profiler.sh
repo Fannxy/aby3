@@ -1,5 +1,7 @@
 root_folder=/root/aby3
 
+rm -r ${root_folder}/scheduling/Record_test/record.xlsx
+
 # Sync the schedule
 scp -r ./scheduling aby31:${root_folder}/ &
 scp -r ./scheduling aby32:${root_folder}/ &
@@ -14,30 +16,30 @@ wait;
 
 num_parties=3
 server_host="aby30 aby31 aby32"
-ip_address="10.3.0.15 10.3.0.16 10.3.0.17"
-network_interface="ibs110 ibs110 ibs110"
+ip_address="10.5.0.15 10.3.0.16 10.5.0.17"
+network_interface="ens11 ibs110 ens110"
 fitting_length=16
 fitting_step=128
 complexity="1 n"
 get_bandwidth_time=1
-parallelism_limit=96
+parallelism_limit=48
 
-task_list=("Index" "Max" "Metric")
-data_size=1073741824
+# task_list=("Index" "Max" "Metric")
+# data_size=268435456
 
-for task in ${task_list[@]}; do
-    python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${task} \
-    --num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
-    --data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} \
-    --run_tasks --MPI
+# for task in ${task_list[@]}; do
+#     python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${task} \
+#     --num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
+#     --data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} \
+#     --run_tasks --MPI
 
-    python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${task} \
-    --num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
-    --data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} \
-    --run_tasks --MPI --skip_monitor --baseline
-done
+#     python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${task} \
+#     --num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
+#     --data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} \
+#     --run_tasks --MPI --skip_monitor --baseline
+# done
 
-task_list=("Sort" "Matrix")
+task_list=("Sort")
 data_size=33554432
 
 for task in ${task_list[@]}; do
