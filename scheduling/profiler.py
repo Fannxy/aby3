@@ -66,7 +66,7 @@ if __name__ == "__main__":
     parser.add_argument('--keyword', type=str, help='keyword')
     parser.add_argument('--num_parties', type=int, default=3, help='number of parties')
     parser.add_argument('--server_host', type=str, nargs='+', default=["aby30", "aby31", "aby32"], help='server host')
-    parser.add_argument('--ip_address', type=str, nargs='+', default=["10.3.0.15", "10.3.0.16", "10.3.0.17"], help='ip address')
+    parser.add_argument('--ip_address', type=str, nargs='+', default=["10.3.0.13", "10.3.0.16", "10.3.0.17"], help='ip address')
     parser.add_argument('--network_interface', type=str, nargs='+', default=["ibs110", "ibs110", "ibs110"], help='network interface')
     parser.add_argument('--data_size', type=int, help='data size')
     parser.add_argument('--get_bandwidth_time', type=int, default=5, help='get bandwidth time')
