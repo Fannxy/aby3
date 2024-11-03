@@ -165,9 +165,6 @@ if __name__ == "__main__":
         mean_network_usage = np.mean(tmp)
         if mean_network_usage * parallelism < min_bandwidth:
             break
-        mean_cpu_usage = np.mean(usage_dict["cpu"])
-        if mean_cpu_usage * parallelism < 100:
-            break
         parallelism //= 2
     parallelism *= 2
     print(f"parallelism: {parallelism}")
@@ -219,28 +216,42 @@ if __name__ == "__main__":
             thread = threading.Thread(target=analysis, args=(args.server_host[i], f"{args.keyword}-{data_size}", total_command[i], args.record_folder, args.network_interface[i]))
             threads.append(thread)
 
+        start_time = time.time()
         for thread in threads:
             thread.start()
         for thread in threads:
             thread.join()
+        end_time = time.time()
         
         os.system(f"mv {args.record_folder}/monitor-{args.keyword}-{data_size}.log {args.record_folder}/monitor-{args.keyword}-{data_size}-0.log")
         for i in range(1, n):
             os.system(f"scp -r {args.server_host[i]}:{args.record_folder}/monitor-{args.keyword}-{data_size}.log {args.record_folder}/monitor-{args.keyword}-{data_size}-{i}.log")
 
+        keyword = f"{args.keyword}"
+        if args.baseline:
+            keyword += "-baseline"
+        recv_utilization = []
+        send_utilization = []
         for i in range(n):
             usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-{data_size}-{i}.log")
-            keyword = f"{args.keyword}"
-            if args.baseline:
-                keyword += "-baseline"
-            keyword += f"-{i}"
-            draw_usage_graph(usage_dict, f"{args.record_folder}/{keyword}-{data_size}.png")
-            file_path = f"{args.record_folder}/record.xlsx"
-            if not os.path.exists(f"{args.record_folder}/record.xlsx"):
-                df = pd.DataFrame(columns=['keyword', 'data size', 'time stamps', 'utilization'])
-                df.to_excel(file_path, index=False)
-            df = pd.read_excel(file_path, engine='openpyxl')
-            utilization = (np.mean(usage_dict["network_recv"]) + np.mean(usage_dict["network_send"])) / (2 * bandwidth[i])
-            new_row = pd.DataFrame({'keyword': [f"{keyword}"], 'data size': [data_size], 'time stamps': [len(usage_dict["network_recv"])], 'utilization': [utilization]})
-            df = pd.concat([df, new_row], ignore_index=True)
+            draw_usage_graph(usage_dict, f"{args.record_folder}/{keyword}-{data_size}-{i}.png")
+            recv_u = np.mean(usage_dict["network_recv"]) / bandwidth[i]
+            send_u = np.mean(usage_dict["network_send"]) / bandwidth[i]
+            recv_utilization.append(recv_u)
+            send_utilization.append(send_u)
+
+        file_path = f"{args.record_folder}/record.xlsx"
+        if not os.path.exists(f"{args.record_folder}/record.xlsx"):
+            df = pd.DataFrame()
             df.to_excel(file_path, index=False)
+        
+        df = pd.read_excel(file_path, engine='openpyxl')
+        new_row = {}
+        new_row['keyword'] = [f"{keyword}"]
+        new_row['data size'] = [data_size]
+        new_row['time'] = [end_time - start_time]
+        for i in range(n):
+            new_row[f"recv utilization-{i}"] = [recv_utilization[i]]
+            new_row[f"send utilization-{i}"] = [send_utilization[i]]
+        df = pd.concat([df, pd.DataFrame(new_row)], ignore_index=True)
+        df.to_excel(file_path, index=False)

@@ -9,7 +9,7 @@ data_size=33554432
 fitting_length=16
 fitting_step=128
 complexity="1 n"
-get_bandwidth_time=1
+get_bandwidth_time=20
 parallelism_limit=48
 
 # Sync the schedule
