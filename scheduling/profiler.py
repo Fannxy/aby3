@@ -160,8 +160,7 @@ if __name__ == "__main__":
             usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-profile-{size}.log")
         network_recv, network_send = usage_dict["network_recv"], usage_dict["network_send"]
         network_usage = [max(recv, send) for recv, send in zip(network_recv, network_send)]
-        tmp = [np.mean(network_usage[i:i+64]) for i in range(0, len(network_usage), 64)]
-        tmp = [x for x in tmp if x > min_bandwidth / 64]
+        tmp = [x for x in network_usage if x > min_bandwidth / 64]
         mean_network_usage = np.mean(tmp)
         if mean_network_usage * parallelism < min_bandwidth:
             break
