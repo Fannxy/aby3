@@ -20,20 +20,20 @@ def assign_task(bandwidth, expr_recv, expr_send, parallelism, data_size):
     perms = list(itertools.permutations([i for i in range(num_parties)])) # role of i-th party is perm[i]
 
     c = np.zeros(len(perms) + 1)
-    c[-1] = 1
+    c[-1] = -1
 
     A_ub = []
     for i in range(num_parties):
         u_recv = []
         for perm in perms:
-            u_recv.append(coef_recv[perm[i]])
-        u_recv.append(-bandwidth[i])
+            u_recv.append(-coef_recv[perm[i]])
+        u_recv.append(bandwidth[i])
         A_ub.append(u_recv)
 
         u_send = []
         for perm in perms:
-            u_send.append(coef_send[perm[i]])
-        u_send.append(-bandwidth[i])
+            u_send.append(-coef_send[perm[i]])
+        u_send.append(bandwidth[i])
         A_ub.append(u_send)
     A_ub = np.array(A_ub)
     b_ub = np.zeros(num_parties * 2)
