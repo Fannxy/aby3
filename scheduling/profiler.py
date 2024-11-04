@@ -9,6 +9,7 @@ import json
 import subprocess
 import shlex
 from task_assigning import assign_task
+import copy
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'PtA_deploy')))
 from system_monitor import *
 
@@ -78,6 +79,7 @@ if __name__ == "__main__":
     parser.add_argument('--run_tasks', action='store_true', help='run tasks')
     parser.add_argument('--MPI', action='store_true', help='run in MPI')
     parser.add_argument('--baseline', action='store_true', help='run baseline')
+    parser.add_argument('--config_folder', type=str, default=root_folder+"scheduling/config/", help='config folder')
 
     args = parser.parse_args()
     n = args.num_parties
@@ -87,34 +89,57 @@ if __name__ == "__main__":
     if not os.path.exists(args.record_folder):
         os.makedirs(args.record_folder)
     
+    if not os.path.exists(args.config_folder):
+        os.makedirs(args.config_folder)
+    
     # get bandwidth
     print("Getting bandwidth")
     bandwidth = []
-    for i in range(n):
-        test_server = args.server_host[i]
-        for j in range(n):
-            if args.server_host[j] != args.server_host[i]:
-                test_server = args.server_host[j]
-                break
-        bandwidth.append(get_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], test_server))
-    for i in range(n):
-        print(f"{args.server_host[i]}: {bandwidth[i]}Gb/s")
+    # if the bandwidth file exists, load the bandwidth from the file.
+    if os.path.exists(f"{args.config_folder}/bandwidth.json"):
+        with open(f"{args.config_folder}/bandwidth.json", "r") as f:
+            network_dict = json.load(f)
+        for i in range(n):
+            bandwidth.append(network_dict[args.server_host[i]])
+    else: # otherwise get the bandwidth from the servers.
+        for i in range(n):
+            test_server = args.server_host[i]
+            for j in range(n):
+                if args.server_host[j] != args.server_host[i]:
+                    test_server = args.server_host[j]
+                    break
+            bandwidth.append(get_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], test_server))
+        for i in range(n):
+            print(f"{args.server_host[i]}: {bandwidth[i]}Gb/s")
+        network_dict = {args.server_host[i]: bandwidth[i] for i in range(n)}
+        with open(f"{args.config_folder}/bandwidth.json", "w") as f:
+            json.dump(network_dict, f)
     
     # collect network usage
     print("Collecting network usage")
     length = args.fitting_length
     step = args.fitting_step
     usage_dict = [{} for _ in range(3)]
-    if not args.skip_monitor:
+    
+    skip_monitor = True
+    re_monitor_flag = (not args.skip_monitor) # true if we need to record the monitor log.
+    
+    # define whether the monitor log exist.
+    for role in range(3):
+        monitor_file = f"{args.record_folder}/monitor-{args.keyword}-{role}-{step}.log"
+        if not os.path.exists(monitor_file):
+            skip_monitor = False
+            break
+    if skip_monitor:
+        for role in range(3):
+            for size in range(step, step * length + 1, step):
+                usage_dict[role][size] = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-{role}-{size}.log")
+    elif re_monitor_flag: # need to record the monitor log.
         for role in range(3):
             sizes = range(step, step * length + 1, step)
             for size in sizes:
                 usage_dict[role][size] = collect_network_usage(size, role, args.args, args.record_folder, f"{args.keyword}-{role}-{size}", args.server_host, args.ip_address, args.network_interface)
                 time.sleep(0.5)
-    else:
-        for role in range(3):
-            for size in range(step, step * length + 1, step):
-                usage_dict[role][size] = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-{role}-{size}.log")
     
     # fit network usage with given expression
     print("Fitting network usage")
@@ -154,7 +179,7 @@ if __name__ == "__main__":
     min_bandwidth_index = bandwidth.index(min_bandwidth)
     while parallelism > 2:
         size = data_size // parallelism
-        if not args.skip_monitor:
+        if re_monitor_flag:
             usage_dict = collect_network_usage(size, min_bandwidth_index, args.args, args.record_folder, f"{args.keyword}-profile-{size}", args.server_host, args.ip_address, args.network_interface)
         else:
             usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-profile-{size}.log")
@@ -167,16 +192,30 @@ if __name__ == "__main__":
         parallelism //= 2
     parallelism *= 2
     print(f"parallelism: {parallelism}")
-
+    if(parallelism < 3): parallelism = 3
+    # print the info to a file.
+    with open(f"{args.config_folder}/parallelism.txt", "a") as f:
+        f.write(f"parallelism: {parallelism}\n")
+        f.write(f"task: {args.keyword}\n")
 
     # assign tasks
-    
+
     if args.baseline:
         res = [[[i for i in range(n)], data_size // parallelism] for i in range(parallelism)]
+        print("Task assignment:", res)
+        with open(f"{args.config_folder}/task_assignment-basline.txt", "w") as f:
+            json.dump(res, f)
+            f.write(f"\ntask: {args.keyword}\n")
     else:
         res = assign_task(bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, parallelism=parallelism, data_size=data_size)
-    print("Task assignment:", res)
-
+        print("Task assignment:", res)
+        # save_res = res
+        save_res = copy.deepcopy(res)
+        # save_res["task"] = args.keyword
+        with open(f"{args.config_folder}/task_assignment.txt", "w") as f:
+            json.dump(save_res, f)
+            f.write(f"\ntask: {args.keyword}\n")
+        
     # run the tasks
     if args.run_tasks:
         print("Running tasks")

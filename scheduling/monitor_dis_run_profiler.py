@@ -19,7 +19,7 @@ if __name__ == "__main__":
     if(not os.path.exists(args.record_folder)):
         os.makedirs(args.record_folder)
     
-    monitor = SystemMonitor(0.01)
+    monitor = SystemMonitor(1)
     monitor.start_all(interface=args.interface)
     command = " ".join(args.command).replace('+', '-')
     os.system(command)
