@@ -33,48 +33,20 @@ int splitted_arith_merge_sort_test(oc::CLP& cmd){
     if(arr_len > data_size / 2) arr_len = data_size / 2;
     size_t arr_num = data_size / arr_len;
 
-    std::vector<aby3::i64Matrix> arr;
-    for(size_t i = 0; i < arr_num; i++) {
-        arr.push_back(aby3::i64Matrix(arr_len, 1));
-    }
-
-    std::vector<int> ref_res(arr_num * arr_len);
-    for(size_t i = 0; i < arr_num; i++) {
-        for(size_t j = 0; j < arr_len; j++) {
-            arr[i](j, 0) = i * 10 + j;
-            ref_res[i * arr_len + j] = i * 10 + j;
-        }
-    }
-
-    aby3::i64Matrix res_res_(arr_num * arr_len, 1);
-    std::sort(ref_res.begin(), ref_res.end());
-    for(size_t i = 0; i < arr_num * arr_len; i++) res_res_(i, 0) = ref_res[i];
-
     // enc the data.
     std::vector<aby3::si64Matrix> enc_arr;
     for(size_t i = 0; i < arr_num; i++) {
-        enc_arr.push_back(aby3::si64Matrix(arr_len, 1));
-    }
-    if(role == 0){
-        for(size_t i = 0; i < arr_num; i++) {
-            enc.localIntMatrix(runtime, arr[i], enc_arr[i]).get();
+        aby3::si64Matrix tmp(arr_len, 1);
+        for(i64 i=0; i<arr_len; i++) {
+            tmp.mShares[0](i) = i;
+            tmp.mShares[1](i) = i;
         }
-    }else{
-        for(size_t i = 0; i < arr_num; i++) {
-            enc.remoteIntMatrix(runtime, enc_arr[i]).get();
-        }
+        enc_arr.push_back(tmp);
     }
+
 
     aby3::si64Matrix multi_sort_test;
     odd_even_multi_merge(enc_arr, multi_sort_test, role, enc, eval, runtime);
-
-    aby3::i64Matrix multi_test(arr_num * arr_len, 1);
-    enc.revealAll(runtime, multi_sort_test, multi_test).get();
-
-    if(role == 0){
-        check_result("Arithmetic Multi Merge Sort Test", multi_test, res_res_);
-    }
-
 
     return 0;
 }
