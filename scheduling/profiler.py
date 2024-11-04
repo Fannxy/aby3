@@ -21,19 +21,21 @@ def calculate_expression(n, expression):
     result = eval(expression, allowed_functions)
     return result
 
-def get_bandwidth(i, time, server_host, ip_address, test_server):
+def get_bandwidth(i, time, server_host, ip_address, test_server, parallel=10):
     os.system(f"ssh {server_host} 'iperf3 -s -D'")
-    result = os.popen(f"ssh {test_server} 'iperf3 -c {ip_address} -t {time} -J'").read()
+    result = os.popen(f"ssh {test_server} 'iperf3 -c {ip_address} -t {time} -P {parallel} -J'").read()
     data = json.loads(result)
     bandwidth = data["end"]["sum_received"]["bits_per_second"] / (2**30)
     os.system(f"ssh {server_host} 'pkill iperf3'")
+    possible_bandwidth = [1, 10, 35]
+    bandwidth = min(possible_bandwidth, key=lambda x: abs(x - bandwidth))
     return bandwidth
 
 def run_command(command):
     os.system(command)
 
 def collect_network_usage(data_size, role, args, record_folder, keyword, server_host, ip_address, network_interface):
-    monitor = SystemMonitor(0.01)
+    monitor = SystemMonitor(0.1)
     monitor.start_all(interface=network_interface[0])
 
     threads = []
@@ -65,6 +67,7 @@ if __name__ == "__main__":
     parser.add_argument('--args', type=str, help='run args')
     parser.add_argument('--record_folder', type=str, help='record folder')
     parser.add_argument('--keyword', type=str, help='keyword')
+    parser.add_argument('--task', type=str, help='task name')
     parser.add_argument('--num_parties', type=int, default=3, help='number of parties')
     parser.add_argument('--server_host', type=str, nargs='+', default=["aby30", "aby31", "aby32"], help='server host')
     parser.add_argument('--ip_address', type=str, nargs='+', default=["10.3.0.13", "10.3.0.16", "10.3.0.17"], help='ip address')
@@ -114,7 +117,7 @@ if __name__ == "__main__":
         network_dict = {args.server_host[i]: bandwidth[i] for i in range(n)}
         with open(f"{args.config_folder}/bandwidth.json", "w") as f:
             json.dump(network_dict, f)
-    
+
     # collect network usage
     print("Collecting network usage")
     length = args.fitting_length
@@ -138,8 +141,12 @@ if __name__ == "__main__":
         for role in range(3):
             sizes = range(step, step * length + 1, step)
             for size in sizes:
-                usage_dict[role][size] = collect_network_usage(size, role, args.args, args.record_folder, f"{args.keyword}-{role}-{size}", args.server_host, args.ip_address, args.network_interface)
+                usage_dict[role][size] = collect_network_usage(size, role, args.args, args.record_folder, f"{args.task}-{role}-{size}", args.server_host, args.ip_address, args.network_interface)
                 time.sleep(0.5)
+    else:
+        for role in range(3):
+            for size in range(step, step * length + 1, step):
+                usage_dict[role][size] = get_usage_dict(f"{args.record_folder}/monitor-{args.task}-{role}-{size}.log")
     
     # fit network usage with given expression
     print("Fitting network usage")
@@ -173,21 +180,30 @@ if __name__ == "__main__":
     print(expr_send)
 
     # decide parallelism
+    max_bandwidth = max(bandwidth)
+    max_bandwidth_index = bandwidth.index(max_bandwidth)
     print("Deciding parallelism")
+    if not args.skip_monitor:
+        parallelism = args.parallelism_limit
+        while parallelism > 3:
+            size = data_size // parallelism
+            usage_dict = collect_network_usage(size, 0, args.args, args.record_folder, f"{args.task}-profile-{size}", args.server_host, args.ip_address, args.network_interface)
+            network_recv, network_send = usage_dict["network_recv"], usage_dict["network_send"]
+            network_usage = [max(recv, send) for recv, send in zip(network_recv, network_send)]
+            mean_network_usage = np.mean(network_usage)
+            if mean_network_usage > max_bandwidth * 2 / 3:
+                break
+            parallelism //= 2
+
     parallelism = args.parallelism_limit // 2
-    min_bandwidth = min(bandwidth)
-    min_bandwidth_index = bandwidth.index(min_bandwidth)
-    while parallelism > 2:
+    while parallelism > 3:
         size = data_size // parallelism
-        if re_monitor_flag:
-            usage_dict = collect_network_usage(size, min_bandwidth_index, args.args, args.record_folder, f"{args.keyword}-profile-{size}", args.server_host, args.ip_address, args.network_interface)
-        else:
-            usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-profile-{size}.log")
+        usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.task}-profile-{size}.log")
         network_recv, network_send = usage_dict["network_recv"], usage_dict["network_send"]
         network_usage = [max(recv, send) for recv, send in zip(network_recv, network_send)]
-        tmp = [x for x in network_usage if x > min_bandwidth / 64]
-        mean_network_usage = np.mean(tmp)
-        if mean_network_usage * parallelism < min_bandwidth:
+        mean_network_usage = np.mean(network_usage)
+        if mean_network_usage * parallelism < max_bandwidth * 2:
+            print(f"mean network usage: {mean_network_usage}, parallelism: {parallelism}")
             break
         parallelism //= 2
     parallelism *= 2
@@ -209,11 +225,8 @@ if __name__ == "__main__":
     else:
         res = assign_task(bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, parallelism=parallelism, data_size=data_size)
         print("Task assignment:", res)
-        # save_res = res
-        save_res = copy.deepcopy(res)
-        # save_res["task"] = args.keyword
         with open(f"{args.config_folder}/task_assignment.txt", "w") as f:
-            json.dump(save_res, f)
+            json.dump(res, f)
             f.write(f"\ntask: {args.keyword}\n")
         
     # run the tasks
@@ -266,17 +279,20 @@ if __name__ == "__main__":
             os.system(f"scp -r {args.server_host[i]}:{args.record_folder}/monitor-{args.keyword}-{data_size}.log {args.record_folder}/monitor-{args.keyword}-{data_size}-{i}.log")
 
         keyword = f"{args.keyword}"
-        if args.baseline:
-            keyword += "-baseline"
         recv_utilization = []
         send_utilization = []
+        total_utilization = 0
+        total_bandwidth = 0
         for i in range(n):
             usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-{data_size}-{i}.log")
             draw_usage_graph(usage_dict, f"{args.record_folder}/{keyword}-{data_size}-{i}.png")
             recv_u = np.mean(usage_dict["network_recv"]) / bandwidth[i]
             send_u = np.mean(usage_dict["network_send"]) / bandwidth[i]
+            total_utilization += np.mean(usage_dict["network_recv"]) + np.mean(usage_dict["network_send"])
+            total_bandwidth += bandwidth[i]
             recv_utilization.append(recv_u)
             send_utilization.append(send_u)
+        total_utilization /= total_bandwidth*2
 
         file_path = f"{args.record_folder}/record.xlsx"
         if not os.path.exists(f"{args.record_folder}/record.xlsx"):
@@ -288,8 +304,10 @@ if __name__ == "__main__":
         new_row['keyword'] = [f"{keyword}"]
         new_row['data size'] = [data_size]
         new_row['time'] = [end_time - start_time]
+        new_row["parallelism"] = [parallelism]
         for i in range(n):
             new_row[f"recv utilization-{i}"] = [recv_utilization[i]]
             new_row[f"send utilization-{i}"] = [send_utilization[i]]
+        new_row[f"total utilization-{i}"] = [total_utilization]
         df = pd.concat([df, pd.DataFrame(new_row)], ignore_index=True)
         df.to_excel(file_path, index=False)

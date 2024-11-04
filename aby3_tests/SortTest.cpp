@@ -29,8 +29,8 @@ int splitted_arith_merge_sort_test(oc::CLP& cmd){
     } else {
         throw std::runtime_error(LOCATION);
     }
-    size_t arr_len = 1024;
-    if(arr_len > data_size) arr_len = data_size;
+    size_t arr_len = 65536;
+    if(arr_len > data_size / 2) arr_len = data_size / 2;
     size_t arr_num = data_size / arr_len;
 
     std::vector<aby3::i64Matrix> arr;
