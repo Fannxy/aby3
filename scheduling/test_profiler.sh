@@ -11,7 +11,7 @@ fitting_length=16
 fitting_step=128
 complexity="1 n"
 get_bandwidth_time=5
-parallelism_limit=48
+parallelism_limit=128
 
 network_interface=""
 for ip in $ip_address; do

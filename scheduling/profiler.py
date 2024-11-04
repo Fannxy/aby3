@@ -178,6 +178,7 @@ if __name__ == "__main__":
             break
         parallelism //= 2
     parallelism *= 2
+    parallelism = args.parallelism_limit
     print(f"parallelism: {parallelism}")
 
 
