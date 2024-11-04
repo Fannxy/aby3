@@ -11,6 +11,7 @@ def calculate_expression(n, expression):
 
 def assign_task(bandwidth, expr_recv, expr_send, parallelism, data_size):
     num_parties = len(bandwidth)
+    print(f">>>>>> num_parties = {num_parties} | expr_recv = {expr_recv}")
     assert(len(expr_recv) == num_parties)
     assert(len(expr_send) == num_parties)
 
