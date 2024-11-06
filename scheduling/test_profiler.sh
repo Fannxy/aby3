@@ -1,18 +1,20 @@
 ip_address="$1 $2 $3"
-keyword=$4
-task=$5
-data_size=$6
-net_config=$7
+profile_ip_address="$4 $5 $6"
+keyword=$7
+task=$8
+data_size=$9
+assignment_strategy=${10}
+net_config=${11}
 
 root_folder=/root/aby3
-port=1022
+port=7897
 num_parties=3
 server_host="aby30 aby31 aby32"
 fitting_length=16
 fitting_step=128
 complexity="1 n"
 get_bandwidth_time=5
-parallelism_limit=128
+parallelism_limit=48
 
 network_interface=""
 for ip in $ip_address; do
@@ -20,18 +22,38 @@ for ip in $ip_address; do
     network_interface="$network_interface $interface"
 done
 
+profile_network_interface=""
+for ip in $profile_ip_address; do
+    interface=$(ssh $ip -o StrictHostKeyChecking=no -p $port "ip -o -4 addr show | grep $ip" | awk '{print $2}')
+    profile_network_interface="$profile_network_interface $interface"
+done
+
 echo "ip_address: $ip_address"
 echo "keyword: $keyword"
 echo "task: $task"
 echo "data_size: $data_size"
 echo "network_interface: $network_interface"
+echo "assignment_strategy: $assignment_strategy"
+echo "net_config: $net_config"
 
-python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${keyword} --task ${task} \
---num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
---data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} \
---run_tasks --config_folder ${root_folder}/scheduling/${net_config}
-
-python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${keyword}-baseline --task ${task} \
---num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
---data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} \
---run_tasks --skip_monitor --baseline --config_folder ${root_folder}/scheduling/${net_config}
+python ${root_folder}/scheduling/profiler.py \
+  --args " -${task}" \
+  --args_agg " -${task}-agg" \
+  --record_folder ${root_folder}/scheduling/Record_test \
+  --config_folder ${root_folder}/scheduling/${net_config} \
+  --keyword ${keyword} \
+  --task ${task} \
+  --num_parties ${num_parties} \
+  --server_host ${server_host} \
+  --ip_address ${ip_address} \
+  --network_interface ${network_interface} \
+  --profile_ip_address ${profile_ip_address} \
+  --profile_network_interface ${profile_network_interface} \
+  --data_size ${data_size} \
+  --fitting_length ${fitting_length} \
+  --fitting_step ${fitting_step} \
+  --get_bandwidth_time ${get_bandwidth_time} \
+  --parallelism_limit ${parallelism_limit} \
+  --complexity ${complexity} \
+  --assignment_strategy ${assignment_strategy} \
+  --run_tasks
