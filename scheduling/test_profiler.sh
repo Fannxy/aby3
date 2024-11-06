@@ -40,7 +40,7 @@ python ${root_folder}/scheduling/profiler.py \
   --args " -${task}" \
   --args_agg " -${task}-agg" \
   --record_folder ${root_folder}/scheduling/Record_test \
-  --config_folder ${root_folder}/scheduling/${net_config} \
+  --config_folder ${root_folder}/scheduling/Record_test/${net_config} \
   --keyword ${keyword} \
   --task ${task} \
   --num_parties ${num_parties} \
