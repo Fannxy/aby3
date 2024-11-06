@@ -3,6 +3,7 @@ keyword=$4
 task=$5
 data_size=$6
 net_config=$7
+micro_benchmark="${8:-""}"
 
 root_folder=/root/aby3
 port=1022
@@ -26,12 +27,12 @@ echo "task: $task"
 echo "data_size: $data_size"
 echo "network_interface: $network_interface"
 
-python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${keyword} --task ${task} \
+python ${root_folder}/scheduling/profiler.py --args " ${micro_benchmark} -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${keyword} --task ${task} \
 --num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
 --data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} \
 --run_tasks --config_folder ${root_folder}/scheduling/${net_config}
 
-python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${keyword}-baseline --task ${task} \
+python ${root_folder}/scheduling/profiler.py --args " ${micro_benchmark} -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${keyword}-baseline --task ${task} \
 --num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
 --data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} \
 --run_tasks --skip_monitor --baseline --config_folder ${root_folder}/scheduling/${net_config}

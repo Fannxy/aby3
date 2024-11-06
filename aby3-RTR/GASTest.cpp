@@ -25,10 +25,9 @@ int get_value(string key, CLP& cmd, string& val) {
     auto keys = cmd.getMany<string>(key);
     if(keys.size() == 0) cout << key << " value is null" << endl;
     val = keys[0];
-    // cout << "val: " << val << endl;
-    // cout << "keys size: " << keys.size() << endl;
   } else {
-    throw std::runtime_error(LOCATION);
+    // throw std::runtime_error(LOCATION);
+    std::cerr << key << " value is null" << std::endl;
   }
   return 0;
 }

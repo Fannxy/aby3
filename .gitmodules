@@ -5,7 +5,3 @@
 [submodule "aby3-GraphQuery/privGraphQuery"]
 	path = aby3-GraphQuery/privGraphQuery
 	url = git@github.com:Fannxy/privGraphQuery.git
-
-[submodule "PtA_deploy"]
-	path = PtA_deploy
-	url = git@github.com:Fannxy/PtA_deploy.git

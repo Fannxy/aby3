@@ -1,4 +1,5 @@
 #include <cryptoTools/Network/IOService.h>
+#include <cryptoTools/Common/CLP.h>
 #include <aby3/sh3/Sh3FixedPoint.h>
 #include <aby3/sh3/Sh3Encryptor.h>
 #include <aby3/sh3/Sh3Evaluator.h>

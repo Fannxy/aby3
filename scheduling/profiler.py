@@ -216,9 +216,11 @@ if __name__ == "__main__":
         f.write(f"task: {args.keyword}\n")
 
     # assign tasks
+    time_stamp_file_prefix = f"{args.record_folder}/stamp-{args.keyword}-{data_size}"
 
     if args.baseline:
         res = [[[i for i in range(n)], data_size // parallelism] for i in range(parallelism)]
+        time_stamp_file_prefix = f"{time_stamp_file_prefix}-baseline"
         print("Task assignment:", res)
         with open(f"{args.config_folder}/task_assignment-basline.txt", "w") as f:
             json.dump(res, f)
@@ -229,7 +231,7 @@ if __name__ == "__main__":
         with open(f"{args.config_folder}/task_assignment.txt", "w") as f:
             json.dump(res, f)
             f.write(f"\ntask: {args.keyword}\n")
-        
+
     # run the tasks
     if args.run_tasks:
         print("Running tasks")
@@ -247,7 +249,7 @@ if __name__ == "__main__":
             for role in range(3):
                 p0_ip = args.ip_address[party_id[0]]
                 p1_ip = args.ip_address[party_id[1]]
-                command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
+                command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip} -stampFile {time_stamp_file_prefix}-{rank}.txt"
                 commands[party_id[role]].append(command)
         
         total_command = []
@@ -275,9 +277,17 @@ if __name__ == "__main__":
             thread.join()
         end_time = time.time()
         
+        # concate all the time stamp files.
+        os.system(f"cat {time_stamp_file_prefix}-*.txt > {time_stamp_file_prefix}.txt")
+        os.system(f"rm {time_stamp_file_prefix}-*.txt")
+        
+        os.system(f"mv {time_stamp_file_prefix}.txt {time_stamp_file_prefix}-0.txt")
         os.system(f"mv {args.record_folder}/monitor-{args.keyword}-{data_size}.log {args.record_folder}/monitor-{args.keyword}-{data_size}-0.log")
         for i in range(1, n):
+            os.system(f"ssh {args.server_host[i]} \"cat {time_stamp_file_prefix}-*.txt > {time_stamp_file_prefix}.txt\"")
+            os.system(f"ssh {args.server_host[i]} \"rm {time_stamp_file_prefix}-*.txt\"")
             os.system(f"scp -r {args.server_host[i]}:{args.record_folder}/monitor-{args.keyword}-{data_size}.log {args.record_folder}/monitor-{args.keyword}-{data_size}-{i}.log")
+            os.system(f"scp -r {args.server_host[i]}:{time_stamp_file_prefix}.txt {time_stamp_file_prefix}-{i}.txt")
 
         keyword = f"{args.keyword}"
         recv_utilization = []
@@ -286,7 +296,11 @@ if __name__ == "__main__":
         total_bandwidth = 0
         for i in range(n):
             usage_dict = get_usage_dict(f"{args.record_folder}/monitor-{args.keyword}-{data_size}-{i}.log")
-            draw_usage_graph(usage_dict, f"{args.record_folder}/{keyword}-{data_size}-{i}.png")
+            time_stamp_dict = get_time_stamp(f"{time_stamp_file_prefix}-{i}.txt")
+            if not time_stamp_dict:
+                draw_usage_graph(usage_dict, f"{args.record_folder}/{keyword}-{data_size}-{i}.png")
+            else:
+                draw_usage_graph(usage_dict, f"{args.record_folder}/{keyword}-{data_size}-{i}.png", time_stamp_dict)
             recv_u = np.mean(usage_dict["network_recv"]) / bandwidth[i]
             send_u = np.mean(usage_dict["network_send"]) / bandwidth[i]
             total_utilization += np.mean(usage_dict["network_recv"]) + np.mean(usage_dict["network_send"])

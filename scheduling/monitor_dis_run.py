@@ -26,8 +26,6 @@ if __name__ == "__main__":
         os.makedirs(args.record_folder)
         
     NETWORK_INTERFACE = eval(f"NETWORK_INTERFACE{args.role}")
-        
-    
     if(not args.analysis):
         monitor = SystemMonitor(0.01)
         monitor.start_all(interface=NETWORK_INTERFACE)

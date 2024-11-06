@@ -1,4 +1,5 @@
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <unordered_map>
 #include <map>
@@ -19,13 +20,16 @@ public:
     void operator=(Timer const&) = delete; // you can not assign Timer instance.
 
     void start(const std::string& key) {
-        timestamps[key] = std::chrono::high_resolution_clock::now();
+        auto start_time = std::chrono::high_resolution_clock::now();
+        timestamps[key] = start_time;
+        start_timestamps[key] = start_time;
     }
 
     void end(const std::string& key) {
         auto end_time = std::chrono::high_resolution_clock::now();
         auto start_time = timestamps[key];
         durations[key] = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+        end_timestamps[key] = end_time;
     }
 
     std::string get_key(const std::string& key) {
@@ -120,12 +124,32 @@ public:
         totalTimes.clear();
     }
 
+    void print_time_stamps(std::ostream& os = std::cout){
+        for(auto& kv : start_timestamps){
+            std::string key = kv.first;
+            auto start_time = start_timestamps[key].time_since_epoch();
+            auto end_time = end_timestamps[key].time_since_epoch();
+            auto start_seconds = std::chrono::duration_cast<std::chrono::seconds>(start_time).count();
+            auto start_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(start_time).count();
+            auto end_seconds = std::chrono::duration_cast<std::chrono::seconds>(end_time).count();
+            auto end_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end_time).count();
+            os << "Key = " << key << " start = " 
+            << start_seconds << "." << std::setfill('0') << std::setw(3) << start_milliseconds 
+            << " end = " 
+            << end_seconds << "." << std::setfill('0') << std::setw(3) << end_milliseconds << std::endl;
+        }
+    }
+
 private:
     Timer() {} // you can not construct Timer instance from outside.
     std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> timestamps;
     std::map<std::string, double> durations;
     std::unordered_map<std::string, int> keycounts;
     std::unordered_map<std::string, double> totalTimes;
+
+    // used to get the time stamps.
+    std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> start_timestamps;
+    std::unordered_map<std::string, std::chrono::high_resolution_clock::time_point> end_timestamps;
 
     std::string get_prefix(const std::string& key) {
         size_t pos = key.find_last_of('-');

@@ -182,6 +182,18 @@ int splitted_cipher_index_pta(oc::CLP& cmd);
 int splitted_max_pta(oc::CLP& cmd);
 int splitted_metric_pta(oc::CLP& cmd);
 
+// TODO - micro-benchamrks.
+int splitted_micro_benchmarks(oc::CLP& cmd);
+int get_si64_shares(aby3::u64 data_size, aby3::si64Matrix& data);
+int get_sb_shares(aby3::u64 data_size, aby3::sbMatrix& data);
+
+template <aby3::Decimal D>
+int get_sf64_shares(aby3::u64 data_size, aby3::sf64Matrix<D>& data){
+    data.resize(data_size, 1);
+    auto& mCast = (aby3::si64Matrix&) data;
+    return get_si64_shares(data_size, mCast);
+}
+
 bool check_result(const std::string& func_name, aby3::i64Matrix& test,
                   aby3::i64Matrix& res);
 
