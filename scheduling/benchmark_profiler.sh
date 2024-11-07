@@ -1,19 +1,9 @@
 root_folder=/root/aby3
-result_folder=${root_folder}/scheduling/Result
 
-# rm -r ${root_folder}/scheduling/Record_test/record.xlsx
-port=7897
 num_parties=3
+node_id=(12 14 4)
+# node_id=(13 16 17)
 server_host="aby30 aby31 aby32"
-fitting_length=8
-fitting_step=256
-complexity="1 n"
-get_bandwidth_time=1
-parallelism_limit=96
-
-if [ ! -d ${result_folder} ]; then
-    mkdir ${result_folder}
-fi
 
 # Sync the schedule
 scp -r ./scheduling/*.py aby31:${root_folder}/scheduling/ &
@@ -30,43 +20,47 @@ scp -r ${root_folder}/out/build/linux/frontend/frontend aby32:${root_folder}/out
 wait;
 
 declare -A ip_addr_dict
-ip_addr_dict["Homo-35G"]="10.3.0.12 10.3.0.14 10.3.0.4"
-ip_addr_dict["Homo-10G"]="10.5.0.12 10.5.0.14 10.5.0.4"
-ip_addr_dict["Homo-1G"]="10.1.0.12 10.1.0.14 10.1.0.4"
-ip_addr_dict["Hetero-10G-35G-35G"]="10.5.0.12 10.3.0.14 10.3.0.4"
-ip_addr_dict["Hetero-10G-10G-35G"]="10.5.0.12 10.5.0.14 10.3.0.4"
-ip_addr_dict["Hetero-1G-35G-35G"]="10.1.0.12 10.3.0.14 10.3.0.4"
-ip_addr_dict["Hetero-1G-1G-35G"]="10.1.0.12 10.1.0.14 10.3.0.4"
-ip_addr_dict["Hetero-1G-10G-10G"]="10.1.0.12 10.5.0.14 10.5.0.4"
-ip_addr_dict["Hetero-1G-1G-10G"]="10.1.0.12 10.1.0.14 10.5.0.4"
+ip_addr_dict["Homo-35G"]="10.3.0.${node_id[0]} 10.3.0.${node_id[1]} 10.3.0.${node_id[2]}"
+ip_addr_dict["Homo-10G"]="10.5.0.${node_id[0]} 10.5.0.${node_id[1]} 10.5.0.${node_id[2]}"
+ip_addr_dict["Homo-1G"]="10.1.0.${node_id[0]} 10.1.0.${node_id[1]} 10.1.0.${node_id[2]}"
+ip_addr_dict["Hetero-10G-35G-35G"]="10.5.0.${node_id[0]} 10.3.0.${node_id[1]} 10.3.0.${node_id[2]}"
+ip_addr_dict["Hetero-10G-10G-35G"]="10.5.0.${node_id[0]} 10.5.0.${node_id[1]} 10.3.0.${node_id[2]}"
+ip_addr_dict["Hetero-1G-35G-35G"]="10.1.0.${node_id[0]} 10.3.0.${node_id[1]} 10.3.0.${node_id[2]}"
+ip_addr_dict["Hetero-1G-1G-35G"]="10.1.0.${node_id[0]} 10.1.0.${node_id[1]} 10.3.0.${node_id[2]}"
+ip_addr_dict["Hetero-1G-10G-10G"]="10.1.0.${node_id[0]} 10.5.0.${node_id[1]} 10.5.0.${node_id[2]}"
+ip_addr_dict["Hetero-1G-1G-10G"]="10.1.0.${node_id[0]} 10.1.0.${node_id[1]} 10.5.0.${node_id[2]}"
+ip_addr_dict["Hetero-35G-35G-10G"]="10.3.0.${node_id[0]} 10.3.0.${node_id[1]} 10.5.0.${node_id[2]}"
 
-net_config_list=("Homo-35G" "Homo-10G" "Homo-1G" 
-"Hetero-10G-35G-35G" "Hetero-10G-10G-35G" "Hetero-1G-35G-35G" "Hetero-1G-10G-10G" "Hetero-1G-1G-10G")
 
-net_config_list=("Homo-10G")
-
-task_list=("Matrix" "Sort")
-data_size=1073741824
+net_config_list=("Homo-35G" "Homo-10G" "Homo-1G" "Hetero-10G-35G-35G" "Hetero-35G-35G-10G")
+task_list=("Matrix")
+assignment_strategy_list=("roundrole" "baseline")
+data_size=4194304
 
 # for task in ${task_list[@]}; do
-
-#     python ${root_folder}/scheduling/profiler.py --args " -${task}" --record_folder ${root_folder}/scheduling/Record_test --keyword ${task} --task ${task} \
-#     --num_parties ${num_parties} --server_host ${server_host} --ip_address ${ip_address} --network_interface ${network_interface} \
-#     --data_size ${data_size} --fitting_length ${fitting_length} --fitting_step ${fitting_step} --get_bandwidth_time ${get_bandwidth_time} --parallelism_limit ${parallelism_limit} --complexity ${complexity} 
-
 #     for net_config in ${net_config_list[@]}; do
-#         ip_address=${ip_addr_dict[${net_config}]}
-#         keyword="${task}-${net_config}"
-#         bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${keyword} ${task} ${data_size} ${net_config}
+#         for assignment_strategy in ${assignment_strategy_list[@]}; do
+#             ip_address=${ip_addr_dict[${net_config}]}
+#             keyword="${task}-${net_config}-${assignment_strategy}"
+#             bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_addr_dict["Homo-35G"]} ${keyword} ${task} ${data_size} ${assignment_strategy} ${net_config}
+#         done
 #     done
 # done
 
+
 # TODO - shuffle
+net_config_list=("Homo-10G" "Homo-1G" "Hetero-1G-10G-10G" "Hetero-1G-1G-10G")
+data_size=1073741824
 micro_benchmarks=("ff-mul" "ib-mul" "a2b" "b2a" "b2a-single")
 for task in ${micro_benchmarks[@]}; do
     for net_config in ${net_config_list[@]}; do
         ip_address=${ip_addr_dict[${net_config}]}
-        keyword="${task}-${net_config}"
-        bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${keyword} ${task} ${data_size} ${net_config} -Micro
+        for assignment_strategy in  ${assignment_strategy_list[@]}; do
+            keyword="${task}-${net_config}-${assignment_strategy}"
+            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_addr_dict["Homo-35G"]} ${keyword} ${task} ${data_size} ${assignment_strategy} ${net_config} -Micro
+        done
     done
 done
+
+cp -r ${root_folder}/scheduling/Record_test/*.png ${root_folder}/scheduling/Result/
+cp ${root_folder}/scheduling/Record_test/record.xlsx ${root_folder}/scheduling/Result/
