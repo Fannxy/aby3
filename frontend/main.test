@@ -48,8 +48,12 @@ int main(int argc, char** argv) {
 	}
 
 	if(cmd.isSet("ORAM")){
-		pos_map_test(cmd);
-		sqrt_oram_test(cmd);
+		if(cmd.isSet("rank")){
+			splitted_oram_init(cmd);
+		} else {
+			pos_map_test(cmd);
+			sqrt_oram_test(cmd);
+		}
 	}
 
 	if(cmd.isSet("Graph")){

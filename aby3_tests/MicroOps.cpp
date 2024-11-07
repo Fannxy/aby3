@@ -7,6 +7,7 @@
 #include "../aby3-Basic/Basics.h"
 #include "../aby3-Basic/Matrix.h"
 #include "../aby3-RTR/BuildingBlocks.h"
+#include "../aby3-Basic/Shuffle.h"
 #include "../aby3-Basic/timer.h"
 #include "../aby3-RTR/GASTest.h"
 
@@ -101,6 +102,14 @@ int splitted_micro_benchmarks(oc::CLP& cmd){
         get_sb_shares(sizeX, dataX);
         dataX.resize(sizeX, 1);
         bool2arith(role, dataX, dataY, enc, eval, runtime);
+    }
+
+    if(cmd.isSet("shuffle")){
+        task = "shuffle";
+        aby3::sbMatrix dataX, dataRes;
+        get_sb_shares(sizeX, dataX);
+        dataRes.resize(sizeX, 64);
+        efficient_shuffle(dataX, role, dataRes, enc, eval, runtime);
     }
 
     Timer& timer = Timer::getInstance();

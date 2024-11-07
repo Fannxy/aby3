@@ -187,6 +187,9 @@ int splitted_micro_benchmarks(oc::CLP& cmd);
 int get_si64_shares(aby3::u64 data_size, aby3::si64Matrix& data);
 int get_sb_shares(aby3::u64 data_size, aby3::sbMatrix& data);
 
+// ORAM.
+int splitted_oram_init(oc::CLP &cmd);
+
 template <aby3::Decimal D>
 int get_sf64_shares(aby3::u64 data_size, aby3::sf64Matrix<D>& data){
     data.resize(data_size, 1);
