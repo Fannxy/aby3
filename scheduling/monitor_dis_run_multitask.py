@@ -63,7 +63,6 @@ if __name__ == "__main__":
                 p0_ip = eval(f"IP_ADDRESS{index[0]}")
                 p1_ip = eval(f"IP_ADDRESS{index[1]}")
                 command = f"{root_folder}out/build/linux/frontend/frontend -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
-                print(command)
                 thread = threading.Thread(target=run_command, args=(command,))
                 threads.append(thread)
                 thread.start()

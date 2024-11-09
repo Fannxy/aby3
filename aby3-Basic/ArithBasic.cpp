@@ -105,7 +105,7 @@ aby3::i64Matrix back2plain(int pIdx, std::vector<aby3::si64>& cipher_val, aby3::
     return plain_mat;
 }
 
-void arith2bool(int pIdx, aby3::si64Matrix &arithInput, aby3::sbMatrix &res,
+void arith2bool_core(int pIdx, aby3::si64Matrix &arithInput, aby3::sbMatrix &res,
                 aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
                 aby3::Sh3Runtime &runtime){
     
@@ -113,7 +113,33 @@ void arith2bool(int pIdx, aby3::si64Matrix &arithInput, aby3::sbMatrix &res,
     convt.init(runtime, enc.mShareGen);
     convt.toBinaryMatrix(runtime, arithInput, res).get();
     runtime.runNext();
-    runtime.runNext(); // note that we need to run two times to get the result!
+    runtime.runNext();
+
+    return;
+}
+
+void arith2bool(int pIdx, aby3::si64Matrix &arithInput, aby3::sbMatrix &res,
+                aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
+                aby3::Sh3Runtime &runtime){
+    u64 len = arithInput.rows();
+    u64 MAX_UNIT_SIZE = 1<<25;
+    u64 round = (size_t)ceil(len / (double)MAX_UNIT_SIZE);
+    u64 last_len = len - (round - 1) * MAX_UNIT_SIZE;
+
+    for(u64 i=0; i<round; i++){
+        u64 tmp_size = (i == round - 1) ? last_len : MAX_UNIT_SIZE;
+    
+        si64Matrix tmpA(tmp_size, 1);
+        std::memcpy(tmpA.mShares[0].data(), arithInput.mShares[0].data() + i * MAX_UNIT_SIZE, tmp_size * sizeof(arithInput.mShares[0](0, 0)));
+        std::memcpy(tmpA.mShares[1].data(), arithInput.mShares[1].data() + i * MAX_UNIT_SIZE, tmp_size * sizeof(arithInput.mShares[1](0, 0)));
+        sbMatrix tmpRes(tmp_size, res.bitCount());
+
+        arith2bool_core(pIdx, tmpA, tmpRes, enc, eval, runtime);
+
+        std::memcpy(res.mShares[0].data() + i * MAX_UNIT_SIZE, tmpRes.mShares[0].data(), tmp_size * sizeof(tmpRes.mShares[0](0, 0)));
+        std::memcpy(res.mShares[1].data() + i * MAX_UNIT_SIZE, tmpRes.mShares[1].data(), tmp_size * sizeof(tmpRes.mShares[1](0, 0)));
+    }
+
     return;
 }
 

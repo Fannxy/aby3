@@ -5,9 +5,11 @@ task=$8
 data_size=$9
 assignment_strategy=${10}
 net_config=${11}
+micro_benchmark="${12:-""}"
 
 root_folder=/root/aby3
-port=7897
+# port=7897
+port=1022
 num_parties=3
 server_host="aby30 aby31 aby32"
 get_bandwidth_time=2
@@ -43,8 +45,9 @@ echo "network_interface: $network_interface"
 echo "assignment_strategy: $assignment_strategy"
 echo "net_config: $net_config"
 
+
 python ${root_folder}/scheduling/profiler.py \
-  --args " -${task}" \
+  --args " ${micro_benchmark} -${task}" \
   --args_agg " -${task}-agg" \
   --record_folder ${root_folder}/scheduling/Record_test \
   --config_folder ${root_folder}/scheduling/Result/${net_config} \

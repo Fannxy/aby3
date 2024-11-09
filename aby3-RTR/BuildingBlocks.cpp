@@ -11,6 +11,7 @@ using namespace std;
 using namespace oc;
 
 #include "./Pair_then_Reduce/include/datatype.h"
+#include "../aby3-Basic/timer.h"
 
 // #define LOCAL_TEST
 #define P0_IP "10.3.0.13"
@@ -22,8 +23,8 @@ static int BASEPORT=5001;
 double synchronized_time(int pIdx, double& time_slot, Sh3Runtime &runtime){
   // double sync_time = time_slot;
   if(pIdx == 0){
-    runtime.mComm.mNext.asyncSendCopy<double>(time_slot);
-    runtime.mComm.mPrev.asyncSendCopy<double>(time_slot);
+    runtime.mComm.mNext.asyncSendFuture<double>(&time_slot, 1).get();
+    runtime.mComm.mPrev.asyncSendFuture<double>(&time_slot, 1).get();
     return time_slot;
   }
   if(pIdx == 1){
@@ -284,95 +285,47 @@ int vector_mean_square(int pIdx, const std::vector<aby3::si64>&sharedA, const st
 
 
 int cipher_mul_seq(int pIdx, const si64Matrix &sharedA, const sbMatrix &sharedB, si64Matrix &res, Sh3Evaluator &eval, Sh3Encryptor& enc, Sh3Runtime &runtime){
-  // switch (pIdx)
-  // {
-  // case 0:
-  // {
-  //   vector<array<i64, 2>> s0(sharedA.size());
-  //   BitVector c1(sharedA.size());
-  //   for (u64 i = 0; i < s0.size(); ++i)
-  //   {
-  //       auto bb = sharedB.mShares[0](i) ^ sharedB.mShares[1](i);
-  //       auto zeroShare = enc.mShareGen.getShare();
+  u64 len = sharedA.rows();
+  u64 MAX_UNIT_SIZE = 1<<25;
+  u64 round = (size_t)ceil(len / (double)MAX_UNIT_SIZE);
+  u64 last_len = len - (round - 1) * MAX_UNIT_SIZE;
 
-  //       s0[i][bb] = zeroShare;
-  //       s0[i][bb ^ 1] = sharedA.mShares[1](i) + zeroShare;
-  //       c1[i] = static_cast<u8>(sharedB.mShares[1](i));
-  //   }
-  //   eval.mOtNext.send(runtime.mComm.mNext, s0);
-  //   eval.mOtPrev.send(runtime.mComm.mPrev, s0);
+  Timer& timer = Timer::getInstance();
 
-  //   // share 1: from p1 to p0, p2 
-  //   eval.mOtPrev.help(runtime.mComm.mPrev, c1);
-  //   auto fu1 = runtime.mComm.mPrev.asyncRecv(res.mShares[0].data(), res.size()).share();
-  //   i64* dd = res.mShares[1].data();
-  //   auto fu2 = SharedOT::asyncRecv(runtime.mComm.mNext, runtime.mComm.mPrev, std::move(c1), { dd, i64(res.size()) }).share();
-  //   fu1.get();
-  //   fu2.get();
-  //   break;
-  // }
-  // case 1: {
-  //   vector<array<i64, 2>> s1(sharedA.size());
-  //   BitVector c0(sharedA.size());
-  //   for (u64 i = 0; i < s1.size(); ++i)
-  //   {
-  //       auto bb = sharedB.mShares[0](i) ^ sharedB.mShares[1](i);
-  //       auto ss = enc.mShareGen.getShare();
+  for(u64 i=0; i<round; i++){
+    u64 tmp_size = (i == round - 1) ? last_len : MAX_UNIT_SIZE;
+    
+    si64Matrix tmpA(tmp_size, 1);
+    sbMatrix tmpB(tmp_size, sharedB.bitCount());
+    std::memcpy(tmpA.mShares[0].data(), sharedA.mShares[0].data() + i * MAX_UNIT_SIZE, tmp_size * sizeof(sharedA.mShares[0](0, 0)));
+    std::memcpy(tmpA.mShares[1].data(), sharedA.mShares[1].data() + i * MAX_UNIT_SIZE, tmp_size * sizeof(sharedA.mShares[1](0, 0)));
+    std::memcpy(tmpB.mShares[0].data(), sharedB.mShares[0].data() + i * MAX_UNIT_SIZE, tmp_size * sizeof(sharedB.mShares[0](0, 0)));
+    std::memcpy(tmpB.mShares[1].data(), sharedB.mShares[1].data() + i * MAX_UNIT_SIZE, tmp_size * sizeof(sharedB.mShares[1](0, 0)));
+    si64Matrix tmpRes(tmp_size, 1);
 
-  //       s1[i][bb] = ss;
-  //       s1[i][bb ^ 1] = (sharedA.mShares[0](i) + sharedA.mShares[1](i)) + ss;
-  //       c0[i] = static_cast<u8>(sharedB.mShares[0](i));
-  //   }
-  //   // share 0: from p0 to p1,p2
-  //   eval.mOtNext.help(runtime.mComm.mNext, c0);
+    eval.asyncMul(runtime, tmpA, tmpB, tmpRes).get();
 
-  //   // share 1: from p1 to p0,p2 
-  //   eval.mOtNext.send(runtime.mComm.mNext, s1);
-  //   eval.mOtPrev.send(runtime.mComm.mPrev, s1);
+    switch (pIdx)
+    {
+    case 0: {
+        timer.end("OT-helper");
+        timer.end("OT-sender");
+        break;
+    }
+    case 1: {
+        timer.end("OT-sender");
+        break;
+    }
+    case 2: {
+        timer.end("OT-sender");
+        timer.end("OT-helper");
+        break;
+    }
+    }
 
-  //   // share 0: from p0 to p1,p2
-  //   i64* dd = res.mShares[0].data();
-  //   auto fu1 = SharedOT::asyncRecv(runtime.mComm.mPrev, runtime.mComm.mNext, std::move(c0), { dd, i64(res.size()) }).share();
-  //   // share 1:
-  //   auto fu2 = runtime.mComm.mNext.asyncRecv(res.mShares[1].data(), res.size()).share();
-  //   fu1.get();
-  //   fu2.get();
-  //   break;
-  // }
-  // case 2: {
-  //   BitVector c0(sharedA.size()), c1(sharedA.size());
-  //   std::vector<i64> s0(sharedA.size()), s1(sharedA.size());
-  //   for (u64 i = 0; i < sharedA.size(); ++i)
-  //   {
-  //       c0[i] = static_cast<u8>(sharedB.mShares[1](i));
-  //       c1[i] = static_cast<u8>(sharedB.mShares[0](i));
-  //       s0[i] = s1[i] = enc.mShareGen.getShare();
-  //   }
-  //   // share 0: from p0 to p1,p2
-  //   eval.mOtPrev.help(runtime.mComm.mPrev, c0);
-  //   runtime.mComm.mNext.asyncSend(std::move(s0));
-
-  //   // share 1: from p1 to p0,p2 
-  //   eval.mOtNext.help(runtime.mComm.mNext, c1);
-  //   runtime.mComm.mPrev.asyncSend(std::move(s1));
-
-  //   // share 0: from p0 to p1,p2
-  //   i64* dd0 = res.mShares[1].data();
-  //   auto fu1 = SharedOT::asyncRecv(runtime.mComm.mNext, runtime.mComm.mPrev, std::move(c0), { dd0, i64(res.size()) }).share();
-
-  //   // share 1: from p1 to p0,p2
-  //   i64* dd1 = res.mShares[0].data();
-  //   auto fu2 = SharedOT::asyncRecv(runtime.mComm.mPrev, runtime.mComm.mNext, std::move(c1), { dd1, i64(res.size()) }).share();
-
-  //   fu1.get();
-  //   fu2.get();
-  //   break;
-  // }
-  // default:
-  //   throw std::runtime_error(LOCATION);
-  // }
-
-  eval.asyncMul(runtime, sharedA, sharedB, res).get();
+    std::memcpy(res.mShares[0].data() + i * MAX_UNIT_SIZE, tmpRes.mShares[0].data(), tmp_size * sizeof(tmpRes.mShares[0](0, 0)));
+    std::memcpy(res.mShares[1].data() + i * MAX_UNIT_SIZE, tmpRes.mShares[1].data(), tmp_size * sizeof(tmpRes.mShares[1](0, 0)));
+  }
   return 0;
 }
 

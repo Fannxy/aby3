@@ -269,6 +269,10 @@ void bool2arith(int pIdx, aby3::sbMatrix &boolInput, aby3::si64Matrix &res,
                 aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
                 aby3::Sh3Runtime &runtime);
 
+void arith2bool_core(int pIdx, aby3::si64Matrix &arithInput, aby3::sbMatrix &res,
+                aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
+                aby3::Sh3Runtime &runtime);
+
 void arith2bool(int pIdx, aby3::si64Matrix &arithInput, aby3::sbMatrix &res,
                 aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
                 aby3::Sh3Runtime &runtime);

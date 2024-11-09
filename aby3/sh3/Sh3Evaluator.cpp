@@ -4,6 +4,7 @@
 #include <cryptoTools/Common/Log.h>
 #include <cassert>
 #include "../../aby3-RTR/debug.h"
+#include "../../aby3-Basic/timer.h"
 
 using namespace oc;
 namespace aby3
@@ -129,7 +130,7 @@ namespace aby3
 			assert(B.rows() == A.rows());
 			assert(A.cols() == 1);
 			assert(B.bitCount() == 1);
-
+			Timer& timer = Timer::getInstance();
 			switch (mPartyIdx)
 			{
 			case 0:
@@ -163,11 +164,14 @@ namespace aby3
 
 				// We are OT sender, p1 is receiver, p2 is helper.
 				// receiver will obtain m = b * (a0 + a2) - c0 - c2 - z
-				mOtNextRecver.send(comm.mNext, s0);
+				// mOtNextRecver.send(comm.mNext, s0);
 
 				// We are OT helper, p1 is receiver, p2 is sender.
 				// receiver will obtain m = b * a1 + z
+				timer.start("OT-helper");
 				mOtNextRecver.help(comm.mNext, b1);
+				timer.start("OT-sender");
+				mOtNextRecver.send(comm.mNext, s0);
 				break;
 			}
 			case 1:
@@ -197,18 +201,31 @@ namespace aby3
 				oc::span<i64> recv1(c[0].data(), c[0].size());
 
 				// obtain m = b * (a0 + a2) - c0 - c2 - z
-				auto f0 = SharedOT::asyncRecv(comm.mPrev, comm.mNext, std::move(b0), recv0);
+				// auto f0 = SharedOT::asyncRecv(comm.mPrev, comm.mNext, std::move(b0), recv0);
 
 				// obtain m = b * a1 + z
+				timer.start("OT-receiver-f0");
+				timer.start("OT-receiver-f1");
 				auto f1 = SharedOT::asyncRecv(comm.mNext, comm.mPrev, std::move(b1), recv1);
-
-				self.then([&, recv0 = std::move(recv0), f0, f1](CommPkg& comm, Sh3Task self){
-					f0.get();
-					f1.get();
-					for (u64 i = 0; i < recv0.size(); ++i)
-						c[0](i) += recv0[i];
-					comm.mNext.asyncSendCopy(c[0].data(), c[0].size());
-				});
+				auto f0 = SharedOT::asyncRecv(comm.mPrev, comm.mNext, std::move(b0), recv0);
+				f0.get();
+				// f1.get();
+				// SharedOT::asyncRecv(comm.mNext, comm.mPrev, std::move(b1), recv1);
+				// SharedOT::asyncRecv(comm.mPrev, comm.mNext, std::move(b0), recv0);
+				timer.end("OT-receiver-f0");
+				for (u64 i = 0; i < recv0.size(); ++i)
+					c[0](i) += recv0[i];
+				f1.get();
+				timer.end("OT-receiver-f1");
+				timer.start("OT-sender");
+				comm.mNext.asyncSendCopy(c[0].data(), c[0].size());
+				// self.then([&, recv0 = std::move(recv0), f0, f1](CommPkg& comm, Sh3Task self){
+				// 	f0.get();
+				// 	f1.get();
+				// 	for (u64 i = 0; i < recv0.size(); ++i)
+				// 		c[0](i) += recv0[i];
+				// 	comm.mNext.asyncSendCopy(c[0].data(), c[0].size());
+				// });
 				break;
 			}
 			case 2:
@@ -243,19 +260,25 @@ namespace aby3
 
 				// We are OT helper, p1 is receiver, p0 is sender.
 				// receiver will obtain m = b * (a0 + a2) - c0 - c2 - z
-				mOtPrevRecver.help(comm.mPrev, b0);
+				// mOtPrevRecver.help(comm.mPrev, b0);
 
 				// We are OT sender, p1 is receiver, p0 is helper.
 				// receiver will obtain m = b * a1 + z
+				timer.start("OT-sender");
 				mOtPrevRecver.send(comm.mPrev, s1);
+				timer.start("OT-helper");
+				mOtPrevRecver.help(comm.mPrev, b0);
+				timer.start("OT-receiver");
+				auto f = comm.mPrev.asyncRecv(c[1].data(), c[1].size()).share();
+				f.get();
+				timer.end("OT-receiver");
 
-
-				self.then([&](CommPkg& comm, Sh3Task self) {
-					auto f = comm.mPrev.asyncRecv(c[1].data(), c[1].size()).share();
-					self.then([&, f](CommPkg& comm, Sh3Task self) {
-						f.get();
-						});
-					});
+				// self.then([&](CommPkg& comm, Sh3Task self) {
+				// 	auto f = comm.mPrev.asyncRecv(c[1].data(), c[1].size()).share();
+				// 	self.then([&, f](CommPkg& comm, Sh3Task self) {
+				// 		f.get();
+				// 		});
+				// 	});
 				break;
 			}
 			default:

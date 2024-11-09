@@ -2,6 +2,7 @@
 #include <libOTe/Tools/Tools.h>
 #include "Sh3BinaryEvaluator.h"
 #include "../../aby3-RTR/debug.h"
+#include "../../aby3-Basic/timer.h"
 
 using namespace oc;
 
@@ -383,7 +384,6 @@ namespace aby3
 
 		std::vector<oc::BetaBundle> words0(numWords), words1(numWords), oWords(numWords);
 		oc::BetaBundle temp(2 * bitCount);
-
 		for (u64 i = 0; i < numWords; ++i)
 		{
 			auto begin = i * base;

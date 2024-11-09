@@ -48,8 +48,12 @@ int main(int argc, char** argv) {
 	}
 
 	if(cmd.isSet("ORAM")){
-		pos_map_test(cmd);
-		sqrt_oram_test(cmd);
+		if(cmd.isSet("rank")){
+			splitted_oram_init(cmd);
+		} else {
+			pos_map_test(cmd);
+			sqrt_oram_test(cmd);
+		}
 	}
 
 	if(cmd.isSet("Graph")){
@@ -116,6 +120,13 @@ int main(int argc, char** argv) {
 		}
 		else{
 			debug_info("The Metric test is only applicable with rank specified!");
+		}
+	}
+
+	if(cmd.isSet("Micro")){
+		if(cmd.isSet("rank")){
+			debug_info("in micro_benchmark");
+			splitted_micro_benchmarks(cmd);
 		}
 	}
   return 0;

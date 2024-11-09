@@ -24,7 +24,8 @@ void SharedOT::send(
 	//auto b = mAes.ecbEncBlock(ZeroBlock);
 	//chl.asyncSendCopy(b);
 
-	chl.asyncSend(std::move(msgs));
+	// chl.asyncSend(std::move(msgs));
+	chl.asyncSendCopy(msgs);
 }
 
 void SharedOT::help(
@@ -90,7 +91,8 @@ void SharedOT::help(
 	//chl.asyncSendCopy(b);
 
 
-	chl.asyncSend(std::move(mc));
+	// chl.asyncSend(std::move(mc));
+	chl.asyncSendCopy(mc.data(), mc.size());
 }
 
 void SharedOT::setSeed(const oc::block & seed, oc::u64 seedIdx)
@@ -173,8 +175,10 @@ SharedOT::AsyncRecv SharedOT::asyncRecv(oc::Channel & sender, oc::Channel & help
 
 	//block b0, b1;
 
-	sender.asyncRecv(d0, size, cb);
-	helper.asyncRecv(d1, size, cb);
+	auto f0 = sender.asyncRecv(d0, size, cb);
+	auto f1 = helper.asyncRecv(d1, size, cb);
+	f0.get();
+	f1.get();
 
 	return m;
 }
