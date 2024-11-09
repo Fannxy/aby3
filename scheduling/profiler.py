@@ -24,7 +24,6 @@ def calculate_expression(n, expression):
 def get_bandwidth(i, time, server_host, ip_address, test_server, parallel=1):
     os.system(f"ssh {server_host} 'iperf3 -s -D'")
     result = os.popen(f"ssh {test_server} 'iperf3 -c {ip_address} -t {time} -P {parallel} -J'").read()
-    print(result)
     data = json.loads(result)
     bandwidth = data["end"]["sum_received"]["bits_per_second"] / (2**30)
     os.system(f"ssh {server_host} 'pkill iperf3'")
@@ -113,7 +112,10 @@ if __name__ == "__main__":
                 if args.server_host[j] != args.server_host[i]:
                     test_server = args.server_host[j]
                     break
-            bandwidth.append(get_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], test_server))
+            bandwidth_i = []
+            for _ in range(5):
+                bandwidth_i.append(get_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], test_server))
+            bandwidth.append(max(bandwidth_i))
         for i in range(n):
             print(f"{args.server_host[i]}: {bandwidth[i]}Gb/s")
         network_dict = {args.server_host[i]: bandwidth[i] for i in range(n)}
@@ -192,7 +194,14 @@ if __name__ == "__main__":
     print("Assigning tasks")
     res = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit)
     print("Task assignment:", res)
+    coef_recv = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_recv]
+    coef_send = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_send]
+    max_coef = max(max(coef_recv), max(coef_send))
     with open(f"{args.config_folder}/task_assignment-{args.assignment_strategy}.txt", "w") as f:
+        for i in range(3):
+            f.write(f"role {i} recv: %.2f\n" % (coef_recv[i] / max_coef))
+            f.write(f"role {i} send: %.2f\n" % (coef_send[i] / max_coef))
+        f.write(f"parallelism: {len(res)}\n")
         json.dump(res, f)
         f.write(f"\ntask: {args.keyword}\n")
 

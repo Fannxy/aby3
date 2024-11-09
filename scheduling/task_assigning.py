@@ -27,7 +27,7 @@ def calculate_mean_usage(n, mean_usage):
 
 def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send_mean_usage, data_size, parallelism_limit):
     num_parties = len(bandwidth)
-    print(f"recv mean usage: {recv_mean_usage} | send mean usage: {send_mean_usage}")
+    # print(f"recv mean usage: {recv_mean_usage} | send mean usage: {send_mean_usage}")
     assert(len(expr_recv) == num_parties)
     assert(len(expr_send) == num_parties)
 
@@ -65,8 +65,6 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
     opt_x = res.x[:-1]
 
     sum_opt_x = sum(opt_x)
-    print(sum_opt_x / parallelism_limit / 2)
-    print(opt_x)
     indices = [i for i, x in enumerate(opt_x) if x >= sum_opt_x / parallelism_limit / 2]
     remaining_data_size = data_size
     subtask_data_size = [0] * len(perms)
@@ -85,8 +83,8 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
             sum_comm_recv += coef_recv[perms[i][party]] * subtask_data_size[i]
             sum_comm_send += coef_send[perms[i][party]] * subtask_data_size[i]
         for i in indices:
-            predicted_bandwidth_recv[i][party] = coef_recv[perms[i][party]] * subtask_data_size[i] / sum_comm_recv * bandwidth[party]
-            predicted_bandwidth_send[i][party] = coef_send[perms[i][party]] * subtask_data_size[i] / sum_comm_send * bandwidth[party]
+            predicted_bandwidth_recv[i][party] = coef_recv[perms[i][party]] * subtask_data_size[i] / sum_comm_recv * bandwidth[party] * 2
+            predicted_bandwidth_send[i][party] = coef_send[perms[i][party]] * subtask_data_size[i] / sum_comm_send * bandwidth[party] * 2
 
     for i in indices:
         task_num[i] = parallelism_limit
@@ -130,5 +128,5 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
                 result.append([perms[i], data_size // total_task_num])
     else:
         raise ValueError(f"Invalid strategy: {strategy}")
-
+    
     return result

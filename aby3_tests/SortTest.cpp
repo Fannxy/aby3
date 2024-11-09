@@ -29,7 +29,7 @@ int splitted_arith_merge_sort_test(oc::CLP& cmd){
     } else {
         throw std::runtime_error(LOCATION);
     }
-    size_t arr_len = 65536;
+    size_t arr_len = 8192;
     if(arr_len > data_size / 2) arr_len = data_size / 2;
     size_t arr_num = data_size / arr_len;
 
