@@ -87,3 +87,32 @@ int splitted_fixed_matrix_mult_test(oc::CLP& cmd) {
     
     return 0;
 }
+
+int splitted_fixed_matrix_sum_test(oc::CLP& cmd) {
+
+    SPLITTED_TEST_INIT
+
+    u64 sizeX = 16,
+        sizeY = 16;
+
+    sf64Matrix<D8> sharedA(sizeX, sizeY),
+                sharedB(sizeX, sizeY),
+                sharedC(sizeX, sizeY);
+
+    // locally obtain the test data.
+    auto& mCastA = (si64Matrix&) sharedA;
+    auto& mCastB = (si64Matrix&) sharedB;
+
+    for(i64 i=0; i<mCastA.size(); i++) {
+        mCastA.mShares[0](i) = 0;
+        mCastA.mShares[1](i) = 0;
+    }
+    for(i64 i=0; i<mCastB.size(); i++) {
+        mCastB.mShares[0](i) = 0;
+        mCastB.mShares[1](i) = 0;
+    }
+
+    fixed_matrix_sum(sharedA, sharedB, sharedC, 0, enc, eval, runtime);
+    
+    return 0;
+}

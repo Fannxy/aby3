@@ -36,24 +36,17 @@ int fixed_matrix_mult(sf64Matrix<D8>& A, sf64Matrix<D8>& B, sf64Matrix<D8>& C, i
     return 0;
 }
 
-// int fixed_matrix_mult(sf64Matrix<D8>& A, sf64Matrix<D8>& B, sf64Matrix<D8>& C, int pIdx, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime) {
-//     if (A.cols() != B.rows() || A.rows() != C.rows() || B.cols() != C.cols()) {
-//         THROW_RUNTIME_ERROR("Matrix dimensions do not match.");
-//     }
-//     for(u64 i = 0; i < B.cols(); ++i) {
-//         sf64Matrix<D8> repeatCol(A.rows(), A.cols());
-//         for(u64 j = 0; j < A.rows(); ++j)
-//             for(u64 k = 0; k < A.cols(); ++k)
-//                 repeatCol(j, k, B(k, i));
-//         sf64Matrix<D8> sharedProd;
-//         eval.asyncMul(runtime, A, repeatCol, sharedProd).get();
-//         for(u64 j = 0; j < A.rows(); ++j) {
-//             sf64<D8> sum = sharedProd(j, 0);
-//             for(u64 k = 1; k < A.cols(); ++k)
-//                 sum = sum + sharedProd(j, k);
-//             C(j, i, sum);
-//         }
-//     }
+int fixed_matrix_sum(sf64Matrix<D8>& A, sf64Matrix<D8>& B, sf64Matrix<D8>& C, int pIdx, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime) {
+    if (A.rows() != B.rows() || A.cols() != B.cols() || A.rows() != C.rows() || A.cols() != C.cols()) {
+        THROW_RUNTIME_ERROR("Matrix dimensions do not match.");
+    }
+
+    for(u64 i = 0; i < A.rows(); ++i)
+        for(u64 j = 0; j < A.cols(); ++j) {
+            sf64<D8> sum = A(i, j);
+            sum = sum + B(i, j);
+            C(i, j, sum);
+        }
     
-//     return 0;
-// }
+    return 0;
+}

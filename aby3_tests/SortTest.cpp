@@ -12,7 +12,7 @@
 using namespace oc;
 using namespace aby3;
 
-int splitted_arith_merge_sort_test(oc::CLP& cmd){
+int splitted_arith_multi_merge_sort_test(oc::CLP& cmd){
 
     SPLITTED_TEST_INIT
 
@@ -47,6 +47,44 @@ int splitted_arith_merge_sort_test(oc::CLP& cmd){
 
     aby3::si64Matrix multi_sort_test;
     odd_even_multi_merge(enc_arr, multi_sort_test, role, enc, eval, runtime);
+
+    return 0;
+}
+
+int splitted_arith_merge_sort_test(oc::CLP& cmd){
+
+    SPLITTED_TEST_INIT
+
+    if(role == 0){
+        debug_info("RUN SPLITTED ARITHMETIC MERGE SORT TEST");
+    }
+
+    // prepare the data.
+    // prepare the data.
+    size_t data_size;
+    if (cmd.isSet("dataSize")) {
+        auto keys = cmd.getMany<size_t>("dataSize");
+        data_size = keys[0];
+    } else {
+        throw std::runtime_error(LOCATION);
+    }
+    size_t arr_num = 2;
+    size_t arr_len = data_size / arr_num;
+
+    // enc the data.
+    std::vector<aby3::si64Matrix> enc_arr;
+    for(size_t i = 0; i < arr_num; i++) {
+        aby3::si64Matrix tmp(arr_len, 1);
+        for(i64 i=0; i<arr_len; i++) {
+            tmp.mShares[0](i) = i;
+            tmp.mShares[1](i) = i;
+        }
+        enc_arr.push_back(tmp);
+    }
+
+
+    aby3::si64Matrix sort_test;
+    odd_even_merge(enc_arr[0], enc_arr[1], sort_test, role, enc, eval, runtime);
 
     return 0;
 }

@@ -164,12 +164,14 @@ int quick_sort_test(oc::CLP& cmd);
 int quick_sort_with_duplicate_elements_test(oc::CLP& cmd);
 int odd_even_merge_test(oc::CLP& cmd);
 int splitted_arith_merge_sort_test(oc::CLP& cmd);
+int splitted_arith_multi_merge_sort_test(oc::CLP& cmd);
 int arith_sort_test(oc::CLP& cmd);
 int arith_merge_sort_test(oc::CLP& cmd);
 
 // matrix multiplication tests
 int fixed_matrix_mult_test(oc::CLP& cmd);
 int splitted_fixed_matrix_mult_test(oc::CLP& cmd);
+int splitted_fixed_matrix_sum_test(oc::CLP& cmd);
 
 int correctness_cipher_index_pta(oc::CLP& cmd);
 int correctness_sort_pta(oc::CLP& cmd);

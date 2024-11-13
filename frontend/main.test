@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
 
 	if(cmd.isSet("Sort")){
 		if(cmd.isSet("rank")){
-			splitted_arith_merge_sort_test(cmd);
+			splitted_arith_multi_merge_sort_test(cmd);
 		} else {
 			// bc_sort_test(cmd);
 			// bc_sort_corner_test(cmd);
@@ -85,11 +85,23 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	if(cmd.isSet("Sort-agg")){
+		if(cmd.isSet("rank")){
+			splitted_arith_merge_sort_test(cmd);
+		}
+	}
+
 	if(cmd.isSet("Matrix")){
 		if(cmd.isSet("rank")){
 			splitted_fixed_matrix_mult_test(cmd);
 		} else {
 			fixed_matrix_mult_test(cmd);
+		}
+	}
+
+	if(cmd.isSet("Matrix-agg")){
+		if(cmd.isSet("rank")){
+			splitted_fixed_matrix_sum_test(cmd);
 		}
 	}
 

@@ -1,8 +1,8 @@
 root_folder=/root/aby3
 
 num_parties=3
-node_id=(12 14 4)
-# node_id=(13 16 17)
+# node_id=(12 14 4)
+node_id=(13 16 17)
 server_host="aby30 aby31 aby32"
 
 # Sync the schedule

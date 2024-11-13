@@ -8,8 +8,8 @@ net_config=${11}
 micro_benchmark="${12:-""}"
 
 root_folder=/root/aby3
-# port=7897
-port=1022
+port=7897
+# port=1022
 num_parties=3
 server_host="aby30 aby31 aby32"
 get_bandwidth_time=2
