@@ -91,8 +91,7 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
         remaining_data_size -= subtask_data_size[i]
     
     min_time = 1e9
-    # for m in range(1, parallelism_limit + 1):
-    for m in range(parallelism_limit, parallelism_limit + 1):
+    for m in range(1, parallelism_limit + 1):
         m_task_num = [0] * len(perms)
         remaining_data_size = data_size
         remaining_parallelism = m
@@ -128,17 +127,17 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
             if sum_comm_send[j] > 0:
                 time = max(time, sum_comm_send[j] / (bandwidth[j] * sum_mean_usage_send[j]))
         
-        print(f"m = {m}")
-        print(f"    computation time = {time}")
-        for j in range(num_parties):
-            print(f"    Party {j}: recv = {sum_comm_recv[j]} | send = {sum_comm_send[j]} | recv usage = {sum_mean_usage_recv[j]} | send usage = {sum_mean_usage_send[j]}")
+        # print(f"m = {m}")
+        # print(f"    computation time = {time}")
+        # for j in range(num_parties):
+        #     print(f"    Party {j}: recv = {sum_comm_recv[j]} | send = {sum_comm_send[j]} | recv usage = {sum_mean_usage_recv[j]} | send usage = {sum_mean_usage_send[j]}")
 
         agg_task_size = m
         while agg_task_size > 1:
             agg_task_size = math.ceil(agg_task_size / 2)
             time += calculate_mean_usage(agg_task_size * data_size / m, agg_time)
         
-        print(f"    total time = {time}")
+        # print(f"    total time = {time}")
         
         if time < min_time:
             min_time = time
