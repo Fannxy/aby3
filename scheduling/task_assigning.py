@@ -25,7 +25,23 @@ def calculate_mean_usage(n, mean_usage):
     r = keys[pos_r]
     return (r - n) / (r - l) * mean_usage[l] + (n - l) / (r - l) * mean_usage[r]
 
-def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send_mean_usage, data_size, parallelism_limit):
+def assign_aggr(assignment):
+    if len(assignment) == 1:
+        return [assignment]
+    left_assignment = assign_aggr(assignment[:len(assignment) // 2])
+    right_assignment = assign_aggr(assignment[len(assignment) // 2:])
+    new_assignment = []
+    for i in range(max(len(left_assignment), len(right_assignment))):
+        new_layer = []
+        if i < len(left_assignment):
+            new_layer += left_assignment[i]
+        if i < len(right_assignment):
+            new_layer += right_assignment[i]
+        new_assignment.append(new_layer)
+    new_assignment.append([[assignment[0][0], sum([item[1] for item in assignment])]])
+    return new_assignment
+
+def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send_mean_usage, data_size, parallelism_limit, agg_time):
     num_parties = len(bandwidth)
     # print(f"recv mean usage: {recv_mean_usage} | send mean usage: {send_mean_usage}")
     assert(len(expr_recv) == num_parties)
@@ -74,59 +90,89 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
         sum_opt_x -= opt_x[i]
         remaining_data_size -= subtask_data_size[i]
     
-    predicted_bandwidth_recv = [[0] * num_parties for _ in range(len(perms))]
-    predicted_bandwidth_send = [[0] * num_parties for _ in range(len(perms))]
-    for party in range(num_parties):
-        sum_comm_recv = 0
-        sum_comm_send = 0
+    min_time = 1e9
+    # for m in range(1, parallelism_limit + 1):
+    for m in range(parallelism_limit, parallelism_limit + 1):
+        m_task_num = [0] * len(perms)
+        remaining_data_size = data_size
+        remaining_parallelism = m
         for i in indices:
-            sum_comm_recv += coef_recv[perms[i][party]] * subtask_data_size[i]
-            sum_comm_send += coef_send[perms[i][party]] * subtask_data_size[i]
+            m_task_num[i] = round(subtask_data_size[i] / remaining_data_size * remaining_parallelism)
+            remaining_data_size -= subtask_data_size[i]
+            remaining_parallelism -= m_task_num[i]
+        
+        sum_comm_recv = [0] * num_parties
+        sum_comm_send = [0] * num_parties
+        sum_mean_usage_recv = [0] * num_parties
+        sum_mean_usage_send = [0] * num_parties
         for i in indices:
-            predicted_bandwidth_recv[i][party] = coef_recv[perms[i][party]] * subtask_data_size[i] / sum_comm_recv * bandwidth[party] * 2
-            predicted_bandwidth_send[i][party] = coef_send[perms[i][party]] * subtask_data_size[i] / sum_comm_send * bandwidth[party] * 2
-
-    for i in indices:
-        task_num[i] = parallelism_limit
-        for m in range(1, parallelism_limit):
-            flag = False
+            if m_task_num[i] == 0:
+                continue
             for j in range(num_parties):
-                predicted_mean_usage_recv = calculate_mean_usage(subtask_data_size[i] / m, recv_mean_usage[perms[i][j]])
-                predicted_mean_usage_send = calculate_mean_usage(subtask_data_size[i] / m, send_mean_usage[perms[i][j]])
-                # print(f"Perm {perms[i]} | Party {j} | Parallelism = {m} | Predicted mean usage (recv) = {predicted_mean_usage_recv} | Predicted mean usage (send) = {predicted_mean_usage_send} | Predicted bandwidth (recv) = {predicted_bandwidth_recv[i][j]} | Predicted bandwidth (send) = {predicted_bandwidth_send[i][j]}")
-                if predicted_mean_usage_recv * m >= predicted_bandwidth_recv[i][j] or predicted_mean_usage_send * m >= predicted_bandwidth_send[i][j]:
-                    flag = True
-                    break
-            if flag:
-                task_num[i] = m
-                break
-    
+                sum_comm_recv[j] += coef_recv[perms[i][j]] * data_size / m * m_task_num[i]
+                sum_comm_send[j] += coef_send[perms[i][j]] * data_size / m * m_task_num[i]
+                sum_mean_usage_recv[j] += calculate_mean_usage(data_size / m, recv_mean_usage[perms[i][j]]) / (2 * bandwidth[j]) * m_task_num[i]
+                sum_mean_usage_send[j] += calculate_mean_usage(data_size / m, send_mean_usage[perms[i][j]]) / (2 * bandwidth[j]) * m_task_num[i]
+        
+        max_usage = 1
+        for j in range(num_parties):
+            max_usage = max(max_usage, sum_mean_usage_recv[j], sum_mean_usage_send[j])
+        for j in range(num_parties):
+            sum_mean_usage_recv[j] /= max_usage
+            sum_mean_usage_send[j] /= max_usage
+        
+        time = 0
+        for j in range(num_parties):
+            if sum_comm_recv[j] > 0:
+                time = max(time, sum_comm_recv[j] / (bandwidth[j] * sum_mean_usage_recv[j]))
+            if sum_comm_send[j] > 0:
+                time = max(time, sum_comm_send[j] / (bandwidth[j] * sum_mean_usage_send[j]))
+        
+        print(f"m = {m}")
+        print(f"    computation time = {time}")
+        for j in range(num_parties):
+            print(f"    Party {j}: recv = {sum_comm_recv[j]} | send = {sum_comm_send[j]} | recv usage = {sum_mean_usage_recv[j]} | send usage = {sum_mean_usage_send[j]}")
+
+        agg_task_size = m
+        while agg_task_size > 1:
+            agg_task_size = math.ceil(agg_task_size / 2)
+            time += calculate_mean_usage(agg_task_size * data_size / m, agg_time)
+        
+        print(f"    total time = {time}")
+        
+        if time < min_time:
+            min_time = time
+            task_num = m_task_num
+
     total_task_num = sum(task_num)
-    if total_task_num > parallelism_limit:
-        remaining_task_num = total_task_num
-        remaining_parallelism = parallelism_limit
-        for i in indices:
-            tmp = round(task_num[i] / remaining_task_num * remaining_parallelism)
-            remaining_task_num -= task_num[i]
-            remaining_parallelism -= tmp
-            task_num[i] = tmp
-        total_task_num = sum(task_num)
 
     # for i in indices:
     #     print(f"Task {perms[i]}: ")
     #     print(f"    Data size: {subtask_data_size[i]}")
     #     print(f"    Task num: {task_num[i]}")
-    #     print(f"    Predicted bandwidth (recv): {predicted_bandwidth_recv[i]}")
-    #     print(f"    Predicted bandwidth (send): {predicted_bandwidth_send[i]}")
 
-    result = []
+    comp_assignment = []
+    aggr_assignment = []
     if strategy == 'baseline':
-        result = [[perms[0], data_size // total_task_num] for _ in range(total_task_num)]
+        comp_assignment = [[perms[0], data_size // total_task_num] for _ in range(total_task_num)]
     elif strategy == 'roundrole':
         for i in indices:
             for _ in range(task_num[i]):
-                result.append([perms[i], data_size // total_task_num])
+                comp_assignment.append([perms[i], data_size // total_task_num])
     else:
         raise ValueError(f"Invalid strategy: {strategy}")
     
-    return result
+    # aggr_layer = comp_assignment
+    # while len(aggr_layer) > 1:
+    #     new_layer = []
+    #     for i in range(0, len(aggr_layer) // 2):
+    #         new_layer.append([aggr_layer[i][0], aggr_layer[i][1] + aggr_layer[len(aggr_layer) // 2 * 2 - i - 1][1]])
+    #     aggr_assignment.append([item for item in new_layer])
+    #     if len(aggr_layer) % 2 == 1:
+    #         new_layer.append([aggr_layer[-1][0], aggr_layer[-1][1]])
+    #     new_layer.sort(key=lambda x: x[1])
+    #     aggr_layer = new_layer
+
+    aggr_assignment = assign_aggr(comp_assignment)
+    
+    return comp_assignment, aggr_assignment

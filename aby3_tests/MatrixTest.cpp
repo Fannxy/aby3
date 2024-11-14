@@ -92,6 +92,10 @@ int splitted_fixed_matrix_sum_test(oc::CLP& cmd) {
 
     SPLITTED_TEST_INIT
 
+    if(role == 0){
+        debug_info("RUN SPLITTED FIXED MATRIX SUM TEST");
+    }
+
     u64 sizeX = 16,
         sizeY = 16;
 

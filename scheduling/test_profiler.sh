@@ -15,15 +15,9 @@ server_host="aby30 aby31 aby32"
 get_bandwidth_time=2
 parallelism_limit=48
 
-declare -A fitting_length
-declare -A fitting_step
-declare -A complexity
-fitting_length["Matrix"]=8
-fitting_step["Matrix"]=256
-complexity["Matrix"]="1 n"
-fitting_length["Sort"]=8
-fitting_step["Sort"]=4096
-complexity["Sort"]="1 n n*log(n)"
+fitting_length=8
+fitting_step=4096
+complexity="1 n"
 
 network_interface=""
 for ip in $ip_address; do
@@ -45,25 +39,48 @@ echo "network_interface: $network_interface"
 echo "assignment_strategy: $assignment_strategy"
 echo "net_config: $net_config"
 
-
-python ${root_folder}/scheduling/profiler.py \
-  --args " ${micro_benchmark} -${task}" \
-  --args_agg " -${task}-agg" \
-  --record_folder ${root_folder}/scheduling/Record_test \
-  --config_folder ${root_folder}/scheduling/Result/${net_config} \
-  --keyword ${keyword} \
-  --task ${task} \
-  --num_parties ${num_parties} \
-  --server_host ${server_host} \
-  --ip_address ${ip_address} \
-  --network_interface ${network_interface} \
-  --profile_ip_address ${profile_ip_address} \
-  --profile_network_interface ${profile_network_interface} \
-  --data_size ${data_size} \
-  --fitting_length ${fitting_length[${task}]} \
-  --fitting_step ${fitting_step[${task}]} \
-  --get_bandwidth_time ${get_bandwidth_time} \
-  --parallelism_limit ${parallelism_limit} \
-  --complexity ${complexity[${task}]} \
-  --assignment_strategy ${assignment_strategy} \
-  --run_tasks
+for m in $(seq 6 $parallelism_limit); do
+    echo "m: $m"
+    python ${root_folder}/scheduling/profiler.py \
+    --args " ${micro_benchmark} -${task}" \
+    --args_agg " -${task}-agg" \
+    --record_folder ${root_folder}/scheduling/Record_test \
+    --config_folder ${root_folder}/scheduling/Result/${net_config} \
+    --keyword ${keyword} \
+    --task ${task} \
+    --num_parties ${num_parties} \
+    --server_host ${server_host} \
+    --ip_address ${ip_address} \
+    --network_interface ${network_interface} \
+    --profile_ip_address ${profile_ip_address} \
+    --profile_network_interface ${profile_network_interface} \
+    --data_size ${data_size} \
+    --fitting_length ${fitting_length} \
+    --fitting_step ${fitting_step} \
+    --get_bandwidth_time ${get_bandwidth_time} \
+    --parallelism_limit ${m} \
+    --complexity ${complexity} \
+    --assignment_strategy ${assignment_strategy} \
+    --run_tasks
+done
+# python ${root_folder}/scheduling/profiler.py \
+#   --args " ${micro_benchmark} -${task}" \
+#   --args_agg " -${task}-agg" \
+#   --record_folder ${root_folder}/scheduling/Record_test \
+#   --config_folder ${root_folder}/scheduling/Result/${net_config} \
+#   --keyword ${keyword} \
+#   --task ${task} \
+#   --num_parties ${num_parties} \
+#   --server_host ${server_host} \
+#   --ip_address ${ip_address} \
+#   --network_interface ${network_interface} \
+#   --profile_ip_address ${profile_ip_address} \
+#   --profile_network_interface ${profile_network_interface} \
+#   --data_size ${data_size} \
+#   --fitting_length ${fitting_length} \
+#   --fitting_step ${fitting_step} \
+#   --get_bandwidth_time ${get_bandwidth_time} \
+#   --parallelism_limit ${parallelism_limit} \
+#   --complexity ${complexity} \
+#   --assignment_strategy ${assignment_strategy} \
+#   --run_tasks

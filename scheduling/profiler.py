@@ -127,6 +127,7 @@ if __name__ == "__main__":
     length = args.fitting_length
     step = args.fitting_step
     usage_dict = [{} for _ in range(3)]
+    usage_dict_agg = [{} for _ in range(3)]
     for size in range(step, step * length + 1, step):
         for role in range(3):
             print(f"Collecting network usage: {size} {role}")
@@ -143,7 +144,8 @@ if __name__ == "__main__":
     
     recv_mean_usage = [{} for _ in range(3)]
     send_mean_usage = [{} for _ in range(3)]
-    size = 2
+    agg_time = {}
+    size = step
     while size < data_size:
         max_mean_usage = 0
         for role in range(n):
@@ -157,12 +159,27 @@ if __name__ == "__main__":
                 ip_address=args.profile_ip_address,
                 network_interface=args.profile_network_interface
             )
+            usage_dict_agg[role][size] = get_profile_usage_dict(
+                data_size=size,
+                role=role,
+                args=args.args_agg,
+                record_folder=args.record_folder,
+                keyword=f"{args.task}-agg",
+                server_host=args.server_host,
+                ip_address=args.profile_ip_address,
+                network_interface=args.profile_network_interface
+            )
             recv_mean_usage[role][size] = np.mean(usage_dict[role][size]["network_recv"])
             send_mean_usage[role][size] = np.mean(usage_dict[role][size]["network_send"])
             max_mean_usage = max(max_mean_usage, recv_mean_usage[role][size], send_mean_usage[role][size])
+        agg_time[size] = np.mean([len(usage_dict_agg[role][size]["network_recv"]) for role in range(n)])
         if max_mean_usage > max(bandwidth):
             break
         size *= 2
+    
+    # for size in agg_time.keys():
+    #     comp_time = np.mean([len(usage_dict[role][size]["network_recv"]) for role in range(n)])
+    #     print(f"size: {size}, agg_time: {agg_time[size]}, comp_time: {comp_time}")
     
     # fit network usage with given expression
     print("Fitting network usage")
@@ -208,8 +225,9 @@ if __name__ == "__main__":
     #         f.write(f"\ntask: {args.keyword}\n")
 
     print("Assigning tasks")
-    res = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit)
-    print("Task assignment:", res)
+    comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time)
+    print("Task assignment:", comp_assignment)
+    print("Aggregation assignment:", aggr_assignment)
     coef_recv = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_recv]
     coef_send = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_send]
     max_coef = max(max(coef_recv), max(coef_send))
@@ -217,8 +235,9 @@ if __name__ == "__main__":
         for i in range(3):
             f.write(f"role {i} recv: %.2f\n" % (coef_recv[i] / max_coef))
             f.write(f"role {i} send: %.2f\n" % (coef_send[i] / max_coef))
-        f.write(f"parallelism: {len(res)}\n")
-        json.dump(res, f)
+        f.write(f"parallelism: {len(comp_assignment)}\n")
+        json.dump(comp_assignment, f)
+        json.dump(aggr_assignment, f)
         f.write(f"\ntask: {args.keyword}\n")
     
     time_stamp_file_prefix = f"{args.record_folder}/stamp-{args.keyword}-{data_size}-{args.assignment_strategy}"
@@ -228,7 +247,7 @@ if __name__ == "__main__":
         print("Running tasks")
 
         commands = [[] for i in range(n)]
-        for rank, param in enumerate(res):
+        for rank, param in enumerate(comp_assignment):
             role_assignment = param[0]
             subtask_size = param[1]
             party_id = []
@@ -243,10 +262,32 @@ if __name__ == "__main__":
                 command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip} -stampFile {time_stamp_file_prefix}-{rank}.txt"
                 commands[party_id[role]].append(command)
         
+        commands_agg = []
+        for agg_layer in aggr_assignment:
+            commands_agg_layer = [[] for i in range(n)]
+            for rank, param in enumerate(agg_layer):
+                role_assignment = param[0]
+                subtask_size = param[1]
+                party_id = []
+                for role in range(3):
+                    for i in range(n):
+                        if role_assignment[i] == role:
+                            party_id.append(i)
+                            break
+                for role in range(3):
+                    p0_ip = args.ip_address[party_id[0]]
+                    p1_ip = args.ip_address[party_id[1]]
+                    command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args_agg} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
+                    commands_agg_layer[party_id[role]].append(command)
+            commands_agg.append(commands_agg_layer)
+        
         total_command = []
         for node in range(n):
             if not args.MPI:
                 command = " \& ".join(commands[node]) + " \& wait"
+                for agg_layer in commands_agg:
+                    command += " \; "
+                    command += " \& ".join(agg_layer[node]) + " \& wait"
                 total_command.append(command)
             else:
                 mpi_command = " mpirun"
@@ -254,6 +295,12 @@ if __name__ == "__main__":
                     mpi_command += " -np 1 " + command
                     if i != len(commands[node]) - 1:
                         mpi_command += " :"
+                for agg_layer in commands_agg:
+                    mpi_command += " \; mpirun"
+                    for i, command in enumerate(agg_layer[node]):
+                        mpi_command += " -np 1 " + command
+                        if i != len(agg_layer[node]) - 1:
+                            mpi_command += " :"
                 total_command.append(mpi_command)
 
         threads = []
@@ -310,7 +357,7 @@ if __name__ == "__main__":
         new_row['keyword'] = [f"{keyword}"]
         new_row['data size'] = [data_size]
         new_row['time'] = [end_time - start_time]
-        new_row["parallelism"] = [len(res)]
+        new_row["parallelism"] = [len(comp_assignment)]
         for i in range(n):
             new_row[f"recv utilization-{i}"] = [recv_utilization[i]]
             new_row[f"send utilization-{i}"] = [send_utilization[i]]
