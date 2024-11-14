@@ -17,7 +17,7 @@ def network_analysis():
     if(not os.path.exists(network_analysis_folder)):
         os.makedirs(network_analysis_folder)
         
-    df_dict_list = []
+    df_dict_list = [] 
     # for folder in folders:
     for k in range(len(folders)):
         folder = folders[k]

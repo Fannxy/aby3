@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 import os
 import numpy as np
+import re
 
-def draw_usage_graph(usage_dict, graph_file_name):
+def draw_usage_graph_core(usage_dict, graph_file_name):
     """
     Draw the usage graph.
     """
@@ -32,8 +33,8 @@ def draw_usage_graph(usage_dict, graph_file_name):
     plt.ylabel("usage (GB)")
     
     plt.subplot(1, 4, 3)
-    plt.plot(usage_dict["network_send"], label="network send")
-    plt.plot(usage_dict["network_recv"], label="network recv")
+    plt.plot(usage_dict["network_send"], label="network send", alpha=0.7)
+    plt.plot(usage_dict["network_recv"], label="network recv", alpha=0.7)
     print(f"stamps of network = {len(usage_dict['network_send'])}")
     plt.title("network usage")
     plt.xlabel("time")
@@ -53,6 +54,69 @@ def draw_usage_graph(usage_dict, graph_file_name):
     
     return
 
+
+def draw_usage_graph(usage_dict, graph_file_name, time_stamp_dict=None):
+    """
+    Draw the usage graph.
+    """
+    
+    if(time_stamp_dict == None):
+        draw_usage_graph_core(usage_dict, graph_file_name)
+        return
+    
+    plt.figure(figsize=(16, 4))
+                
+    plt.subplot(1, 4, 1)
+    plt.plot(usage_dict["cpu"], label="cpu")
+    plt.plot(usage_dict["user_cpu"], label="user")
+    plt.plot(usage_dict["sys_cpu"], label="sys")
+    print(f"stamps of cpu = {len(usage_dict['cpu'])}")
+    plt.title("cpu usage")
+    plt.xlabel("time")
+    plt.ylabel("usage (%)")
+    plt.legend()
+    
+    plt.subplot(1, 4, 2)
+    plt.plot(usage_dict["memory"])
+    print(f"stamps of memory = {len(usage_dict['memory'])}")
+    plt.title("memory usage")
+    plt.xlabel("time")
+    plt.ylabel("usage (GB)")
+    
+    plt.subplot(1, 4, 3)
+    plt.plot(usage_dict["network_send"], label="network send", alpha=0.7)
+    plt.plot(usage_dict["network_recv"], label="network recv", alpha=0.7)
+    
+    colors = plt.cm.get_cmap('tab10').colors
+    for i, key in enumerate(time_stamp_dict.keys()):
+        start = time_stamp_dict[key]["start"]
+        end = time_stamp_dict[key]["end"]
+        start_index = np.searchsorted(usage_dict["time_stamp"], start)
+        end_index = np.searchsorted(usage_dict["time_stamp"], end)
+        color = colors[(i+5) % len(colors)]
+        plt.axvline(x=start_index, color=color, label = key, alpha=0.7)
+        plt.axvline(x=end_index, color=color, alpha=0.7)
+    
+    print(f"stamps of network = {len(usage_dict['network_send'])}")
+    plt.title("network usage")
+    plt.xlabel("time")
+    plt.ylabel("usage (Gb/s)")
+    plt.legend()
+    
+    plt.subplot(1, 4, 4)
+    plt.plot(usage_dict["recv_drop"], label="drop")
+    plt.title("network recvdrop")
+    plt.xlabel("time")
+    plt.ylabel("drop rate")
+    plt.legend()
+    
+    plt.tight_layout()
+    print(graph_file_name)
+    plt.savefig(graph_file_name, dpi=300)
+    
+    return
+
+
 def get_usage_dict(monitor_log):
     usage_dict = {
         "cpu": [],
@@ -62,10 +126,13 @@ def get_usage_dict(monitor_log):
         "network_send": [],
         "network_recv": [],
         "recv_drop": [],
+        "time_stamp": []
     }
     
     with open(monitor_log, 'r') as file:
         tmp_dict = json.load(file)
+    
+    usage_dict["time_stamp"] = [item[0] for item in tmp_dict["cpu"]]
     
     for key in tmp_dict.keys():
         if(key != "network" and key != "user_cpu" and key != "sys_cpu"):
@@ -103,6 +170,29 @@ def get_usage_dict(monitor_log):
             usage_dict["user_cpu"] = user_cpu_rate.tolist()
     
     return usage_dict
+
+
+def get_time_stamp(stamp_file):
+    time_stamp_dict = {}
+    
+    if(os.path.exists(stamp_file) == False):
+        return time_stamp_dict
+    
+    with open(stamp_file, "r") as f:
+        lines = f.readlines()
+        
+    for line in lines:
+        match = re.match(r'Key = (.+?) start = ([\d.]+) end = ([\d.]+)', line)
+        if match:
+            key = match.group(1)
+            start = float(match.group(2))
+            end = float(match.group(3))
+            if key not in time_stamp_dict.keys():
+                time_stamp_dict[key] = {"start": start, "end": end}
+            time_stamp_dict[key]["start"] = min(time_stamp_dict[key]["start"], start)
+            time_stamp_dict[key]["end"] = max(time_stamp_dict[key]["end"], end)
+        
+    return time_stamp_dict
 
 
 class SystemMonitor:
