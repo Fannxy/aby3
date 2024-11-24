@@ -41,7 +41,7 @@ def assign_aggr(assignment):
     new_assignment.append([[assignment[0][0], sum([item[1] for item in assignment])]])
     return new_assignment
 
-def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send_mean_usage, data_size, parallelism_limit, agg_time):
+def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send_mean_usage, data_size, parallelism_limit, agg_time, parallelism_min=1):
     num_parties = len(bandwidth)
     # print(f"recv mean usage: {recv_mean_usage} | send mean usage: {send_mean_usage}")
     assert(len(expr_recv) == num_parties)
@@ -91,7 +91,7 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
         remaining_data_size -= subtask_data_size[i]
     
     min_time = 1e9
-    for m in range(1, parallelism_limit + 1):
+    for m in range(parallelism_min, parallelism_limit + 1):
         m_task_num = [0] * len(perms)
         remaining_data_size = data_size
         remaining_parallelism = m

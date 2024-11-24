@@ -81,6 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('--fitting_step', type=int, default=100, help='fitting step')
     parser.add_argument('--complexity', type=str, nargs='+', default=['1', 'n'], help='communication complexity of each stage')
     parser.add_argument('--parallelism_limit', type=int, default=64, help='parallelism limit')
+    parser.add_argument('--fix_parallelism', action='store_true', help='fix parallelism')
     parser.add_argument('--run_tasks', action='store_true', help='run tasks')
     parser.add_argument('--MPI', action='store_true', help='run in MPI')
     parser.add_argument('--assignment_strategy', type=str, choices=['baseline', 'roundrole'], default='roundrole', help='baseline or roundrole')
@@ -225,7 +226,7 @@ if __name__ == "__main__":
     #         f.write(f"\ntask: {args.keyword}\n")
 
     print("Assigning tasks")
-    comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time)
+    comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time, parallelism_min=(args.parallelism_limit if args.fix_parallelism else 0))
     print("Task assignment:", comp_assignment)
     print("Aggregation assignment:", aggr_assignment)
     coef_recv = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_recv]
