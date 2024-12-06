@@ -19,6 +19,7 @@
 #include "aby3-ML/aby3ML.h"
 #include "aby3-ML/PlainML.h"
 
+#include "aby3-RTR/debug.h"
 
 using namespace std;
 using namespace Eigen;
@@ -28,6 +29,7 @@ namespace aby3
 
 	int logistic_plain_main(CLP& cmd)
 	{
+		debug_info("logistic_plain_main start");
 		auto N = cmd.getOr<int>("N", 10000);
 		auto D = cmd.getOr<int>("D", 1000);
 		auto B = cmd.getOr<int>("B", 128);
@@ -41,10 +43,10 @@ namespace aby3
 		for (u64 i = 0; i < (u64)D; ++i)
 		{
 			model(i, 0) = prng.get<int>() % 10;
-			std::cout << model(i, 0) << " ";
+			// std::cout << model(i, 0) << " ";
 		}
 
-		std::cout << std::endl;
+		// std::cout << std::endl;
 		gen.setModel(model);
 
 
@@ -55,7 +57,7 @@ namespace aby3
 		gen.sample(test_data, test_label);
 
 
-		std::cout << "training __" << std::endl;
+		// std::cout << "training __" << std::endl;
 
 		RegressionParam params;
 		params.mBatchSize = B;
@@ -69,10 +71,10 @@ namespace aby3
 
 		SGD_Logistic(params, engine, train_data, train_label, W2, &test_data, &test_label);
 
-		for (u64 i = 0; i < (u64)D; ++i)
-		{
-			std::cout << i << " " << gen.mModel(i, 0) << " " << W2(i, 0) << std::endl;
-		}
+		// for (u64 i = 0; i < (u64)D; ++i)
+		// {
+		// 	std::cout << i << " " << gen.mModel(i, 0) << " " << W2(i, 0) << std::endl;
+		// }
 
 		return 0;
 	}

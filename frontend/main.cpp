@@ -141,5 +141,17 @@ int main(int argc, char** argv) {
 			splitted_micro_benchmarks(cmd);
 		}
 	}
+
+	if(cmd.isSet("LogReg-0") || cmd.isSet("LogReg-1") || cmd.isSet("LogReg-2")){
+		if(cmd.isSet("rank")){
+			MPI_Init(&argc, &argv);
+			splitted_logistic_regression_test(cmd);
+		}
+	}
+	if(cmd.isSet("LogReg")){
+		if(!cmd.isSet("rank")){
+			logistic_regression_test(cmd);
+		}
+	}
   return 0;
 }

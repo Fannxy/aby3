@@ -211,22 +211,8 @@ if __name__ == "__main__":
     # assign tasks
     time_stamp_file_prefix = f"{args.record_folder}/stamp-{args.keyword}-{data_size}"
 
-    # if args.baseline:
-    #     res = [[[i for i in range(n)], data_size // parallelism] for i in range(parallelism)]
-    #     time_stamp_file_prefix = f"{time_stamp_file_prefix}-baseline"
-    #     print("Task assignment:", res)
-    #     with open(f"{args.config_folder}/task_assignment-basline.txt", "w") as f:
-    #         json.dump(res, f)
-    #         f.write(f"\ntask: {args.keyword}\n")
-    # else:
-    #     res = assign_task(bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, parallelism=parallelism, data_size=data_size)
-    #     print("Task assignment:", res)
-    #     with open(f"{args.config_folder}/task_assignment.txt", "w") as f:
-    #         json.dump(res, f)
-    #         f.write(f"\ntask: {args.keyword}\n")
-
     print("Assigning tasks")
-    comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time, parallelism_min=(args.parallelism_limit if args.fix_parallelism else 0))
+    comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time, parallelism_min=(args.parallelism_limit if args.fix_parallelism else 1))
     print("Task assignment:", comp_assignment)
     print("Aggregation assignment:", aggr_assignment)
     coef_recv = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_recv]

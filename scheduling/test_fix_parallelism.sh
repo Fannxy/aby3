@@ -39,7 +39,8 @@ echo "network_interface: $network_interface"
 echo "assignment_strategy: $assignment_strategy"
 echo "net_config: $net_config"
 
-for m in 2 4 8 16 32 48; do
+# enumerate m from 2 to 48
+for m in $(seq 2 48); do
     python ${root_folder}/scheduling/profiler.py \
     --args " ${micro_benchmark} -${task}" \
     --args_agg " -${task}-agg" \

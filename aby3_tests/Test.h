@@ -173,6 +173,10 @@ int fixed_matrix_mult_test(oc::CLP& cmd);
 int splitted_fixed_matrix_mult_test(oc::CLP& cmd);
 int splitted_fixed_matrix_sum_test(oc::CLP& cmd);
 
+// logistic regression tests
+int logistic_regression_test(oc::CLP& cmd);
+int splitted_logistic_regression_test(oc::CLP& cmd);
+
 int correctness_cipher_index_pta(oc::CLP& cmd);
 int correctness_sort_pta(oc::CLP& cmd);
 int correctness_sum_pta(oc::CLP& cmd);

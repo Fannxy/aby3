@@ -1,10 +1,12 @@
-args=" -Sort -dataSize 1048576 -p0_ip 10.3.0.15 -p1_ip 10.3.0.16 -rank 0"
-keyword="sort"
+args=" -LogReg -dataSize 100000 -p0_ip 10.3.0.13 -p1_ip 10.3.0.16 -rank 0"
+keyword="LogReg"
 root_folder=/root/aby3
 
 # Sync the schedule
-scp -r ./scheduling aby31:${root_folder}/ &
-scp -r ./scheduling aby32:${root_folder}/ &
+scp -r ./scheduling/*.py aby31:${root_folder}/scheduling/ &
+scp -r ./scheduling/*.py aby32:${root_folder}/scheduling/ &
+scp -r ./scheduling/*.sh aby31:${root_folder}/scheduling/ &
+scp -r ./scheduling/*.sh aby32:${root_folder}/scheduling/ &
 wait;
 
 # # prepare the test cpp.
