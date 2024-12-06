@@ -147,6 +147,7 @@ if __name__ == "__main__":
     send_mean_usage = [{} for _ in range(3)]
     agg_time = {}
     size = step
+    last_max_mean_usage = 0
     while size < data_size:
         max_mean_usage = 0
         for role in range(n):
@@ -173,9 +174,11 @@ if __name__ == "__main__":
             recv_mean_usage[role][size] = np.mean(usage_dict[role][size]["network_recv"])
             send_mean_usage[role][size] = np.mean(usage_dict[role][size]["network_send"])
             max_mean_usage = max(max_mean_usage, recv_mean_usage[role][size], send_mean_usage[role][size])
+        print(f"size: {size}, max_mean_usage: {max_mean_usage}, bandwidth: {max(bandwidth)}")
         agg_time[size] = np.mean([len(usage_dict_agg[role][size]["network_recv"]) for role in range(n)])
-        if max_mean_usage > max(bandwidth):
+        if max_mean_usage < last_max_mean_usage:
             break
+        last_max_mean_usage = max(max_mean_usage, last_max_mean_usage)
         size *= 2
     
     # for size in agg_time.keys():

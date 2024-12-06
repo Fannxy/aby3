@@ -4,6 +4,7 @@ num_parties=3
 # node_id=(12 14 4)
 node_id=(13 16 17)
 server_host="aby30 aby31 aby32"
+parallelism_limit=48
 
 # Sync the schedule
 scp -r ./scheduling/*.py aby31:${root_folder}/scheduling/ &
@@ -45,7 +46,7 @@ for task in ${task_list[@]}; do
         for assignment_strategy in ${assignment_strategy_list[@]}; do
             ip_address=${ip_addr_dict[${net_config}]}
             keyword="${task}-${net_config}-${assignment_strategy}"
-            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_addr_dict["Homo-35G"]} ${keyword} ${task} ${data_size[${task}]} ${assignment_strategy} ${net_config}
+            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_addr_dict["Homo-35G"]} ${keyword} ${task} ${data_size[${task}]} ${assignment_strategy} ${net_config} ${parallelism_limit}
         done
     done
 done
@@ -59,7 +60,7 @@ for task in ${micro_benchmarks[@]}; do
         ip_address=${ip_addr_dict[${net_config}]}
         for assignment_strategy in  ${assignment_strategy_list[@]}; do
             keyword="${task}-${net_config}-${assignment_strategy}"
-            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_addr_dict["Homo-35G"]} ${keyword} ${task} ${data_size_micro} ${assignment_strategy} ${net_config} -Micro
+            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_addr_dict["Homo-35G"]} ${keyword} ${task} ${data_size_micro} ${assignment_strategy} ${net_config} ${parallelism_limit} -Micro
         done
     done
 done

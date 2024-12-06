@@ -82,11 +82,13 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
 
     sum_opt_x = sum(opt_x)
     indices = [i for i, x in enumerate(opt_x) if x >= sum_opt_x / parallelism_limit / 2]
+    if len(indices) == 0:
+        indices = [i for i, x in enumerate(opt_x) if x > 0]
     remaining_data_size = data_size
     subtask_data_size = [0] * len(perms)
     task_num = [0] * len(perms)
     for i in indices:
-        subtask_data_size[i] = round(opt_x[i] / sum_opt_x * remaining_data_size)
+        subtask_data_size[i] = math.ceil(opt_x[i] / sum_opt_x * remaining_data_size)
         sum_opt_x -= opt_x[i]
         remaining_data_size -= subtask_data_size[i]
     
@@ -96,7 +98,7 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
         remaining_data_size = data_size
         remaining_parallelism = m
         for i in indices:
-            m_task_num[i] = round(subtask_data_size[i] / remaining_data_size * remaining_parallelism)
+            m_task_num[i] = math.ceil(subtask_data_size[i] / remaining_data_size * remaining_parallelism)
             remaining_data_size -= subtask_data_size[i]
             remaining_parallelism -= m_task_num[i]
         
@@ -172,6 +174,7 @@ def assign_task(strategy, bandwidth, expr_recv, expr_send, recv_mean_usage, send
     #     new_layer.sort(key=lambda x: x[1])
     #     aggr_layer = new_layer
 
-    aggr_assignment = assign_aggr(comp_assignment)
+    if len(comp_assignment) > 1:
+        aggr_assignment = assign_aggr(comp_assignment)
     
     return comp_assignment, aggr_assignment

@@ -149,9 +149,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	if(cmd.isSet("LogReg")){
-		if(!cmd.isSet("rank")){
-			logistic_regression_test(cmd);
-		}
+		logistic_regression_test(cmd);
 	}
   return 0;
 }

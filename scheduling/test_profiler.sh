@@ -5,7 +5,8 @@ task=$8
 data_size=$9
 assignment_strategy=${10}
 net_config=${11}
-micro_benchmark="${12:-""}"
+parallelism_limit=${12}
+micro_benchmark="${13:-""}"
 
 root_folder=/root/aby3
 port=7897
@@ -13,7 +14,6 @@ port=7897
 num_parties=3
 server_host="aby30 aby31 aby32"
 get_bandwidth_time=2
-parallelism_limit=48
 
 fitting_length=8
 fitting_step=4096
