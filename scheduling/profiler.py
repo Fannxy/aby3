@@ -40,7 +40,7 @@ def collect_network_usage(data_size, args, record_folder, keyword, server_host, 
     for i in range(3):
         command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {data_size} -role {i} {args} -p0_ip {ip_address[0]} -p1_ip {ip_address[1]} -rank 0"
         print(command)
-        thread = threading.Thread(target=analysis, args=(server_host[i], f"{keyword}-{data_size}", command, record_folder, network_interface[i]))
+        thread = threading.Thread(target=analysis, args=(server_host[i], f"{keyword}-{data_size}-{i}", command, record_folder, network_interface[i]))
         threads.append(thread)
     
     for thread in threads:
@@ -48,9 +48,9 @@ def collect_network_usage(data_size, args, record_folder, keyword, server_host, 
     for thread in threads:
         thread.join()
     
-    os.system(f"mv {record_folder}/monitor-{keyword}-{data_size}.log {record_folder}/monitor-{keyword}-{data_size}-0.log")
-    for i in range(1, n):
-        os.system(f"scp -r {server_host[i]}:{record_folder}/monitor-{keyword}-{data_size}.log {record_folder}/monitor-{keyword}-{data_size}-{i}.log")
+    # os.system(f"mv {record_folder}/monitor-{keyword}-{data_size}.log {record_folder}/monitor-{keyword}-{data_size}-0.log")
+    # for i in range(1, n):
+    #     os.system(f"scp -r {server_host[i]}:{record_folder}/monitor-{keyword}-{data_size}.log {record_folder}/monitor-{keyword}-{data_size}-{i}.log")
     return
 
 def get_profile_usage_dict(data_size, role, args, record_folder, keyword, server_host, ip_address, network_interface):
@@ -295,7 +295,7 @@ if __name__ == "__main__":
 
         threads = []
         for i in range(n):
-            thread = threading.Thread(target=analysis, args=(args.server_host[i], f"{args.keyword}-{data_size}", total_command[i], args.record_folder, args.network_interface[i]))
+            thread = threading.Thread(target=analysis, args=(args.server_host[i], f"{args.keyword}-{data_size}-{i}", total_command[i], args.record_folder, args.network_interface[i]))
             threads.append(thread)
 
         start_time = time.time()
@@ -309,8 +309,8 @@ if __name__ == "__main__":
         os.system(f"cat {time_stamp_file_prefix}-*.txt > {time_stamp_file_prefix}.txt")
         os.system(f"rm {time_stamp_file_prefix}-*.txt")
         
-        os.system(f"mv {time_stamp_file_prefix}.txt {time_stamp_file_prefix}-0.txt")
-        os.system(f"mv {args.record_folder}/monitor-{args.keyword}-{data_size}.log {args.record_folder}/monitor-{args.keyword}-{data_size}-0.log")
+        # os.system(f"mv {time_stamp_file_prefix}.txt {time_stamp_file_prefix}-0.txt")
+        # os.system(f"mv {args.record_folder}/monitor-{args.keyword}-{data_size}.log {args.record_folder}/monitor-{args.keyword}-{data_size}-0.log")
         for i in range(1, n):
             os.system(f"ssh {args.server_host[i]} \"cat {time_stamp_file_prefix}-*.txt > {time_stamp_file_prefix}.txt\"")
             os.system(f"ssh {args.server_host[i]} \"rm {time_stamp_file_prefix}-*.txt\"")

@@ -9,7 +9,7 @@ parallelism_limit=${12}
 micro_benchmark="${13:-""}"
 
 root_folder=/root/aby3
-port=7897
+port=22
 # port=1022
 num_parties=3
 server_host="aby30 aby31 aby32"
