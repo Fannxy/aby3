@@ -1,3 +1,0 @@
-hoatname = h1 | ip = 10.0.0.11
-hoatname = h2 | ip = 10.0.0.12
-hoatname = h3 | ip = 10.0.0.13
