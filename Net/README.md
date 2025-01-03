@@ -40,6 +40,13 @@
 
 3. Install mininet in your pod.
 
+    Install mininet by:
+
+    ```bash
+    git clone git@github.com:mininet/mininet.git
+    cp ./install_wo_sudo.sh ./mininet/util/
+    ```
+    
     At first install the dependencies by:
 
     ```bash
@@ -100,7 +107,7 @@
 
 ## Define customized ssh-based mininet environment
 
-I provide a very simple 3-party peer-to-peer network topology through in `./mininet/examples/p2p_3pc_net.py`
+I provide a very simple 3-party peer-to-peer network topology through in `p2p_3pc_net.py`, copy it into the `./mininet/examples/`
 
 The front `NETWORK_CONFIG` defines the corresponding bandwitdth (`bw`, in the unit of Mbps) and latencies. 
 

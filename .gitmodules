@@ -5,3 +5,6 @@
 [submodule "aby3-GraphQuery/privGraphQuery"]
 	path = aby3-GraphQuery/privGraphQuery
 	url = git@github.com:Fannxy/privGraphQuery.git
+[submodule "Net/mininet"]
+	path = Net/mininet
+	url = git@github.com:Fannxy/mininet.git
