@@ -38,14 +38,14 @@ int main(int argc, char** argv) {
 		communication_test(cmd);
 	}
 
-	if(cmd.isSet("Shuffle")){
-		if(cmd.isSet("rank")){
-			splitted_shuffle_test(cmd);
-		} else {
-			shuffle_test(cmd);
-			large_scale_shuffle_test(cmd);
-		}
-	}
+	// if(cmd.isSet("Shuffle")){
+	// 	if(cmd.isSet("rank")){
+	// 		splitted_shuffle_test(cmd);
+	// 	} else {
+	// 		shuffle_test(cmd);
+	// 		large_scale_shuffle_test(cmd);
+	// 	}
+	// }
 
 	if(cmd.isSet("ORAM")){
 		if(cmd.isSet("rank")){
@@ -90,6 +90,20 @@ int main(int argc, char** argv) {
 			splitted_arith_merge_sort_test(cmd);
 		}
 	}
+
+	if(cmd.isSet("Shuffle")){
+		if(cmd.isSet("rank")){
+			cmd.set("shuffle");
+			splitted_micro_benchmarks(cmd);
+		}
+	}
+
+	if(cmd.isSet("Shuffle-agg")){
+		if(cmd.isSet("rank")){
+			splitted_arith_merge_sort_test(cmd);
+		}
+	}
+
 
 	if(cmd.isSet("Matrix")){
 		if(cmd.isSet("rank")){
