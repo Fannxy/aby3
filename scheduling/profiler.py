@@ -150,7 +150,8 @@ if __name__ == "__main__":
     agg_time = {}
     size = step
     last_max_mean_usage = 0
-    while size < data_size:
+    while size < step * length + 1:
+    # for size in range(step, step * length + 1, step):
         max_mean_usage = 0
         for role in range(n):
             usage_dict[role][size] = get_profile_usage_dict(
