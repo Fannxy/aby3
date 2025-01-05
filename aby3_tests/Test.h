@@ -189,6 +189,8 @@ int splitted_max_pta(oc::CLP& cmd);
 int splitted_metric_pta(oc::CLP& cmd);
 
 // TODO - micro-benchamrks.
+int fake_test(int role, aby3::i64Matrix& dataX, aby3::Sh3Runtime& runtime);
+int fake_test2(int role, aby3::i64Matrix& dataX, aby3::Sh3Runtime& runtime);
 int splitted_micro_benchmarks(oc::CLP& cmd);
 int get_si64_shares(aby3::u64 data_size, aby3::si64Matrix& data);
 int get_sb_shares(aby3::u64 data_size, aby3::sbMatrix& data);

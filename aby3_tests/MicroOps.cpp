@@ -112,6 +112,20 @@ int splitted_micro_benchmarks(oc::CLP& cmd){
         efficient_shuffle(dataX, role, dataRes, enc, eval, runtime);
     }
 
+    if(cmd.isSet("fake_test")){
+        task = "fake";
+        aby3::i64Matrix dataX(sizeX, 1);
+        for(u64 i=0; i<sizeX; i++) dataX(i, 0) = i;
+        fake_test(role, dataX, runtime);
+    }
+
+    if(cmd.isSet("fake_test2")){
+        task = "fake2";
+        aby3::i64Matrix dataX(sizeX, 1);
+        for(u64 i=0; i<sizeX; i++) dataX(i, 0) = i;
+        fake_test2(role, dataX, runtime);
+    }
+
     Timer& timer = Timer::getInstance();
     std::string stamp_file = "/tmp/aby3-stamp.txt";
     get_value("stampFile", cmd, stamp_file);

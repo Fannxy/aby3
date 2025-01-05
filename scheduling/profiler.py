@@ -108,20 +108,22 @@ if __name__ == "__main__":
             bandwidth.append(network_dict[args.server_host[i]])
     else: # otherwise get the bandwidth from the servers.
         for i in range(n):
-            test_server = args.server_host[i]
+            test_server = args.server_host[(i+1)%n]
+            bandwidth_i = []
             for j in range(n):
                 if args.server_host[j] != args.server_host[i]:
                     test_server = args.server_host[j]
-                    break
-            bandwidth_i = []
-            for _ in range(5):
-                bandwidth_i.append(get_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], test_server))
+                    # break
+                    for _ in range(2):
+                        bandwidth_i.append(get_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], test_server))
             bandwidth.append(max(bandwidth_i))
         for i in range(n):
             print(f"{args.server_host[i]}: {bandwidth[i]}Gb/s")
         network_dict = {args.server_host[i]: bandwidth[i] for i in range(n)}
         with open(f"{args.config_folder}/bandwidth.json", "w") as f:
             json.dump(network_dict, f)
+
+    function_profile_file = f"{args.config_folder}/function_profile.txt"
 
     # collect network usage
     print("Collecting network usage")
@@ -174,7 +176,8 @@ if __name__ == "__main__":
             recv_mean_usage[role][size] = np.mean(usage_dict[role][size]["network_recv"])
             send_mean_usage[role][size] = np.mean(usage_dict[role][size]["network_send"])
             max_mean_usage = max(max_mean_usage, recv_mean_usage[role][size], send_mean_usage[role][size])
-        print(f"size: {size}, max_mean_usage: {max_mean_usage}, bandwidth: {max(bandwidth)}")
+        with open(function_profile_file, "a") as f:
+            print(f"size: {size}, max_mean_usage: {max_mean_usage}, bandwidth: {max(bandwidth)}", file=f)
         agg_time[size] = np.mean([len(usage_dict_agg[role][size]["network_recv"]) for role in range(n)])
         if max_mean_usage < last_max_mean_usage:
             break
@@ -208,8 +211,10 @@ if __name__ == "__main__":
     for i in range(3):
         expr_recv[i] = " + ".join(f"({coef}) * ({complexity_expr})" for coef, complexity_expr in zip(coef_recv[i], args.complexity))
         expr_send[i] = " + ".join(f"({coef}) * ({complexity_expr})" for coef, complexity_expr in zip(coef_send[i], args.complexity))
-    print(expr_recv)
-    print(expr_send)
+    
+    with open(function_profile_file, "a") as f:
+        print(expr_recv, file=f)
+        print(expr_send, file=f)
 
     # assign tasks
     time_stamp_file_prefix = f"{args.record_folder}/stamp-{args.keyword}-{data_size}"
@@ -226,7 +231,9 @@ if __name__ == "__main__":
             f.write(f"role {i} recv: %.2f\n" % (coef_recv[i] / max_coef))
             f.write(f"role {i} send: %.2f\n" % (coef_send[i] / max_coef))
         f.write(f"parallelism: {len(comp_assignment)}\n")
+        f.write(f"comp_assignment:\n")
         json.dump(comp_assignment, f)
+        f.write(f"\naggr_assignment:\n")
         json.dump(aggr_assignment, f)
         f.write(f"\ntask: {args.keyword}\n")
     
@@ -293,6 +300,8 @@ if __name__ == "__main__":
                             mpi_command += " :"
                 total_command.append(mpi_command)
 
+        # print("total_command:", total_command)
+        # exit(0)
         threads = []
         for i in range(n):
             thread = threading.Thread(target=analysis, args=(args.server_host[i], f"{args.keyword}-{data_size}-{i}", total_command[i], args.record_folder, args.network_interface[i]))
