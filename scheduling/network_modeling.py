@@ -7,9 +7,9 @@ import json
 
 root_folder = "/root/aby3/"
 SERVER_HOST = ["aby30", "aby31", "aby32"]
-HOSTNAME = ["10.1.0.12", "10.1.0.14", "10.1.0.4"]
-NETWORK_INTERFACE = ["ibs110", "ibs110", "ibs110"] # do not use
-IP_ADDRESS = ["10.3.0.12", "10.3.0.14", "10.3.0.4"]
+HOSTNAME = ["10.0.0.11", "10.0.0.12", "10.0.0.13"]
+NETWORK_INTERFACE = ["h1-eth0", "h2-eth0", "h3-eth0"] # do not use
+IP_ADDRESS = ["10.0.0.11", "10.0.0.12", "10.0.0.13"]
 START_PORT = 5201
 TIME_INTERVAL = 60
 network_res_file = root_folder + "scheduling/network.json"

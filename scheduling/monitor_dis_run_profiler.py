@@ -4,6 +4,7 @@ import argparse
 import threading
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'PtA_deploy')))
 from system_monitor import *
+from profiler import debug_log
 
 root_folder = "/root/aby3/"
 
@@ -22,6 +23,8 @@ if __name__ == "__main__":
     monitor = SystemMonitor(0.1)
     monitor.start_all(interface=args.interface)
     command = " ".join(args.command).replace('+', '-')
+    debug_log(f"logging file = {args.record_folder}/monitor-{args.keyword}.log")
+    debug_log(f"command = {command}")
     os.system(command)
     monitor.stop_and_output(args.record_folder + f"/monitor-{args.keyword}.log")
     exit(0)

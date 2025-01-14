@@ -2,24 +2,35 @@ import sys
 import os
 import argparse
 import threading
-import re
 import math
+from functools import reduce
 import pandas as pd
 import json
-import subprocess
-import shlex
-from task_assigning import assign_task
+from task_assigning import assign_task, get_optimal_size_for_communication_load_balance, assign_aggr, split_perms_to_balance, debug_log
 import copy
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'PtA_deploy')))
 from system_monitor import *
 
 root_folder = "/root/aby3/"
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def calculate_expression(n, expression):
     allowed_functions = {name: getattr(math, name) for name in dir(math) if not name.startswith("__")}
     allowed_functions['n'] = n
     result = eval(expression, allowed_functions)
     return result
+
+def gcd_multiple_numbers(numbers):
+    return reduce(math.gcd, numbers)
 
 def get_bandwidth(i, time, server_host, ip_address, test_server, parallel=1):
     os.system(f"ssh {server_host} 'iperf3 -s -D'")
@@ -33,13 +44,15 @@ def run_command(command):
     os.system(command)
 
 def analysis(server_host, keyword, command, record_folder, interface):
+    # debug_log("in analysis")
+    debug_log(f"command: {command}")
     os.system(f"ssh {server_host} python {root_folder}/scheduling/monitor_dis_run_profiler.py --keyword {keyword} --command ' {command.replace('-', '+')} ' --record_folder {record_folder} --interface {interface}")
 
 def collect_network_usage(data_size, args, record_folder, keyword, server_host, ip_address, network_interface):
     threads = []
     for i in range(3):
         command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {data_size} -role {i} {args} -p0_ip {ip_address[0]} -p1_ip {ip_address[1]} -rank 0"
-        print(command)
+        # print(command)
         thread = threading.Thread(target=analysis, args=(server_host[i], f"{keyword}-{data_size}-{i}", command, record_folder, network_interface[i]))
         threads.append(thread)
     
@@ -47,16 +60,185 @@ def collect_network_usage(data_size, args, record_folder, keyword, server_host, 
         thread.start()
     for thread in threads:
         thread.join()
-    
-    # os.system(f"mv {record_folder}/monitor-{keyword}-{data_size}.log {record_folder}/monitor-{keyword}-{data_size}-0.log")
-    # for i in range(1, n):
-    #     os.system(f"scp -r {server_host[i]}:{record_folder}/monitor-{keyword}-{data_size}.log {record_folder}/monitor-{keyword}-{data_size}-{i}.log")
     return
 
 def get_profile_usage_dict(data_size, role, args, record_folder, keyword, server_host, ip_address, network_interface):
     if not os.path.exists(f"{record_folder}/monitor-{keyword}-{data_size}-{role}.log"):
         collect_network_usage(data_size, args, record_folder, keyword, server_host, ip_address, network_interface)
     return get_usage_dict(f"{record_folder}/monitor-{keyword}-{data_size}-{role}.log")
+
+def generate_comp_commands(comp_assignment, n, args):
+    commands = [[] for i in range(n)]
+    for rank, param in enumerate(comp_assignment):
+        role_assignment = param[0]
+        subtask_size = param[1]
+        party_id = []
+        for role in range(3):
+            for i in range(n):
+                if role_assignment[i] == role:
+                    party_id.append(i)
+                    break
+        for role in range(3):
+            p0_ip = args.ip_address[party_id[0]]
+            p1_ip = args.ip_address[party_id[1]]
+            command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
+            commands[party_id[role]].append(command)
+    
+    total_command = []
+    for node in range(n):
+        if not args.MPI:
+            command = " \& ".join(commands[node]) + " \& wait"
+            total_command.append(command)
+        else:
+            mpi_command = " mpirun"
+            for i, command in enumerate(commands[node]):
+                mpi_command += " -np 1 " + command
+                if i != len(commands[node]) - 1:
+                    mpi_command += " :"
+            total_command.append(mpi_command)
+        
+    return commands, total_command
+
+
+def generate_aggregation_commands(aggr_assignment, n, args):
+    commands_agg = []
+    for agg_layer in aggr_assignment:
+        commands_agg_layer = [[] for i in range(n)]
+        for rank, param in enumerate(agg_layer):
+            role_assignment = param[0]
+            subtask_size = param[1]
+            party_id = []
+            for role in range(3):
+                for i in range(n):
+                    if role_assignment[i] == role:
+                        party_id.append(i)
+                        break
+            for role in range(3):
+                p0_ip = args.ip_address[party_id[0]]
+                p1_ip = args.ip_address[party_id[1]]
+                command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args_agg} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
+                commands_agg_layer[party_id[role]].append(command)
+        commands_agg.append(commands_agg_layer)
+        
+        total_command = []
+        for node in range(n):
+            if not args.MPI:
+                command = ""
+                for j, agg_layer in enumerate(commands_agg):
+                    if(j == 0): command = " \& ".join(agg_layer[node]) + " \& wait"
+                    else:
+                        command += " \; "
+                        command += " \& ".join(agg_layer[node]) + " \& wait"
+                total_command.append(command)
+            else:
+                for j, agg_layer in enumerate(commands_agg):
+                    if(j == 0): mpi_command = " mpirun"
+                    else: mpi_command += " \; mpirun"
+                    for i, command in enumerate(agg_layer[node]):
+                        if(i > 0):
+                            mpi_command += " \; mpirun"
+                        mpi_command += " -np 1 " + command
+                        if i != len(agg_layer[node]) - 1:
+                            mpi_command += " :"
+                total_command.append(mpi_command)
+            
+    return commands_agg, total_command
+        
+        
+
+def generate_execution_commands(comp_assignment, aggr_assignment, n, args):
+    
+    commands, commands_agg = generate_comp_commands(comp_assignment, n, args), generate_aggregation_commands(aggr_assignment, n, args)
+    
+    total_command = []
+    for node in range(n):
+        if not args.MPI:
+            command = " \& ".join(commands[node]) + " \& wait"
+            for agg_layer in commands_agg:
+                command += " \; "
+                command += " \& ".join(agg_layer[node]) + " \& wait"
+            total_command.append(command)
+        else:
+            mpi_command = " mpirun"
+            for i, command in enumerate(commands[node]):
+                mpi_command += " -np 1 " + command
+                if i != len(commands[node]) - 1:
+                    mpi_command += " :"
+            for agg_layer in commands_agg:
+                mpi_command += " \; mpirun"
+                for i, command in enumerate(agg_layer[node]):
+                    mpi_command += " -np 1 " + command
+                    if i != len(agg_layer[node]) - 1:
+                        mpi_command += " :"
+            total_command.append(mpi_command)
+                
+    return total_command
+
+
+def roundrole_min_group_profile(data_size, bandwidth, expr_recv, expr_send, n, args):
+    params, perms = get_optimal_size_for_communication_load_balance(bandwidth, expr_recv, expr_send, data_size)
+    
+    comp_assignment, _ = split_perms_to_balance(params, perms, data_size)
+    main_perm = perms[np.argmax(params)]
+    group_size = len(comp_assignment)
+    
+    # omit if the profiling log exist.
+    comp_flag = True
+    for i in range(n):
+        if not os.path.exists(f"{args.record_folder}/monitor-{args.task}-{data_size}-{i}-min_group.log"):
+            comp_flag = False
+            break
+    
+    if not comp_flag:
+        # profile the time.
+        _, total_comp_command = generate_comp_commands(comp_assignment, n, args)
+        
+        threads = []
+        for i in range(n):
+            thread = threading.Thread(target=analysis, args=(args.server_host[i], f"{args.task}-{data_size}-{i}-min_group", total_comp_command[i], args.record_folder, args.network_interface[i]))
+            threads.append(thread)
+
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+            
+    comp_usage_dict_list = [get_usage_dict(f"{args.record_folder}/monitor-{args.task}-{data_size}-{i}-min_group.log") for i in range(n)]
+    
+    
+    aggr_flag = True
+    for i in range(n):
+        if not os.path.exists(f"{args.record_folder}/monitor-{args.task}-agg-{data_size}-{i}-min_group.log"):
+            aggr_flag = False
+            break
+        
+    if not aggr_flag:
+        debug_log("Profiling aggregation")
+        
+        party_id = {}
+        for i, role in enumerate(main_perm):
+            if(role == 0):
+                party_id[role] = args.ip_address[i]
+            if(role == 1):
+                party_id[role] = args.ip_address[i]
+        
+        threads = []
+        for i, role in enumerate(main_perm):
+    
+            debug_log(f"role: {role}")
+            thread = threading.Thread(target=analysis, args=(args.server_host[i], f"{args.task}-agg-{data_size}-{i}-min_group", f"{root_folder}out/build/linux/frontend/frontend -dataSize {data_size} -role {role} {args.args_agg} -rank 0 -p0_ip {party_id[0]} -p1_ip {party_id[1]}", args.record_folder, args.network_interface[i]))
+            threads.append(thread)
+        
+        for thread in threads:
+            debug_log("start thread profiling agg")
+            thread.start()
+        for thread in threads:
+            thread.join()
+    
+    aggr_usage_dict_list = [get_usage_dict(f"{args.record_folder}/monitor-{args.task}-agg-{data_size}-{i}-min_group.log") for i in range(n)]
+    
+    return comp_usage_dict_list, aggr_usage_dict_list, group_size
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -85,6 +267,8 @@ if __name__ == "__main__":
     parser.add_argument('--run_tasks', action='store_true', help='run tasks')
     parser.add_argument('--MPI', action='store_true', help='run in MPI')
     parser.add_argument('--assignment_strategy', type=str, choices=['baseline', 'roundrole'], default='roundrole', help='baseline or roundrole')
+    parser.add_argument('--balance_fix', type=str2bool, help='fix the bandwidth balance profiling or not')
+
 
     args = parser.parse_args()
     n = args.num_parties
@@ -123,17 +307,18 @@ if __name__ == "__main__":
         with open(f"{args.config_folder}/bandwidth.json", "w") as f:
             json.dump(network_dict, f)
 
-    function_profile_file = f"{args.config_folder}/function_profile.txt"
+    function_profile_file = f"{args.config_folder}/function_profile-{args.task}.txt"
+    logging_file = f"{args.config_folder}/logging-{args.task}.txt"
+
 
     # collect network usage
-    print("Collecting network usage")
+    print("Collecting network usage of each party.")
     length = args.fitting_length
     step = args.fitting_step
     usage_dict = [{} for _ in range(3)]
     usage_dict_agg = [{} for _ in range(3)]
     for size in range(step, step * length + 1, step):
         for role in range(3):
-            print(f"Collecting network usage: {size} {role}")
             usage_dict[role][size] = get_profile_usage_dict(
                 data_size=size,
                 role=role,
@@ -151,7 +336,6 @@ if __name__ == "__main__":
     size = step
     last_max_mean_usage = 0
     while size < step * length + 1:
-    # for size in range(step, step * length + 1, step):
         max_mean_usage = 0
         for role in range(n):
             usage_dict[role][size] = get_profile_usage_dict(
@@ -177,20 +361,15 @@ if __name__ == "__main__":
             recv_mean_usage[role][size] = np.mean(usage_dict[role][size]["network_recv"])
             send_mean_usage[role][size] = np.mean(usage_dict[role][size]["network_send"])
             max_mean_usage = max(max_mean_usage, recv_mean_usage[role][size], send_mean_usage[role][size])
-        with open(function_profile_file, "a") as f:
-            print(f"size: {size}, max_mean_usage: {max_mean_usage}, bandwidth: {max(bandwidth)}", file=f)
         agg_time[size] = np.mean([len(usage_dict_agg[role][size]["network_recv"]) for role in range(n)])
         if max_mean_usage < last_max_mean_usage:
             break
         last_max_mean_usage = max(max_mean_usage, last_max_mean_usage)
         size *= 2
     
-    # for size in agg_time.keys():
-    #     comp_time = np.mean([len(usage_dict[role][size]["network_recv"]) for role in range(n)])
-    #     print(f"size: {size}, agg_time: {agg_time[size]}, comp_time: {comp_time}")
     
     # fit network usage with given expression
-    print("Fitting network usage")
+    print("Fitting network usage to obtain $f_i$ for each party $i$.")
     coef_recv = []
     coef_send = []
     for role in range(3):
@@ -199,6 +378,8 @@ if __name__ == "__main__":
         sum_send = []
         for size in sizes:
             network_recv, network_send = usage_dict[role][size]["network_recv"], usage_dict[role][size]["network_send"]
+            # with open(logging_file, "a") as f:
+            #     print(f"size: {size}, network_recv: {network_recv}, network_send: {network_send}", file=f)
             sum_recv.append(np.sum(network_recv))
             sum_send.append(np.sum(network_send))
         complexity_matrix = np.array([
@@ -213,21 +394,69 @@ if __name__ == "__main__":
         expr_recv[i] = " + ".join(f"({coef}) * ({complexity_expr})" for coef, complexity_expr in zip(coef_recv[i], args.complexity))
         expr_send[i] = " + ".join(f"({coef}) * ({complexity_expr})" for coef, complexity_expr in zip(coef_send[i], args.complexity))
     
-    with open(function_profile_file, "a") as f:
-        print(expr_recv, file=f)
-        print(expr_send, file=f)
-
+        with open(function_profile_file, "a") as f:
+            print("Party - %d" % i, file=f)
+            print("Recv: ", file=f)
+            print(expr_recv, file=f)
+            print("Send: ", file=f)
+            print(expr_send, file=f)
+            print("\n", file=f)
+    
+    # profile the network usage for each node.
+    print("Profile the network usage for each node with the minimum task number \wave{m}.")
+    recv_mean_usage_min_group = [{} for _ in range(3)]
+    send_mean_usage_min_group = [{} for _ in range(3)]
+    usage_dict_min_group = [{} for _ in range(3)]
+    usage_agg_dict_min_group = [{} for _ in range(3)]
+    agg_time_min_group = {}
+    size = step
+    last_max_mean_usage = 0
+    while size < (step * length * 4) + 1:
+        max_mean_usage = 0
+        usage_dict_list, usage_agg_dict_list, group_size = roundrole_min_group_profile(size, bandwidth, expr_recv, expr_send, n, args)
+        record_size = size / group_size
+        for role in range(n):
+            usage_dict_min_group[role][record_size] = usage_dict_list[role]
+            recv_mean_usage_min_group[role][record_size] = np.mean(usage_dict_min_group[role][record_size]["network_recv"]) / group_size
+            send_mean_usage_min_group[role][record_size] = np.mean(usage_dict_min_group[role][record_size]["network_send"]) / group_size
+            max_mean_usage = max(max_mean_usage, recv_mean_usage_min_group[role][record_size], send_mean_usage_min_group[role][record_size])
+            usage_agg_dict_min_group[role][size] = usage_agg_dict_list[role]
+        agg_time_min_group[size] = np.mean([len(usage_agg_dict_min_group[role][size]["network_recv"]) for role in range(n)])
+        # if max_mean_usage < last_max_mean_usage * 0.5:
+        #     break
+        last_max_mean_usage = max(max_mean_usage, last_max_mean_usage)
+        size *= 2
+        debug_log(f"size: {size}", file=logging_file)
+    
+    with open(logging_file, "a") as f:
+        print("-------------- MIN GROUP ----------------", file=f)
+        print(f"group_size: {group_size}", file=f)
+        for i in range(n):
+            print(f"recv_mean_usage_min_group: {recv_mean_usage_min_group[i]}", file=f)
+            print(f"send_mean_usage_min_group: {send_mean_usage_min_group[i]}", file=f)
+        print(f"agg_time: {agg_time_min_group}", file=f)
+        print("-------------- OLD ----------------", file=f)
+        for i in range(n):
+            print(f"recv_mean_usage: {recv_mean_usage[i]}", file=f)
+            print(f"send_mean_usage: {send_mean_usage[i]}", file=f)
+        print(f"agg_time: {agg_time}", file=f)
+        print("-------------- END ----------------", file=f)
+    
     # assign tasks
     time_stamp_file_prefix = f"{args.record_folder}/stamp-{args.keyword}-{data_size}"
 
     print("Assigning tasks")
-    comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time, parallelism_min=(args.parallelism_limit if args.fix_parallelism else 1))
+    if(args.balance_fix):
+        comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage_min_group, send_mean_usage=send_mean_usage_min_group, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time_min_group, parallelism_min=(args.parallelism_limit if args.fix_parallelism else 1), logging_file=f"{args.config_folder}/task_assignment-{args.assignment_strategy}.txt")
+    else:
+        comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time, parallelism_min=(args.parallelism_limit if args.fix_parallelism else 1), logging_file=f"{args.config_folder}/task_assignment-{args.assignment_strategy}.txt")
     print("Task assignment:", comp_assignment)
     print("Aggregation assignment:", aggr_assignment)
     coef_recv = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_recv]
     coef_send = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_send]
     max_coef = max(max(coef_recv), max(coef_send))
     with open(f"{args.config_folder}/task_assignment-{args.assignment_strategy}.txt", "a") as f:
+        f.write(f"\ntask: {args.keyword}\n")
         for i in range(3):
             f.write(f"role {i} recv: %.2f\n" % (coef_recv[i] / max_coef))
             f.write(f"role {i} send: %.2f\n" % (coef_send[i] / max_coef))
@@ -236,7 +465,7 @@ if __name__ == "__main__":
         json.dump(comp_assignment, f)
         f.write(f"\naggr_assignment:\n")
         json.dump(aggr_assignment, f)
-        f.write(f"\ntask: {args.keyword}\n")
+        f.write("--------------------\n")
     
     time_stamp_file_prefix = f"{args.record_folder}/stamp-{args.keyword}-{data_size}-{args.assignment_strategy}"
 
@@ -257,7 +486,7 @@ if __name__ == "__main__":
             for role in range(3):
                 p0_ip = args.ip_address[party_id[0]]
                 p1_ip = args.ip_address[party_id[1]]
-                command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip} -stampFile {time_stamp_file_prefix}-{rank}.txt"
+                command = f"{root_folder}out/build/linux/frontend/frontend -dataSize {subtask_size} -role {role} {args.args} -rank {rank} -p0_ip {p0_ip} -p1_ip {p1_ip}"
                 commands[party_id[role]].append(command)
         
         commands_agg = []
@@ -301,8 +530,7 @@ if __name__ == "__main__":
                             mpi_command += " :"
                 total_command.append(mpi_command)
 
-        # print("total_command:", total_command)
-        # exit(0)
+
         threads = []
         for i in range(n):
             thread = threading.Thread(target=analysis, args=(args.server_host[i], f"{args.keyword}-{data_size}-{i}", total_command[i], args.record_folder, args.network_interface[i]))
@@ -319,8 +547,6 @@ if __name__ == "__main__":
         os.system(f"cat {time_stamp_file_prefix}-*.txt > {time_stamp_file_prefix}.txt")
         os.system(f"rm {time_stamp_file_prefix}-*.txt")
         
-        # os.system(f"mv {time_stamp_file_prefix}.txt {time_stamp_file_prefix}-0.txt")
-        # os.system(f"mv {args.record_folder}/monitor-{args.keyword}-{data_size}.log {args.record_folder}/monitor-{args.keyword}-{data_size}-0.log")
         for i in range(1, n):
             os.system(f"ssh {args.server_host[i]} \"cat {time_stamp_file_prefix}-*.txt > {time_stamp_file_prefix}.txt\"")
             os.system(f"ssh {args.server_host[i]} \"rm {time_stamp_file_prefix}-*.txt\"")

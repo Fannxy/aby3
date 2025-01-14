@@ -8,7 +8,7 @@ net_config=${11}
 micro_benchmark="${12:-""}"
 
 root_folder=/root/aby3
-port=7897
+port=22
 # port=1022
 num_parties=3
 server_host="aby30 aby31 aby32"
@@ -40,7 +40,7 @@ echo "assignment_strategy: $assignment_strategy"
 echo "net_config: $net_config"
 
 # enumerate m from 2 to 48
-for m in $(seq 2 48); do
+for m in $(seq 2 ${parallelism_limit}); do
     python ${root_folder}/scheduling/profiler.py \
     --args " ${micro_benchmark} -${task}" \
     --args_agg " -${task}-agg" \

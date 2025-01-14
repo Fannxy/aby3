@@ -6,7 +6,8 @@ data_size=$9
 assignment_strategy=${10}
 net_config=${11}
 parallelism_limit=${12}
-micro_benchmark="${13:-""}"
+fix_strategy=${13}
+micro_benchmark="${14:-""}"
 
 root_folder=/root/aby3
 port=22
@@ -15,9 +16,9 @@ num_parties=3
 server_host="aby30 aby31 aby32"
 get_bandwidth_time=2
 
-fitting_length=8
-fitting_step=4096
-complexity="1 n"
+fitting_length=16
+fitting_step=2048576
+complexity="n"
 
 network_interface=""
 for ip in $ip_address; do
@@ -59,4 +60,5 @@ python ${root_folder}/scheduling/profiler.py \
   --parallelism_limit ${parallelism_limit} \
   --complexity ${complexity} \
   --assignment_strategy ${assignment_strategy} \
+  --balance_fix ${fix_strategy} \
   --run_tasks
