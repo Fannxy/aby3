@@ -32,13 +32,36 @@ def calculate_expression(n, expression):
 def gcd_multiple_numbers(numbers):
     return reduce(math.gcd, numbers)
 
-def get_bandwidth(i, time, server_host, ip_address, test_server, parallel=1):
-    os.system(f"ssh {server_host} 'iperf3 -s -D'")
-    result = os.popen(f"ssh {test_server} 'iperf3 -c {ip_address} -t {time} -P {parallel} -J'").read()
+def get_bandwidth(i, time, server_host, ip_address, test_server, port, parallel=1):
+    os.system(f"ssh {server_host} 'iperf3 -s -p {port} -D'")
+    result = os.popen(f"ssh {test_server} 'iperf3 -c {ip_address} -p {port} -t {time} -P {parallel} -J'").read()
     data = json.loads(result)
     bandwidth = data["end"]["sum_received"]["bits_per_second"] / (2**30)
     os.system(f"ssh {server_host} 'pkill iperf3'")
     return bandwidth
+
+def measure_bandwidth(i, time, server_host, ip_address, test_servers, parallel=1):
+    threads = []
+    results = []
+    results_lock = threading.Lock()
+    base_port = 5201
+
+    def run_iperf(test_server, port):
+        bandwidth = get_bandwidth(i, time, server_host, ip_address, test_server, port, parallel)
+        with results_lock:
+            results.append(bandwidth)
+
+    for idx, test_server in enumerate(test_servers):
+        port = base_port + idx  
+        thread = threading.Thread(target=run_iperf, args=(test_server, port))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    return sum(results)
+
 
 def run_command(command):
     os.system(command)
@@ -292,15 +315,9 @@ if __name__ == "__main__":
             bandwidth.append(network_dict[args.server_host[i]])
     else: # otherwise get the bandwidth from the servers.
         for i in range(n):
-            test_server = args.server_host[(i+1)%n]
-            bandwidth_i = []
-            for j in range(n):
-                if args.server_host[j] != args.server_host[i]:
-                    test_server = args.server_host[j]
-                    # break
-                    for _ in range(2):
-                        bandwidth_i.append(get_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], test_server))
-            bandwidth.append(max(bandwidth_i))
+            test_servers = [args.server_host[j] for j in range(n) if j != i]
+            bandwidth_i = measure_bandwidth(i, args.get_bandwidth_time, args.server_host[i], args.ip_address[i], test_servers)
+            bandwidth.append(bandwidth_i)
         for i in range(n):
             print(f"{args.server_host[i]}: {bandwidth[i]}Gb/s")
         network_dict = {args.server_host[i]: bandwidth[i] for i in range(n)}

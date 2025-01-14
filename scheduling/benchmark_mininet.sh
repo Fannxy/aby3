@@ -16,11 +16,7 @@ declare -A ip_addr_dict
 ip_addr_dict[${NETNAME}]="10.0.0.${node_id[0]} 10.0.0.${node_id[1]} 10.0.0.${node_id[2]}"
 
 
-# net_config_list=(${NETNAME})
-# task_list=("Matrix" "Sort" "ORAM")
-# assignment_strategy_list=("roundrole" "baseline")
 assignment_strategy_list=("roundrole" "baseline")
-# fix_balance_list=("False" "True")
 
 net_config_list=(${NETNAME})
 data_size_micro=1073741824
@@ -30,9 +26,10 @@ fi
 if [[ $NETNAME == "Hetero-"* ]]; then
     data_size_micro=2147483648
 fi
-# micro_benchmarks=("ff-mul" "ib-mul" "a2b" "b2a-single" "shuffle")
-# micro_benchmarks=("fake_test" "fake_test2")
-micro_benchmarks=("fake_test" "fake_test2")
+if [ $NETNAME = "Homo-100M" ]; then
+    data_size_micro=268435456
+fi
+micro_benchmarks=("ff-mul" "ib-mul" "a2b" "b2a-single" "shuffle" "fake_test" "fake_test2")
 for task in ${micro_benchmarks[@]}; do
     for net_config in ${net_config_list[@]}; do
         ip_address=${ip_addr_dict[${net_config}]}

@@ -18,7 +18,7 @@ ip_addr_dict[${NETNAME}]="10.0.0.${node_id[0]} 10.0.0.${node_id[1]} 10.0.0.${nod
 
 
 net_config_list=(${NETNAME})
-task_list=("LogReg-0" "LogReg-1" "LogReg-2" "Sort" "ORAM")
+task_list=("LogReg-0" "LogReg-1" "LogReg-2" "Sort" "ORAM" "Shuffle")
 # task_list=("Shuffle")
 assignment_strategy_list=("roundrole" "baseline")
 
@@ -31,15 +31,26 @@ data_size["LogReg-1"]=67108864
 data_size["LogReg-2"]=67108864
 data_size["Shuffle"]=4194304
 
-if [ $NETNAME == "Hetero-"* ]; then
+if [  "$NETNAME" == "Homo10G" || "$NETNAME" == "Hetero-*" ]]; then
     echo "Network bandwidth is 10G, scaling up data sizes..."
     data_size["Matrix"]=$((data_size["Matrix"] * 2))
-    data_size["Sort"]=$((data_size["Sort"] * 4))
-    data_size["Shuffle"]=$((data_size["Shuffle"] * 4))
+    data_size["Sort"]=$((data_size["Sort"] * 2))
+    data_size["Shuffle"]=$((data_size["Shuffle"] * 2))
     data_size["ORAM"]=$((data_size["ORAM"] * 2))
-    data_size["LogReg-0"]=$((data_size["LogReg-0"] * 4))
-    data_size["LogReg-1"]=$((data_size["LogReg-1"] * 4))
-    data_size["LogReg-2"]=$((data_size["LogReg-2"] * 4))
+    data_size["LogReg-0"]=$((data_size["LogReg-0"] * 2))
+    data_size["LogReg-1"]=$((data_size["LogReg-1"] * 2))
+    data_size["LogReg-2"]=$((data_size["LogReg-2"] * 2))
+fi
+
+if [  "$NETNAME" == "Homo100M" ]]; then
+    echo "Network bandwidth is 100M, reducing data sizes..."
+    data_size["Matrix"]=$((data_size["Matrix"] / 2))
+    data_size["Sort"]=$((data_size["Sort"] / 2))
+    data_size["Shuffle"]=$((data_size["Shuffle"] / 2))
+    data_size["ORAM"]=$((data_size["ORAM"] / 2))
+    data_size["LogReg-0"]=$((data_size["LogReg-0"] / 2))
+    data_size["LogReg-1"]=$((data_size["LogReg-1"] / 2))
+    data_size["LogReg-2"]=$((data_size["LogReg-2"] / 2))
 fi
 
 
