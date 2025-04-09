@@ -20,18 +20,18 @@ root_folder=/root/aby3
 
 NETWORK_NAME="Hetero-1G-2G-2G"
 
-${root_folder}/scheduling/network_setup.sh 1050 2000 2000
+${root_folder}/scheduling/network_setup.sh 2000 1050 2000
 wait;
 ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
 
 
 NETWORK_NAME="Hetero-1G-10G-10G"
-${root_folder}/scheduling/network_setup.sh 1050 10000 10000
+${root_folder}/scheduling/network_setup.sh 10000 1050 10000
 wait;
 ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
 
 NETWORK_NAME="Hetero-1G-4G-5G"
-${root_folder}/scheduling/network_setup.sh 1050 4000 5000
+${root_folder}/scheduling/network_setup.sh 4000 1050 5000
 wait;
 ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
 

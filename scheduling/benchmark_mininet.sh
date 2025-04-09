@@ -19,17 +19,18 @@ ip_addr_dict[${NETNAME}]="10.0.0.${node_id[0]} 10.0.0.${node_id[1]} 10.0.0.${nod
 assignment_strategy_list=("roundrole" "baseline")
 
 net_config_list=(${NETNAME})
-data_size_micro=1073741824
+data_size_micro=1048576
 if [ $NETNAME = "Homo-10G" ]; then
-    data_size_micro=2147483648
+    data_size_micro=1048576
 fi
 if [[ $NETNAME == "Hetero-"* ]]; then
-    data_size_micro=2147483648
+    data_size_micro=1048576
 fi
 if [ $NETNAME = "Homo-100M" ]; then
     data_size_micro=268435456
 fi
-micro_benchmarks=("ff-mul" "ib-mul" "a2b" "b2a-single" "shuffle" "fake_test" "fake_test2")
+# micro_benchmarks=("ff-mul" "ib-mul" "a2b" "b2a-single" "shuffle" "fake_test" "fake_test2")
+micro_benchmarks=("shuffle")
 for task in ${micro_benchmarks[@]}; do
     for net_config in ${net_config_list[@]}; do
         ip_address=${ip_addr_dict[${net_config}]}
