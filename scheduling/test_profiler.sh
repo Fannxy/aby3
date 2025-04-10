@@ -7,7 +7,8 @@ assignment_strategy=${10}
 net_config=${11}
 parallelism_limit=${12}
 fix_strategy=${13}
-micro_benchmark="${14:-""}"
+min_parallelism=${14}
+micro_benchmark="${15:-""}"
 
 root_folder=/root/aby3
 port=22
@@ -61,4 +62,5 @@ python ${root_folder}/scheduling/profiler.py \
   --complexity ${complexity} \
   --assignment_strategy ${assignment_strategy} \
   --balance_fix ${fix_strategy} \
+  --min_parallelism ${min_parallelism} \
   --run_tasks

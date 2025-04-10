@@ -1,3 +1,5 @@
+#!/bin/bash
+
 NETNAME=$1
 
 root_folder=/root/aby3
@@ -7,6 +9,7 @@ num_parties=3
 node_id=(11 12 13)
 server_host="aby30 aby31 aby32"
 parallelism_limit=96
+min_parallelism=1
 
 # prepare the test cpp.
 cp ${root_folder}/frontend/main.test ${root_folder}/frontend/main.cpp
@@ -59,7 +62,7 @@ for task in ${task_list[@]}; do
         for assignment_strategy in ${assignment_strategy_list[@]}; do
             ip_address=${ip_addr_dict[${net_config}]}
             keyword="${task}-${net_config}-${assignment_strategy}"
-            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_address} ${keyword} ${task} ${data_size[${task}]} ${assignment_strategy} ${net_config} ${parallelism_limit} true "True"
+            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_address} ${keyword} ${task} ${data_size[${task}]} ${assignment_strategy} ${net_config} ${parallelism_limit} true ${min_parallelism} "True"
         done
     done
 done

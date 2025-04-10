@@ -18,25 +18,25 @@ root_folder=/root/aby3
 # ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
 
 
-NETWORK_NAME="Hetero-1G-2G-2G"
+# NETWORK_NAME="Hetero-1G-2G-2G"
 
-${root_folder}/scheduling/network_setup.sh 2000 1050 2000
-wait;
-${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
-
-
-NETWORK_NAME="Hetero-1G-10G-10G"
-${root_folder}/scheduling/network_setup.sh 10000 1050 10000
-wait;
-${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
-
-NETWORK_NAME="Hetero-1G-4G-5G"
-${root_folder}/scheduling/network_setup.sh 4000 1050 5000
-wait;
-${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
+# ${root_folder}/scheduling/network_setup.sh 2000 1050 2000
+# wait;
+# ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
 
 
-mv ${root_folder}/scheduling/Result ${root_folder}/scheduling/Result_basic
+# NETWORK_NAME="Hetero-1G-10G-10G"
+# ${root_folder}/scheduling/network_setup.sh 10000 1050 10000
+# wait;
+# ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
+
+# NETWORK_NAME="Hetero-1G-4G-5G"
+# ${root_folder}/scheduling/network_setup.sh 4000 1050 5000
+# wait;
+# ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
+
+
+# mv ${root_folder}/scheduling/Result ${root_folder}/scheduling/Result_basic
 
 
 

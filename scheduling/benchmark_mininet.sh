@@ -9,6 +9,7 @@ num_parties=3
 node_id=(11 12 13)
 server_host="aby30 aby31 aby32"
 parallelism_limit=64
+min_parallelism=16
 
 # prepare the test cpp.
 cp ${root_folder}/frontend/main.test ${root_folder}/frontend/main.cpp
@@ -32,7 +33,7 @@ fi
 if [ $NETNAME = "Homo-100M" ]; then
     data_size_micro=268435456
 fi
-# micro_benchmarks=("ff-mul" "ib-mul" "a2b" "b2a-single" "shuffle" "fake_test" "fake_test2")
+# micro_benchmarks=("ff-mul" "ib-mul" "a2b" "b2a-single" "shuffle")
 micro_benchmarks=("shuffle")
 for task in ${micro_benchmarks[@]}; do
     for net_config in ${net_config_list[@]}; do
@@ -40,7 +41,7 @@ for task in ${micro_benchmarks[@]}; do
         for assignment_strategy in  ${assignment_strategy_list[@]}; do
             # for fix_strategy in ${fix_balance_list[@]}; do
             keyword="${task}-${net_config}-${assignment_strategy}"
-            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_address} ${keyword} ${task} ${data_size_micro} ${assignment_strategy} ${net_config} ${parallelism_limit} True -Micro
+            bash ${root_folder}/scheduling/test_profiler.sh ${ip_address} ${ip_address} ${keyword} ${task} ${data_size_micro} ${assignment_strategy} ${net_config} ${parallelism_limit} True ${min_parallelism} -Micro
             # done
         done
     done

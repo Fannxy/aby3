@@ -291,6 +291,7 @@ if __name__ == "__main__":
     parser.add_argument('--MPI', action='store_true', help='run in MPI')
     parser.add_argument('--assignment_strategy', type=str, choices=['baseline', 'roundrole'], default='roundrole', help='baseline or roundrole')
     parser.add_argument('--balance_fix', type=str2bool, help='fix the bandwidth balance profiling or not')
+    parser.add_argument('--min_parallelism', type=int, default=1, help='fitting length')
 
 
     args = parser.parse_args()
@@ -464,9 +465,9 @@ if __name__ == "__main__":
 
     print("Assigning tasks")
     if(args.balance_fix):
-        comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage_min_group, send_mean_usage=send_mean_usage_min_group, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time_min_group, parallelism_min=(args.parallelism_limit if args.fix_parallelism else 1), logging_file=f"{args.config_folder}/task_assignment-{args.assignment_strategy}.txt")
+        comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage_min_group, send_mean_usage=send_mean_usage_min_group, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time_min_group, parallelism_min=(args.min_parallelism), logging_file=f"{args.config_folder}/task_assignment-{args.assignment_strategy}.txt")
     else:
-        comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time, parallelism_min=(args.parallelism_limit if args.fix_parallelism else 1), logging_file=f"{args.config_folder}/task_assignment-{args.assignment_strategy}.txt")
+        comp_assignment, aggr_assignment = assign_task(strategy=args.assignment_strategy, bandwidth=bandwidth, expr_recv=expr_recv, expr_send=expr_send, recv_mean_usage=recv_mean_usage, send_mean_usage=send_mean_usage, data_size=data_size, parallelism_limit=args.parallelism_limit, agg_time=agg_time, parallelism_min=(args.min_parallelism), logging_file=f"{args.config_folder}/task_assignment-{args.assignment_strategy}.txt")
     print("Task assignment:", comp_assignment)
     print("Aggregation assignment:", aggr_assignment)
     coef_recv = [calculate_expression(data_size + 1, expr) - calculate_expression(data_size, expr) for expr in expr_recv]
