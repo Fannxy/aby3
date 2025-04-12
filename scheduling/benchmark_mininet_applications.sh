@@ -27,7 +27,7 @@ assignment_strategy_list=("roundrole" "baseline")
 
 declare -A data_size
 data_size["Matrix"]=1048576
-data_size["Sort"]=4194304
+data_size["Sort"]=2097152
 data_size["ORAM"]=33554432
 data_size["LogReg-0"]=67108864
 data_size["LogReg-1"]=67108864
@@ -36,13 +36,13 @@ data_size["Shuffle"]=4194304
 
 if [  "$NETNAME" == "Homo10G" || "$NETNAME" == "Hetero-*" ]]; then
     echo "Network bandwidth is 10G, scaling up data sizes..."
-    data_size["Matrix"]=$((data_size["Matrix"] * 2))
-    data_size["Sort"]=$((data_size["Sort"] * 2))
-    data_size["Shuffle"]=$((data_size["Shuffle"] * 2))
-    data_size["ORAM"]=$((data_size["ORAM"] * 2))
-    data_size["LogReg-0"]=$((data_size["LogReg-0"] * 2))
-    data_size["LogReg-1"]=$((data_size["LogReg-1"] * 2))
-    data_size["LogReg-2"]=$((data_size["LogReg-2"] * 2))
+    data_size["Matrix"]=$((data_size["Matrix"] * 1))
+    data_size["Sort"]=$((data_size["Sort"] * 1))
+    data_size["Shuffle"]=$((data_size["Shuffle"] * 1))
+    data_size["ORAM"]=$((data_size["ORAM"] * 1))
+    data_size["LogReg-0"]=$((data_size["LogReg-0"] * 1))
+    data_size["LogReg-1"]=$((data_size["LogReg-1"] * 1))
+    data_size["LogReg-2"]=$((data_size["LogReg-2"] * 1))
 fi
 
 if [  "$NETNAME" == "Homo100M" ]]; then
