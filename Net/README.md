@@ -105,6 +105,9 @@
     Then your install is success.
 
 
+    Install the requirement from opensource version: https://docs.openvswitch.org/en/latest/intro/install/general/
+
+
 ## Define customized ssh-based mininet environment
 
 I provide a very simple 3-party peer-to-peer network topology through in `p2p_3pc_net.py`, copy it into the `./mininet/examples/`
