@@ -143,3 +143,43 @@ You can ssh the mininet host through `ssh <host-ip>`. Note that the bash seems l
 (Maybe you have to wait a few seconds then can ssh to it.)
 
 Then, we can run programs in one (main) mininet host and control the other two using `ssh`, the same as before.
+
+
+## Problems with BTF Errors
+
+Currently, the 5.15.0-127-generic version linux kernel have some problems with the nf_conncount module. 
+
+```
+> dmseg | tail
+failed to validate module [nf_conncount] BTF: -22
+```
+
+In this case, we can manually start the ovs vswitch to bypass the BTF problems.
+
+1. Install the ovs through the source code, following: https://docs.openvswitch.org/en/latest/intro/install/general/
+
+Note that the version currently being testes is v3.2.0
+
+2. Using the following commands to maunally start the vswitch.
+
+    # 创建数据库目录
+    sudo mkdir -p /usr/local/etc/openvswitch
+    sudo mkdir -p /usr/local/var/run/openvswitch
+
+    # 初始化 OVS 数据库
+    sudo ovsdb-tool create /usr/local/etc/openvswitch/conf.db vswitchd/vswitch.ovsschema
+
+    # 启动 ovsdb-server
+    ovsdb-server /usr/local/etc/openvswitch/conf.db --remote=punix:/usr/local/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile=/usr/local/var/run/openvswitch/ovsdb-server.pid --detach --log-file=/var/log/openvswitch/ovsdb-server.log
+
+    # 初始化 OVS 控制数据库（只需执行一次）
+    ovs-vsctl --db=unix:/usr/local/var/run/openvswitch/db.sock --no-wait init
+
+    # 启动 ovs-vswitchd（使用 netdev 用户态 datapath）
+    ovs-vswitchd --pidfile --detach --log-file=/var/log/openvswitch/ovs-vswitchd.log --unixctl=/usr/local/var/run/openvswitch/vswitchd.sock
+
+3. In this case, using the following code to define the virtual switch.
+
+    ```
+    s1 = net.addSwitch('s1', datapath='user', cls=OVSSwitch)
+    ```
