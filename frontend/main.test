@@ -5,6 +5,7 @@
 #include <mpi.h>
 #include "aby3_tests/Test.h"
 #include "aby3_tests/aby3_tests.h"
+#include "aby3_tests/feddb_test.h"
 #include "eric.h"
 
 using namespace oc;
@@ -72,8 +73,8 @@ int main(int argc, char** argv) {
 		arith_sort_with_values_test(cmd);
 	}
 
-	if(cmd.isSet("LR")){
-		lr_test(cmd);
+	if(cmd.isSet("Feddb")){
+		oblivious_idx_select_test(cmd);
 	}
   return 0;
 }

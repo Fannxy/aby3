@@ -87,7 +87,7 @@ add_subdirectory(aby3-DB_tests)
 add_subdirectory(aby3-GORAM)
 
 add_subdirectory(aby3_tests)
-
+add_subdirectory(aby3-Feddb-Core)
 
 add_subdirectory(frontend)
 
