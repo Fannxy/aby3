@@ -6,3 +6,35 @@ RUN OblIdx TEST
 initial finished
 initial finished
 initial finished
+RUN OblIdx TEST
+initial finished
+initial finished
+initial finished
+RUN OblIdx TEST
+initial finished
+initial finished
+initial finished
+RUN OblIdx TEST
+initial finished
+initial finished
+initial finished
+RUN OblIdx TEST
+initial finished
+initial finished
+initial finished
+RUN OblIdx TEST
+initial finished
+initial finished
+initial finished
+RUN OblIdx TEST
+initial finished
+initial finished
+initial finished
+RUN OblIdx TEST
+initial finished
+initial finished
+initial finished
+RUN OblIdx TEST
+initial finished
+initial finished
+initial finished

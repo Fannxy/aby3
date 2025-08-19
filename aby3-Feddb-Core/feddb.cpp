@@ -1,6 +1,7 @@
 #include "feddb.h"
 #include "utils.h"
 #include "../aby3-GORAM-Core/Shuffle.h"
+#include "../aby3-GORAM-Core/Sort.h"
 #include "../aby3-GORAM-Core/Basics.h"
 
 using namespace oc;
@@ -249,8 +250,9 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
 
     //step one: 对t进行argsort得到sigma
     si64Matrix sigma_si(t_len, 1);
+
     //TODO cipher_argsort or rtr_cipher_argsort
-    cipher_argsort(pIdx, t, sigma_si, eval, runtime, enc);
+    fed_argsort(pIdx,t,sigma_si, enc, eval, runtime);
     //DEBUG
     i64Matrix temp(t_len, 1);
     enc.revealAll(runtime, sigma_si, temp).get();
