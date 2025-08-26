@@ -1030,6 +1030,7 @@ void plain_permutate(std::vector<size_t> &permutation, aby3::sbMatrix &data){
     return;
 }
 
+
 void plain_permutate(std::vector<size_t> &permutation, aby3::i64Matrix &data){
     size_t len = data.rows();
 

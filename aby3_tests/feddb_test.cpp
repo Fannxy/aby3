@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "../aby3-Feddb-Core/feddb.h"
+#include "../aby3-Feddb-Core/genperm.h"
 #include "../aby3-RTR/BuildingBlocks.h"
 #include "../aby3-RTR/debug.h"
 
@@ -57,7 +58,6 @@ int oblivious_idx_select_test(CLP &cmd) {
     res_plain(1,0)=4;
     res_plain(2,0)=16;
     res_plain(3,0)=9;
-    debug_info("initial finished");
 
     // encrypt the inputs.
     si64Matrix data_shared(data_size, 1);
@@ -83,4 +83,73 @@ int oblivious_idx_select_test(CLP &cmd) {
     }
     
     return 0;
+}
+
+int genperm_test(CLP &cmd){
+    // get the configs.
+    int role = -1;
+    if (cmd.isSet("role")) {
+        auto keys = cmd.getMany<int>("role");
+        role = keys[0];
+    }
+    if (role == -1) {
+        throw std::runtime_error(LOCATION);
+    }
+
+    if (role == 0) {
+        debug_info("RUN OblIdx TEST");
+    }
+
+    // setup communications.
+    IOService ios;
+    Sh3Encryptor enc;
+    Sh3Evaluator eval;
+    Sh3Runtime runtime;
+    // distribute_setup((u64)role, ios, enc, eval, runtime);
+    basic_setup((u64)role, ios, enc, eval, runtime);
+
+    size_t data_size = 9;
+    size_t perm_size = 9;
+
+    i64Matrix data_plain(data_size, 1);
+    i64Matrix perm_plain(perm_size, 1);
+
+    
+    for(size_t i=0;i<5;i++){
+        data_plain(i,0)=i;
+    }
+
+    data_plain(5,0)=2;
+    data_plain(6,0)=1;
+    data_plain(7,0)=3;
+    data_plain(8,0)=2;
+
+    perm_plain(0,0)=0;
+    perm_plain(1,0)=1;
+    perm_plain(2,0)=3;
+    perm_plain(3,0)=6;
+    perm_plain(4,0)=8;
+    perm_plain(5,0)=4;
+    perm_plain(6,0)=2;
+    perm_plain(7,0)=7;
+    perm_plain(8,0)=5;
+
+    si64Matrix data_shared(data_size, 1);
+
+    if (role == 0) {
+        enc.localIntMatrix(runtime, data_plain, data_shared).get();
+    } else {
+        enc.remoteIntMatrix(runtime, data_shared).get();
+    }
+
+    si64Matrix perm_shared(perm_size, 1);
+    genPerm(role, data_shared, perm_shared, enc, eval, runtime);
+
+    i64Matrix perm_test(perm_size, 1);
+    enc.revealAll(runtime, perm_shared, perm_test).get();
+
+    if(role == 0){
+        check_result("GenPerm Test", perm_test, perm_plain);
+    }
+    
 }

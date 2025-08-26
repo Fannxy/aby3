@@ -249,19 +249,38 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
     //----t_plain correct
 
     //step one: 对t进行argsort得到sigma
-    si64Matrix sigma_si(t_len, 1);
-
-    //TODO cipher_argsort or rtr_cipher_argsort
-    fed_argsort(pIdx,t,sigma_si, enc, eval, runtime);
+    //TODO: plain_argsort代替
+    i64Matrix sigma_plain(t_len, 1);
+    plain_argsort(t_plain, sigma_plain);
     //DEBUG
-    i64Matrix temp(t_len, 1);
-    enc.revealAll(runtime, sigma_si, temp).get();
-    std::cout << "sigma_plain: " << std::endl;
+    std::cout << "sigma_plain_0: " << std::endl;
     for(size_t i=0; i<t_len; i++){  
-        std::cout << temp(i, 0) << " ";
+        std::cout << sigma_plain(i, 0) << " ";
     }
     std::cout << std::endl;  
-    std::cout.flush();      
+    std::cout.flush();     
+    //----sigma_plain correct
+
+    si64Matrix sigma_si(t_len, 1);
+    if(pIdx == 0){
+        enc.localIntMatrix(runtime, sigma_plain, sigma_si).get();
+    }
+    else{
+        enc.remoteIntMatrix(runtime, sigma_si).get();
+    }
+    //----plain_argsort replace fed_argsort
+    
+    //TODO fed_argsort
+    //fed_argsort(pIdx,t,sigma_si, enc, eval, runtime);
+    //DEBUG
+    // i64Matrix temp(t_len, 1);
+    // enc.revealAll(runtime, sigma_si, temp).get();
+    // std::cout << "sigma_plain: " << std::endl;
+    // for(size_t i=0; i<t_len; i++){  
+    //     std::cout << temp(i, 0) << " ";
+    // }
+    // std::cout << std::endl;  
+    // std::cout.flush();      
 
     //step two: prefixsum_{-1}(v) && u_si
     si64Matrix prefix_inv(v_len, v.cols());
@@ -276,16 +295,23 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         u_si.mShares[1](i, 0) = 0;
     }
 
+    //DEBUG
+    // i64Matrix u_plain(t_len, v.cols());
+    // enc.revealAll(runtime, u_si, u_plain).get();
+    // std::cout << "u_plain: " << std::endl;
+    // for(size_t i=0; i<t_len; i++){  
+    //     std::cout << u_plain(i, 0) << " ";
+    // }
+    // std::cout << std::endl;  
+    // std::cout.flush();      
+    //----u_plain correct
+
     //---------------------------------apply permutation start
     //step three: 对u进行sigma^{-1}的permutation
-        //step0: si64matrix利用Sh3Converter转成sbmatrix
-    Sh3Converter convt;
-    convt.init(runtime, enc.mShareGen);
-    Sh3Task task = runtime.noDependencies();
-
+        //step0: si64matrix转成sbmatrix
     sbMatrix sigma,u;
-    convt.toBinaryMatrix(task, sigma_si, sigma).get();
-    convt.toBinaryMatrix(task, u_si, u).get();
+    arith2bool(pIdx, u_si, u, enc, eval, runtime);
+    arith2bool(pIdx, sigma_si, sigma, enc, eval, runtime);
 
     //sigma_len=u_len=len
     size_t len = sigma.rows();
@@ -357,6 +383,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         
         // 发送sharedY1给P2
         large_data_sending(pIdx, sharedY1, runtime, true);
+        
         // 接收来自P0的sharedX2
         i64Matrix sharedX2(len, unit_size);
         large_data_receiving(pIdx, sharedX2, runtime, true);
@@ -367,6 +394,10 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
             sharedX3(i, 0) = sharedX2(i, 0) ^ next_maskZ(i, 0);
         }
         plain_permutate(next_permutation, sharedX3);
+
+        // 接收来自P2的maskedC2
+        i64Matrix maskedC2(len, unit_size);
+        large_data_receiving(pIdx, maskedC2, runtime, false);
         
         // 计算maskedC1 = sharedX3 ⊕ maskB
         i64Matrix maskedC1(len, unit_size);
@@ -375,9 +406,6 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         }
         large_data_sending(pIdx, maskedC1, runtime, true);
         
-        // 接收来自P2的maskedC2
-        i64Matrix maskedC2(len, unit_size);
-        large_data_receiving(pIdx, maskedC2, runtime, true);
         
         // 计算最终份额
         for (size_t i = 0; i < len; i++) {
@@ -413,7 +441,9 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         for(size_t i=0; i<len; i++){
             maskedC2(i, 0) = sharedY3(i, 0) ^ maskA(i, 0);
         }
-        large_data_sending(pIdx, maskedC2, runtime, true);
+        // 发送P1的maskedC2
+        large_data_sending(pIdx, maskedC2, runtime, false);
+
         
         // 接收来自P1的maskedC1
         i64Matrix maskedC1(len, unit_size);
@@ -431,15 +461,29 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
             rsigma.mShares[0](i, 0) = maskA(i, 0);
         }
     }
-    
         // Step 3-0: 恢复rsigma至明文
         // Step 3-1: 得到rsigma^{-1}
     i64Matrix rsigma_plain(len, unit_size);
-    for (size_t i = 0; i < len; i++) {
-        enc.revealAll(runtime, rsigma, rsigma_plain).get();
+    enc.revealAll(runtime, rsigma, rsigma_plain).get();
+    //DEBUG
+    std::cout << "rsigma_plain: " << std::endl;
+    for(size_t i=0; i<len; i++){  
+        std::cout << rsigma_plain(i, 0) << " ";
     }
+    std::cout << std::endl;  
+    std::cout.flush();      
+    //----rsigma_plain correct
+
     i64Matrix rsigma_inverse_plain(len, unit_size);
     permutation_inverse(rsigma_plain, rsigma_inverse_plain);
+    //DEBUG
+    std::cout << "rsigma_inverse_plain: " << std::endl;
+    for(size_t i=0; i<len; i++){  
+        std::cout << rsigma_inverse_plain(i, 0) << " ";
+    }
+    std::cout << std::endl;  
+    std::cout.flush();      
+    //----permutation inverse correct
     
     //Step 4: 三方协同进行u1=pi([[u]])
     sbMatrix u1(len, bitsize);
@@ -496,17 +540,17 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         }
         plain_permutate(next_permutation, sharedX3);
         
+        // 接收来自P2的maskedC2
+        i64Matrix maskedC2(len, unit_size);
+        large_data_receiving(pIdx, maskedC2, runtime, false);
+
         // 计算maskedC1 = sharedX3 ⊕ maskB
         i64Matrix maskedC1(len, unit_size);
         for(size_t i=0; i<len; i++){
             maskedC1(i, 0) = sharedX3(i, 0) ^ maskB(i, 0);
         }
         large_data_sending(pIdx, maskedC1, runtime, true);
-        
-        // 接收来自P2的maskedC2
-        i64Matrix maskedC2(len, unit_size);
-        large_data_receiving(pIdx, maskedC2, runtime, true);
-        
+
         // 计算最终份额
         for (size_t i = 0; i < len; i++) {
             u1.mShares[1](i, 0) = maskB(i, 0);
@@ -541,7 +585,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         for(size_t i=0; i<len; i++){
             maskedC2(i, 0) = sharedY3(i, 0) ^ maskA(i, 0);
         }
-        large_data_sending(pIdx, maskedC2, runtime, true);
+        large_data_sending(pIdx, maskedC2, runtime, false);
         
         // 接收来自P1的maskedC1
         i64Matrix maskedC1(len, unit_size);
@@ -559,8 +603,18 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
             u1.mShares[0](i, 0) = maskA(i, 0);
         }
     }
+    //DEBUG
+    i64Matrix u1_plain(len, unit_size);
+    enc.revealAll(runtime, u1, u1_plain).get();
+    std::cout << "u1: " << std::endl;
+    for(size_t i=0; i<len; i++){  
+        std::cout << u1_plain(i, 0) << " ";
+    }
+    std::cout << std::endl;  
+    std::cout.flush();      
+    //----u1 correct
 
-        // Step 5: 根据rsigma^{-1}对v1进行置换得到v_prime = rsigma^{-1} (v1)=sigma^{-1} * pi^{-1} * pi([[v]]) = sigma^{-1}(v)
+        // Step 5: 根据rsigma^{-1}对u1进行置换得到u_prime = rsigma^{-1} (u1)=sigma^{-1} * pi^{-1} * pi([[u1]]) = sigma^{-1}(u1)
     sbMatrix u_prime(len, bitsize);
     for (size_t i = 0; i < len; i++) {
         size_t new_pos = rsigma_inverse_plain(i, 0);
@@ -570,8 +624,18 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         }
     } 
     si64Matrix u_prime_si(len, v.cols());
-    convt.bitInjection(task, u_prime, u_prime_si).get();
+    bool2arith(pIdx, u_prime, u_prime_si, enc, eval, runtime);
     //---------------------------------apply permutation finished
+    //DEBUG
+    std::cout << "u_prime_plain: " << std::endl;
+    i64Matrix u_prime_plain(len, unit_size);
+    enc.revealAll(runtime, u_prime_si, u_prime_plain).get();
+    for(size_t i=0; i<len; i++){  
+        std::cout << u_prime_plain(i, 0) << " ";
+    }
+    std::cout << std::endl;  
+    std::cout.flush();      
+    //----u_prime 
 
     //step four: prefixsum_(u_prime)
     si64Matrix u_prime_prefix_si(len, v.cols());
@@ -581,7 +645,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
     //---------------------------------unapply permutation start
         //step 0:u_prime_prefix转成sbmatrix
     sbMatrix u_prime_prefix(len, bitsize);
-    convt.toBinaryMatrix(task, u_prime_prefix_si, u_prime_prefix).get();
+    arith2bool(pIdx, u_prime_prefix_si, u_prime_prefix, enc, eval, runtime);
 
         //step 1:[[u1]]=rsigma(u')
     sbMatrix u_1_(len, bitsize);
@@ -595,6 +659,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
        //step 2: [[u']]=pi^{-1}([[u1]])
     sbMatrix u_prime_(len, bitsize);
     //pi^{-1}=p1^{-1}*p0^{-1}*p2^{-1}，故pidx=0和2互换
+    //逆序置换
     if (pIdx == 2) {
         i64Matrix maskB(len, unit_size);
         i64Matrix maskA(len, unit_size);
@@ -615,8 +680,8 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         }
         plain_permutate(next_inverse_permutation, sharedX2);
         
-        // 发送sharedX2给P1
-        large_data_sending(pIdx, sharedX2, runtime, true);
+        // p2发送sharedX2给P1
+        large_data_sending(pIdx, sharedX2, runtime, false);
         // 计算最终份额
         for (size_t i = 0; i < len; i++) {
             u_prime_.mShares[1](i, 0) = maskA(i, 0);
@@ -635,11 +700,11 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         }
         plain_permutate(next_inverse_permutation, sharedY1);
         
-        // 发送sharedY1给P2
-        large_data_sending(pIdx, sharedY1, runtime, true);
-        // 接收来自P0的sharedX2
+        // p2发送sharedY1给P0
+        large_data_sending(pIdx, sharedY1, runtime, false);
+        // 接收来自P1的sharedX2
         i64Matrix sharedX2(len, unit_size);
-        large_data_receiving(pIdx, sharedX2, runtime, true);
+        large_data_receiving(pIdx, sharedX2, runtime, false);
         
         // 计算sharedX3 = sharedX2 ⊕ next_maskZ，然后应用next_permutation
         i64Matrix sharedX3(len, unit_size);
@@ -648,16 +713,16 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         }
         plain_permutate(prev_inverse_permutation, sharedX3);
         
-        // 计算maskedC1 = sharedX3 ⊕ maskB
-        i64Matrix maskedC1(len, unit_size);
-        for(size_t i=0; i<len; i++){
-            maskedC1(i, 0) = sharedX3(i, 0) ^ maskB(i, 0);
-        }
-        large_data_sending(pIdx, maskedC1, runtime, true);
-        
-        // 接收来自P2的maskedC2
+        // 接收来自P0的maskedC2
         i64Matrix maskedC2(len, unit_size);
         large_data_receiving(pIdx, maskedC2, runtime, true);
+
+         // 计算maskedC1 = sharedX3 ⊕ maskB
+         i64Matrix maskedC1(len, unit_size);
+         for(size_t i=0; i<len; i++){
+             maskedC1(i, 0) = sharedX3(i, 0) ^ maskB(i, 0);
+         }
+         large_data_sending(pIdx, maskedC1, runtime, false);
         
         // 计算最终份额
         for (size_t i = 0; i < len; i++) {
@@ -672,7 +737,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         
         // 接收来自P1的sharedY1
         i64Matrix sharedY1(len, unit_size);
-        large_data_receiving(pIdx, sharedY1, runtime, true);
+        large_data_receiving(pIdx, sharedY1, runtime, false);
         
         // 计算sharedY2 = sharedY1 ⊕ next_maskZ，然后应用next_permutation
         i64Matrix sharedY2(len, unit_size);
@@ -697,7 +762,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         
         // 接收来自P1的maskedC1
         i64Matrix maskedC1(len, unit_size);
-        large_data_receiving(pIdx, maskedC1, runtime, true);
+        large_data_receiving(pIdx, maskedC1, runtime, false);
         
         // 计算maskC = maskedC1 ⊕ maskedC2
         i64Matrix maskC(len, unit_size);
@@ -712,7 +777,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
         }
     }
     si64Matrix u_prime_si_(len, v.cols());
-    convt.bitInjection(task,u_prime_, u_prime_si_).get();
+    bool2arith(pIdx, u_prime_, u_prime_si_, enc, eval, runtime);
     //---------------------------------unapply permutation finished
 
     //step six:get result

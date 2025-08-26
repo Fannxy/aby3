@@ -10,3 +10,5 @@
 #include "../aby3-RTR/debug.h"
 
 int oblivious_idx_select_test(oc::CLP &cmd);
+
+int genperm_test(oc::CLP &cmd);

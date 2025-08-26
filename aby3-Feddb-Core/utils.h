@@ -9,10 +9,19 @@
 
 void prefixsum(int pIdx, aby3::si64Matrix &v, aby3::si64Matrix &result);
 
+void prefixsum_with_initial_elements(int pIdx, aby3::si64Matrix &v, aby3::si64Matrix &result, aby3::si64Matrix &initial_elements);
+
 void prefixsum_inv(int pIdx, aby3::si64Matrix &v, aby3::si64Matrix &result);
 
 void permutation_inverse(aby3::i64Matrix& rsigma_plain, aby3::i64Matrix& rsigma_inv_plain);
 
 void fed_argsort(int pIdx, aby3::si64Matrix &v, aby3::si64Matrix &result, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+//TODO
+void plain_argsort(aby3::i64Matrix& v, aby3::i64Matrix& result);
+
+void permutate(int pIdx, aby3::si64Matrix &data, aby3::si64Matrix &res, std::vector<size_t> &permutation);
+
+void permutate(int pIdx, aby3::si64Matrix &data, aby3::si64Matrix &res, aby3::i64Matrix  &permutation);
 
 #endif

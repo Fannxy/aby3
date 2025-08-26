@@ -20,6 +20,25 @@ void prefixsum(int pIdx, si64Matrix &v, si64Matrix &result){
     return;
 }
 
+void prefixsum_with_initial_elements(int pIdx, si64Matrix &v, si64Matrix &result, si64Matrix &initial_elements){
+    size_t v_len = v.rows();
+    size_t result_len = v_len;
+
+    size_t last = initial_elements.rows();
+    result.resize(result_len, v.cols());
+    
+    i64 sum_0=initial_elements.mShares[0](last-1, 0),sum_1=initial_elements.mShares[1](last-1, 0);
+    for(size_t i=0; i<v_len; i++){
+        sum_0 += v.mShares[0](i, 0);
+        sum_1 += v.mShares[1](i, 0);
+        result.mShares[0](i, 0) = sum_0;
+        result.mShares[1](i, 0) = sum_1;
+
+    }
+
+    return;
+}
+
 void prefixsum_inv(int pIdx, si64Matrix &v, si64Matrix &result){
     size_t v_len = v.rows();
     size_t result_len = v_len;
@@ -150,5 +169,47 @@ void fed_argsort(int pIdx, si64Matrix &v, si64Matrix &result, Sh3Encryptor& enc,
         result.mShares[1](i, 0) = value_enc[i].mShares[1](0, 0);
     }
 
+    return ;
+}
+
+void plain_argsort(i64Matrix& v, i64Matrix& result){
+    size_t v_len = v.rows();
+    size_t result_len = v_len;
+
+    result.resize(result_len, 1);
+    std::vector<int> index(v_len);
+    for(size_t i=0; i<v_len; i++){
+        index[i] = i;
+    }
+    std::sort(index.begin(), index.end(), [&v](int a, int b){
+        return v(a, 0) < v(b, 0);
+    });
+    for(size_t i=0; i<v_len; i++){
+        result(i, 0) = index[i];
+    }
+    return ;
+}
+
+void permutate(int pIdx, si64Matrix &data, si64Matrix &res, std::vector<size_t> &permutation){
+    size_t len = data.rows();
+    for (size_t i = 0; i < len; i++) {
+        size_t new_pos = permutation[i];
+        if (new_pos < len) {
+            res.mShares[0](new_pos, 0) = data.mShares[0](i, 0);
+            res.mShares[1](new_pos, 0) = data.mShares[1](i, 0);
+        }
+    }
+    return ;
+}
+
+void permutate(int pIdx, si64Matrix &data, si64Matrix &res, i64Matrix  &permutation){
+    size_t len = data.rows();
+    for (size_t i = 0; i < len; i++) {
+        size_t new_pos = permutation(i,0);
+        if (new_pos < len) {
+            res.mShares[0](new_pos, 0) = data.mShares[0](i, 0);
+            res.mShares[1](new_pos, 0) = data.mShares[1](i, 0);
+        }
+    }
     return ;
 }
