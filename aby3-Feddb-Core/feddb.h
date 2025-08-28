@@ -5,6 +5,7 @@
 #include "../aby3-GORAM-Core/Basics.h"
 #include "../aby3-GORAM-Core/Shuffle.h"
 #include "../aby3/sh3/Sh3Converter.h"
+#include "../aby3/aby3-Feddb-Core/genperm.h"
 
 
 #ifndef _ABY3_FEDDB_DAGOPNODE_H_

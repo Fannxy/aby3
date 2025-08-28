@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
 	}
 
 	if(cmd.isSet("Feddb")){
-		//oblivious_idx_select_test(cmd);
+		oblivious_idx_select_test(cmd);
 		genperm_test(cmd);
 	}
   return 0;

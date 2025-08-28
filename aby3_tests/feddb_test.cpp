@@ -73,7 +73,6 @@ int oblivious_idx_select_test(CLP &cmd) {
     }
 
     oblivious_idx_select(role, data_shared, idx_shared, res_shared, enc, eval, runtime);
-    debug_info("oblivious_idx_select finished");
 
     i64Matrix res_test(idx_size, 1);
     enc.revealAll(runtime, res_shared, res_test).get();
@@ -97,7 +96,7 @@ int genperm_test(CLP &cmd){
     }
 
     if (role == 0) {
-        debug_info("RUN OblIdx TEST");
+        debug_info("RUN GenPerm TEST");
     }
 
     // setup communications.
@@ -148,8 +147,19 @@ int genperm_test(CLP &cmd){
     i64Matrix perm_test(perm_size, 1);
     enc.revealAll(runtime, perm_shared, perm_test).get();
 
+    //DEBUG
+    // if(role == 0){
+    //     std::cout << "perm_test: " << std::endl;
+    //     for(size_t i=0;i<perm_size;i++){
+    //         std::cout << perm_test(i,0) << " ";
+    //     }
+    //     std::cout << std::endl ;
+    // }
+
     if(role == 0){
         check_result("GenPerm Test", perm_test, perm_plain);
     }
-    
+
+    return 0;
+
 }
