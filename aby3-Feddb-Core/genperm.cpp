@@ -145,7 +145,6 @@ void applyPerm(int pIdx, si64Matrix &perm, si64Matrix &k_j, si64Matrix &k_j_prim
     si64Matrix perm_prime(len,1);
     si64Matrix next_perm(len,1),prev_perm(len,1);
     prev_perm=perm;
-    //todo:1->3
     for(size_t i=0;i<3;i++){
         if(pIdx==i){
             permutate(pIdx, prev_perm, next_perm, prev_permutation);

@@ -1022,9 +1022,14 @@ void plain_permutate(std::vector<size_t> &permutation, aby3::sbMatrix &data){
     size_t bitsize = data.bitCount();
 
     aby3::sbMatrix res(len, bitsize);
+    // for(size_t i=0; i<len; i++){
+    //     res.mShares[0](i, 0) = data.mShares[0](permutation[i], 0);
+    //     res.mShares[1](i, 0) = data.mShares[1](permutation[i], 0);
+    // }
+    //ymn : plain_permutate is not similar to the template in Basic.h
     for(size_t i=0; i<len; i++){
-        res.mShares[0](i, 0) = data.mShares[0](permutation[i], 0);
-        res.mShares[1](i, 0) = data.mShares[1](permutation[i], 0);
+        res.mShares[0](permutation[i], 0) = data.mShares[0](i, 0);
+        res.mShares[1](permutation[i], 0) = data.mShares[1](i, 0);
     }
     data = res;
     return;
@@ -1035,8 +1040,12 @@ void plain_permutate(std::vector<size_t> &permutation, aby3::i64Matrix &data){
     size_t len = data.rows();
 
     aby3::i64Matrix res(len, 1);
+    // for(size_t i=0; i<len; i++){
+    //     res(i, 0) = data(permutation[i], 0);
+    // }
+    //ymn : plain_permutate is not similar to the template in Basic.h
     for(size_t i=0; i<len; i++){
-        res(i, 0) = data(permutation[i], 0);
+        res(permutation[i], 0) = data(i, 0);
     }
     data = res;
     return;

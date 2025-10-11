@@ -7,207 +7,174 @@
 using namespace oc;
 using namespace aby3;
 
-//sbMatrix：一列
-// void concatRows_sbMatrix(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
-//     sbMatrix &res, Sh3Encryptor &enc, Sh3Evaluator &eval,
-//     Sh3Runtime &runtime){
-//         assert(sharedA.bitCount() == sharedB.bitCount());
-//         //将sharedA和sharedB按行拼接成res
-//         int rowA = sharedA.rows();
-//         int rowB = sharedB.rows();
-//         int rowRes = rowA + rowB;
-//         res.resize(rowRes, sharedA.bitCount());
-//         res.mShares[0].block(0, 0, rowA, sharedA.i64Cols()) = sharedA.mShares[0];
-//         res.mShares[1].block(0, 0, rowA, sharedA.i64Cols()) = sharedA.mShares[1];
-//         res.mShares[0].block(rowA, 0, rowB, sharedB.i64Cols()) = sharedB.mShares[0];
-//         res.mShares[1].block(rowA, 0, rowB, sharedB.i64Cols()) = sharedB.mShares[1];
-//         return;
-//     }
-
-// void concatRows_i64Matrix(int pIdx, i64Matrix &sharedA, i64Matrix &sharedB,
-//     i64Matrix &res, Sh3Encryptor &enc, Sh3Evaluator &eval,
-//     Sh3Runtime &runtime){
-//         assert(sharedA.bitCount() == sharedB.bitCount());
-//         //将sharedA和sharedB按行拼接成res
-//         int rowA = sharedA.rows();
-//         int rowB = sharedB.rows();
-//         int rowRes = rowA + rowB;
-//         res.resize(rowRes, sharedA.bitCount());
-//         res.block(0, 0, rowA, sharedA.i64Cols()) = sharedA;
-//         res.block(rowA, 0, rowB, sharedB.i64Cols()) = sharedB;
-//         return;
-//     }
-
-// void shuffle_sbMatrix(int pIdx, sbMatrix &T, sbMatrix &Tres, 
+// void shuffle(int pIdx, std::vector<si64Matrix>& T, std::vector<si64Matrix> &Tres, 
 //     Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+//         size_t len = T.size();
+//         std::vector<sbMatrix> T_sb(len),Tres_sb(len);
+//         for(size_t i=0; i<len; i++){
+//             //不行，arith2bool转成的bitcount是64bit的，但是efficient_shuffle只支持1bit的
+//            // T_sb[i].resize(T[i].rows(), 64);
+//             arith2bool(pIdx, T[i], T_sb[i], enc, eval, runtime);
+//             //std::cout<<"T_sb[i].bitCount()"<<T_sb[i].bitCount()<<std::endl;
+//         }
 
-//         efficient_shuffle_full_matrix(T, pIdx, Tres, enc, eval, runtime);
+//         efficient_shuffle(T_sb, pIdx, Tres_sb, enc, eval, runtime);
+        
+//         for(size_t i=0; i<len; i++){
+//             Tres[i].resize(T[i].rows(), 1);
+//             bool2arith(pIdx, Tres_sb[i], Tres[i], enc, eval, runtime);
+//         }
 //         return ;
 //     }
 
-// void project_sbMatrix(int pIdx, sbMatrix &T, std::vector<int> &cols, sbMatrix &Tres, 
-//     Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+//si64matrix: shuffle from genperm
+void shuffle(int pIdx, si64Matrix& T, si64Matrix& Tres,
+    Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime ){
+    
+    // get the common randomness.
+    block prevSeed = enc.mShareGen.mPrevCommon.getSeed();
+    block nextSeed = enc.mShareGen.mNextCommon.getSeed();
+    size_t len = T.rows();
+
+    // generate the prev, next - correlated randomness.
+    std::vector<size_t> prev_permutation;
+    std::vector<size_t> next_permutation;
+    get_permutation(len, prev_permutation, prevSeed);
+    get_permutation(len, next_permutation, nextSeed);
+
+    //shuffle
+    si64Matrix next_perm(len,1),prev_perm(len,1);
+    prev_perm=T;
+
+    for(size_t i=0;i<3;i++){
+        if(pIdx==i){
+            permutate(pIdx, prev_perm, next_perm, prev_permutation);
+            
+        }
+        else if(pIdx==((i+2)%3)){
+            permutate(pIdx, prev_perm, next_perm, next_permutation);
+            
+        }
+        else if(pIdx==(i+1)%3){
+            std::fill_n(next_perm.mShares[0].data(),len,0);
+            std::fill_n(next_perm.mShares[1].data(),len,0);
+ 
+        }
+        prev_perm=reshare_matrix(pIdx, next_perm, (i+1)%3, enc, runtime);
+
+    }
+    Tres=prev_perm;
+
+    return ;
+
+    }
+
+
+//sbmatrix: effcient-shuffle from GORAM 
+void shuffle(int pIdx, sbMatrix& T, sbMatrix &Tres, 
+    Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+
+        efficient_shuffle(T, pIdx, Tres, enc, eval, runtime);
+        return ;
+    }
+
+void shuffle(int pIdx, std::vector<si64Matrix>& T, std::vector<si64Matrix>& Tres,
+    Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+    size_t len = T.size();
+    size_t unit_len = T[0].rows();
+
+    // get the common randomness.
+    block prevSeed = enc.mShareGen.mPrevCommon.getSeed();
+    block nextSeed = enc.mShareGen.mNextCommon.getSeed();
+    
+    // generate the prev, next - correlated randomness.
+    std::vector<size_t> prev_permutation;
+    std::vector<size_t> next_permutation;
+    get_permutation(unit_len, prev_permutation, prevSeed);
+    get_permutation(unit_len, next_permutation, nextSeed);
+
+    //shuffle
+    std::vector<si64Matrix> next_perm(len),prev_perm(len);
+    for(size_t i=0; i<len; i++){
+        prev_perm[i].resize(unit_len, 1);
+        next_perm[i].resize(unit_len, 1);
+        prev_perm[i]=T[i];
+    }
+
+    for(size_t i=0;i<3;i++){
+        if(pIdx==i){
+            permutate(pIdx, prev_perm, next_perm, prev_permutation);
+            
+        }
+        else if(pIdx==((i+2)%3)){
+            permutate(pIdx, prev_perm, next_perm, next_permutation);
+            
+        }
+        else if(pIdx==(i+1)%3){
+            for(size_t j=0; j<len; j++){
+                std::fill_n(next_perm[j].mShares[0].data(),unit_len,0);
+                std::fill_n(next_perm[j].mShares[1].data(),unit_len,0);
+            }
+        }
         
-//     size_t rows = T.rows();
-//     size_t selected_cols = cols.size();
+        for(size_t j=0; j<len; j++){
+            prev_perm[j]=reshare_matrix(pIdx, next_perm[j], (i+1)%3, enc, runtime);
+        }
+
+    }
+
+    for(size_t i=0; i<len; i++){
+        Tres[i].resize(unit_len, 1);
+        Tres[i]=prev_perm[i];
+    }
+
+    return ;
+
+    }
+
+void persist_plain(int pIdx, const std::string &table_name, aby3::i64Matrix &T){
+    std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
-//     Tres.resize(rows, T.bitCount());
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Unable to open file " << filename << " for writing" << std::endl;
+        return;
+    }
+    int rows = T.rows();
+
+    outFile << "Matrix dimensions: " << rows << std::endl;
+
+    outFile << "Matrix values:" << std::endl;
+    for (int i = 0; i < rows; i++) {
+        outFile << T(i, 0) << std::endl;
+    }
+
+    outFile.close();
+
+    return;
+}
     
-//     // Copy the selected columns from input to output
-//     for (size_t i = 0; i < rows; i++) {
-//         for (size_t j = 0; j < selected_cols; j++) {
-//             // Copy both shares for the selected column
-//             Tres.mShares[0](i, j) = T.mShares[0](i, cols[j]);
-//             Tres.mShares[1](i, j) = T.mShares[1](i, cols[j]);
-//         }
-//     }
-        
-//     return ;
-// }
-
-// void project_i64Matrix(int pIdx, i64Matrix &T, std::vector<int> &cols, i64Matrix &Tres, 
-//     Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
-        
-//     size_t rows = T.rows();
-//     size_t selected_cols = cols.size();
+void read_plain(int pIdx, const std::string &table_name, aby3::i64Matrix &T){
+    std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
-//     Tres.resize(rows, T.bitCount());
+    std::ifstream inFile(filename);
+    if (!inFile.is_open()) {
+        std::cerr << "Error: Unable to open file " << filename << " for reading" << std::endl;
+        return;
+    }
 
-//     for (size_t i = 0; i < rows; i++) {
-//         for (size_t j = 0; j < selected_cols; j++) {
-//             Tres(i, j) = T(i, cols[j]);
-//         }
-//     }
-        
-//     return ;
-// }
+    std::string dummy;
+    int rows;
+    inFile >> dummy >> dummy >> rows;
+    T.resize(rows, 1);
+    inFile >> dummy >> dummy;
+    for (int i = 0; i < rows; i++) {
+        inFile >> T(i, 0);
+    }
 
-// 原始左表；标志表；行数信息
-// void flag_join_sbMatrix(int pIdx, sbMatrix &left_table, sbMatrix &flags_table, si64Matrix &num_rows_info,sbMatrix &result,              
-//         Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime) {
-    
-//     size_t left_rows = left_table.rows();
-//     size_t left_cols = left_table.cols();
-//     size_t left_bits = left_table.bitCount();
-    
-//     size_t flags_rows = flags_table.rows();
-    
-//     // 恢复期望行数的明文值
-//     i64Matrix expected_result_rows_plaintext(1, 1);
-//     enc.revealAll(runtime, num_rows_info, expected_result_rows_plaintext).get();
-//     size_t expected_result_rows = static_cast<size_t>(expected_result_rows_plaintext(0, 0));
-    
-//     // 验证输入维度
-//     if (left_rows != flags_rows) {
-//         throw std::runtime_error("FlagJoin: left table rows must match flags table rows");
-//     }
-    
-//     // 初始化结果矩阵为期望的大小
-//     result.resize(expected_result_rows, left_bits);
-    
-//     size_t write_pos = 0;
-//     for (size_t i = 0; i < left_rows && write_pos < expected_result_rows; i++) {
-//         // 获取每行的标志
-//         sbMatrix flag_val(1, 1);
-//         flag_val.mShares[0](0, 0) = flags_table.mShares[0](i, 0);
-//         flag_val.mShares[1](0, 0) = flags_table.mShares[1](i, 0);
-        
-//         // 检查标志是否为零
-//         i64Matrix plain_zero(1, 1);
-//         plain_zero(0, 0) = 0;
-//         sbMatrix is_flag_zero(1, 1);
-//         bool_cipher_eq(pIdx, flag_val, plain_zero, is_flag_zero, enc, eval, runtime);
-//         i64Matrix plain_is_zero(1, 1);
-//         enc.revealAll(runtime, is_flag_zero, plain_is_zero).get();
-        
-//         // 如果标志不为零，则执行条件复制并写入结果
-//         if (plain_is_zero(0, 0) == 0) {
-//             // 对于左表的每一列，执行条件复制
-//             for (size_t j = 0; j < left_cols; j++) {
-//                 // 获取左表的元素
-//                 sbMatrix left_element(1, left_bits);
-//                 left_element.mShares[0](0, 0) = left_table.mShares[0](i, j);
-//                 left_element.mShares[1](0, 0) = left_table.mShares[1](i, j);
-                
-//                 sbMatrix masked_element(1, left_bits);
-//                 bool_cipher_and(pIdx, flag_val, left_element, masked_element, enc, eval, runtime);
-                
-//                 result.mShares[0](write_pos, j) = masked_element.mShares[0](0, 0);
-//                 result.mShares[1](write_pos, j) = masked_element.mShares[1](0, 0);
-//             }
-//             write_pos++;
-//         }
-//     }
-    
-//     return;
-// }
-
-//TODO：join
-
-// template<typename MatrixType>
-// void persist_cipher(int pIdx, string &table_name, MatrixType &T){
-//     string filename = "GORAM-ABY3/aby3/aby3-Feddb-tmpfile/cipher" + table_name + "_" + to_string(pIdx) + ".txt";
-    
-//     ofstream outFile(filename);
-//     if (!outFile.is_open()) {
-//         cerr << "Error: Unable to open file " << filename << " for writing" << endl;
-//         return;
-//     }
-    
-//     int rows = T.rows();
-//     int cols = T.cols();
-    
-//     outFile << "Matrix dimensions: " << rows << " x " << cols << endl;
-
-//     outFile << "Matrix shares[0]:" << endl;
-//     //T.mShares[0]和T.mShares[1]分别写入
-//     for (int i = 0; i < rows; i++) {
-//         for (int j = 0; j < cols; j++) {
-//             outFile << T.mShares[0](i, j) << " ";
-//         }
-//         outFile << endl;
-//     }
-//     outFile << "Matrix shares[1]:" << endl;
-//     for (int i = 0; i < rows; i++) {
-//         for (int j = 0; j < cols; j++) {
-//             outFile << T.mShares[1](i, j) << " ";
-//         }
-//         outFile << endl;
-//     }
-
-//     outFile.close();
-
-//     return;
-// }
-
-// void persist_plain(int pIdx, string &table_name, i64Matrix &T){
-//     string filename = "GORAM-ABY3/aby3/aby3-Feddb-tmpfile/i64Matrix" + table_name + "_" + to_string(pIdx) + ".txt";
-    
-//     ofstream outFile(filename);
-//     if (!outFile.is_open()) {
-//         cerr << "Error: Unable to open file " << filename << " for writing" << endl;
-//         return;
-//     }
-
-//     int rows = T.rows();
-//     int cols = T.cols();
-
-//     outFile << "Matrix dimensions: " << rows << " x " << cols << endl;
-
-//     outFile << "Matrix values:" << endl;
-//     for (int i = 0; i < rows; i++) {
-//         for (int j = 0; j < cols; j++) {
-//             outFile << T(i, j) << " ";
-//         }
-//         outFile << endl;
-//     }
-
-//     outFile.close();
-
-//     return;
-// }
-
-
+    inFile.close();
+    return;
+}
 
 void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &result,              
         Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
@@ -382,6 +349,163 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
 
     return; 
 }
+
+//agg: sum(valcol) group by keycol : only val:non-zero entries
+//data[0]: keycol & data[1]: valcol
+void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64Matrix> &data,std::vector<si64Matrix> &finalRes,
+    Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime ){
+    
+        int rows=data[0].rows();
+
+        si64Matrix keycol,valcol;
+        keycol.resize(rows, 1);
+        valcol.resize(rows, 1);
+        //sorted
+        for(int i=0; i<rows ;i++){
+            i64 idx_i=idx(i, 0);
+            keycol.mShares[0](i, 0) = data[0].mShares[0](idx_i, 0);
+            keycol.mShares[1](i, 0) = data[0].mShares[1](idx_i, 0);
+            //keycol(i,0) = data[0](idx_i, 0);
+            valcol.mShares[0](i, 0) = data[1].mShares[0](idx_i, 0);
+            valcol.mShares[1](i, 0) = data[1].mShares[1](idx_i, 0);
+            //valcol(i,0) = data[1](idx_i, 0);
+        }
+
+        //DEBUG
+        // i64Matrix tmp_0(rows,1),tmp_1(rows,1);
+        // enc.revealAll(runtime, keycol, tmp_0).get();
+        // enc.revealAll(runtime, valcol, tmp_1).get();
+        // std::cout<<"sorted data: "<<std::endl;
+        // for(int i=0;i<rows;i++){
+        //     std::cout<<"keycol: "<<tmp_0(i,0)<<"(pidx:"<<pIdx<<") ";
+        // }
+        // std::cout<<std::endl;
+        // for(int i=0;i<rows;i++){
+        //     std::cout<<"valcol: "<<tmp_1(i,0)<<"(pidx:"<<pIdx<<") " ;
+        // }
+        // std::cout<<std::endl;
+        //sorted correct
+
+        
+        for(int i=0; i<(rows-1) ;i++){
+            // valcol(i,0) = leftVal * (1 - eqFlag);
+            // valcol(i+1,0) = rightVal + leftVal * (eqFlag);
+            si64Matrix leftval(1,1),rightval(1,1);
+            leftval.mShares[0](0,0)=valcol.mShares[0](i,0);
+            leftval.mShares[1](0,0)=valcol.mShares[1](i,0);
+            rightval.mShares[0](0,0)=valcol.mShares[0](i+1,0);
+            rightval.mShares[1](0,0)=valcol.mShares[1](i+1,0);
+
+            si64Matrix new_leftval(1,1),new_rightval(1,1);
+
+            i64Matrix one(1,1);
+            one(0,0)=1;
+            si64Matrix not_eqFlag(1,1),eqFlag(1,1),oneShared(1,1);
+            if (pIdx == 0) {
+                enc.localIntMatrix(runtime, one, oneShared).get();
+            } else {
+                enc.remoteIntMatrix(runtime, oneShared).get();
+            }
+
+            eqFlag.mShares[0](0,0)=equalFlag.mShares[0](i+1,0);
+            eqFlag.mShares[1](0,0)=equalFlag.mShares[1](i+1,0);
+            not_eqFlag=oneShared-eqFlag;
+            //DEBUG
+            // i64Matrix not_eqFlag_plain(1,1);
+            // enc.revealAll(runtime, not_eqFlag, not_eqFlag_plain).get();
+            // std::cout<<"not_eqFlag: "<<not_eqFlag_plain(0,0)<<"(pidx:"<<pIdx<<") " ;
+            // std::cout<<std::endl;
+            //not_eqFlag_plain correct
+            cipher_mul(pIdx, leftval, not_eqFlag, new_leftval, eval, enc, runtime);
+
+            si64Matrix leftval_times_eqFlag(1,1);
+            cipher_mul(pIdx, leftval, eqFlag, leftval_times_eqFlag, eval, enc, runtime);
+            new_rightval = rightval + leftval_times_eqFlag;
+
+            valcol.mShares[0](i,0) = new_leftval.mShares[0](0,0);
+            valcol.mShares[1](i,0) = new_leftval.mShares[1](0,0);
+            valcol.mShares[0](i+1,0) = new_rightval.mShares[0](0,0);
+            valcol.mShares[1](i+1,0) = new_rightval.mShares[1](0,0);
+
+        }
+
+        //DEBUG
+        // i64Matrix tmp_1(rows,1);
+        // enc.revealAll(runtime, valcol, tmp_1).get();
+        // for(int i=0;i<rows;i++){
+        //     std::cout<<"new_valcol: "<<tmp_1(i,0)<<"(pidx:"<<pIdx<<") " ;
+        // }
+        // std::cout<<std::endl;
+        //new_valcol correct
+
+        sbMatrix valcol_sb(rows,64), zeroFlag_sb(rows,1);
+        i64Matrix zero(rows,1);
+        for(int i=0;i<rows;i++){
+            zero(i,0)=0;
+        }
+        arith2bool(pIdx, valcol, valcol_sb, enc, eval, runtime);
+        bool_cipher_eq(pIdx, valcol_sb, zero, zeroFlag_sb, enc, eval, runtime);
+
+
+        si64Matrix zeroFlag(rows,1);
+        bool2arith(pIdx, zeroFlag_sb, zeroFlag, enc, eval, runtime);
+
+        //DEBUG
+        // i64Matrix tmp_2(rows,1);
+        // enc.revealAll(runtime, zeroFlag, tmp_2).get();
+        // for(int i=0;i<rows;i++){
+        //     std::cout<<"zeroFlag: "<<tmp_2(i,0)<<"(pidx:"<<pIdx<<") " ;
+        // }
+        // std::cout<<std::endl;
+        //zeroFlag correct
+
+        std::vector<si64Matrix> res(3), shuffledRes(3);
+        res[0]=keycol;
+        res[1]=valcol;
+        res[2]=zeroFlag;
+
+        shuffle(pIdx, res, shuffledRes, enc, eval, runtime);
+        zeroFlag=shuffledRes[2];
+        i64Matrix zeroFlag_plain(rows,1);
+        enc.revealAll(runtime, zeroFlag, zeroFlag_plain).get();
+
+        //DEBUG
+        // i64Matrix res_0(rows,1),res_1(rows,1);
+        // enc.revealAll(runtime, shuffledRes[0], res_0).get();
+        // enc.revealAll(runtime, shuffledRes[1], res_1).get();
+        // for(int i=0;i<rows;i++){
+        //     std::cout<<"res_0: "<<res_0(i,0)<<"(pidx:"<<pIdx<<") ;" ;
+        //     std::cout<<"res_1: "<<res_1(i,0)<<"(pidx:"<<pIdx<<") ;" ;
+        //     std::cout<<"res_2: "<<zeroFlag_plain(i,0)<<"(pidx:"<<pIdx<<") ;" ;
+        // }
+        // std::cout<<std::endl;
+        //shuffledRes correct
+
+        int resRows=0;
+        for(int i=0;i<rows;i++){
+            if(zeroFlag_plain(i,0)==0){
+                resRows++;
+            }
+        }
+
+        finalRes[0].resize(resRows, 1);
+        finalRes[1].resize(resRows, 1);
+
+        int resIdx=0;
+        for(int i=0;i<rows;i++){
+            if(zeroFlag_plain(i,0)==0){
+                finalRes[0].mShares[0](resIdx,0)=shuffledRes[0].mShares[0](i,0);
+                finalRes[0].mShares[1](resIdx,0)=shuffledRes[0].mShares[1](i,0);
+                finalRes[1].mShares[0](resIdx,0)=shuffledRes[1].mShares[0](i,0);
+                finalRes[1].mShares[1](resIdx,0)=shuffledRes[1].mShares[1](i,0);
+                resIdx++;
+            }
+        }
+        
+        return;
+
+    }
+
 
 
 

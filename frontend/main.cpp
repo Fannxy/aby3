@@ -76,6 +76,9 @@ int main(int argc, char** argv) {
 	if(cmd.isSet("Feddb")){
 		oblivious_idx_select_test(cmd);
 		genperm_test(cmd);
+		feddb_shuffle_test(cmd);
+		persist_test(cmd);
+		index_agg_test(cmd);
 	}
   return 0;
 }

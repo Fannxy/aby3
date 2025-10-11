@@ -19,6 +19,7 @@ int efficient_shuffle(std::vector<sbMatrix>& T, int pIdx,
     block nextSeed = enc.mShareGen.mNextCommon.getSeed();
     size_t len = T.size();
     size_t unit_len = T[0].i64Size();
+   // std::cout<<"T[0].bitCount()"<<T[0].bitCount()<<std::endl;
 
     // generate the prev, next - correlated randomness.
     // 1 - generate the permutations.
@@ -31,11 +32,14 @@ int efficient_shuffle(std::vector<sbMatrix>& T, int pIdx,
     std::vector<i64Matrix> prev_maskZ(len);
     std::vector<i64Matrix> next_maskZ(len);
     for (size_t i = 0; i < len; i++) {
+        
         prev_maskZ[i].resize(unit_len, T[0].bitCount());
         next_maskZ[i].resize(unit_len, T[0].bitCount());
+       
         get_random_mask(pIdx, prev_maskZ[i], prevSeed);
         get_random_mask(pIdx, next_maskZ[i], nextSeed);
     }
+
 
     // get the random permutation.
     if (pIdx == 0) {
@@ -43,6 +47,7 @@ int efficient_shuffle(std::vector<sbMatrix>& T, int pIdx,
         std::vector<i64Matrix> maskB(len);
         std::vector<i64Matrix> maskA(len);
         for (size_t i = 0; i < len; i++) {
+        
             maskB[i].resize(unit_len, T[0].bitCount());
             maskA[i].resize(unit_len, T[0].bitCount());
             get_random_mask(pIdx, maskB[i], nextSeed);
@@ -222,6 +227,18 @@ int efficient_shuffle(std::vector<sbMatrix>& T, int pIdx,
             }
         }
     }
+
+    //DEBUG
+    // std::cout<<"Tres:"<<std::endl;
+    // for(size_t i=0; i<len; i++){
+    //     i64Matrix tmp(unit_len, 1);
+    //     enc.revealAll(runtime, Tres[i], tmp).get();
+    //     for(size_t j=0; j<unit_len; j++){
+    //         std::cout<<tmp(j, 0)<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+    // std::cout<<std::endl;
     return 0;
 }
 
@@ -384,6 +401,7 @@ int efficient_shuffle(aby3::sbMatrix &T, int pIdx, aby3::sbMatrix &Tres, aby3::S
 
     return 0;
 }
+
 
 // /**
 //  * The shuffle protocol accoring to

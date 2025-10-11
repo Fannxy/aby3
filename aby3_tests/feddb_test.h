@@ -12,3 +12,9 @@
 int oblivious_idx_select_test(oc::CLP &cmd);
 
 int genperm_test(oc::CLP &cmd);
+
+int feddb_shuffle_test(oc::CLP &cmd);
+
+int persist_test(oc::CLP &cmd);
+
+int index_agg_test(oc::CLP &cmd);

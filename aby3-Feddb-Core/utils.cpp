@@ -190,6 +190,7 @@ void plain_argsort(i64Matrix& v, i64Matrix& result){
     return ;
 }
 
+
 void permutate(int pIdx, si64Matrix &data, si64Matrix &res, std::vector<size_t> &permutation){
     size_t len = data.rows();
     for (size_t i = 0; i < len; i++) {
@@ -197,6 +198,26 @@ void permutate(int pIdx, si64Matrix &data, si64Matrix &res, std::vector<size_t> 
         if (new_pos < len) {
             res.mShares[0](new_pos, 0) = data.mShares[0](i, 0);
             res.mShares[1](new_pos, 0) = data.mShares[1](i, 0);
+        }
+    }
+    return ;
+}
+
+void permutate(int pIdx, std::vector<si64Matrix> &data, std::vector<si64Matrix> &res, std::vector<size_t> &permutation){
+    size_t len = data.size();
+    size_t unit_len = data[0].rows();
+
+    for (size_t i = 0; i < len; i++) {
+        res[i].resize(unit_len, 1);
+    }
+
+    for (size_t i = 0; i < len; i++) {
+        for(size_t j = 0; j < unit_len; j++) {
+            size_t new_pos = permutation[j];
+            if (new_pos < unit_len) {
+                res[i].mShares[0](new_pos, 0) = data[i].mShares[0](j, 0);
+                res[i].mShares[1](new_pos, 0) = data[i].mShares[1](j, 0);
+            }
         }
     }
     return ;
