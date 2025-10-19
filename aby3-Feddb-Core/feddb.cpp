@@ -132,7 +132,7 @@ void shuffle(int pIdx, std::vector<si64Matrix>& T, std::vector<si64Matrix>& Tres
 
     }
 
-void persist_plain(int pIdx, const std::string &table_name, aby3::i64Matrix &T){
+void persist_plain(int pIdx, const std::string &table_name, i64Matrix &T){
     std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
     std::ofstream outFile(filename);
@@ -153,8 +153,33 @@ void persist_plain(int pIdx, const std::string &table_name, aby3::i64Matrix &T){
 
     return;
 }
+
+void persist_plain(int pIdx, const std::string &table_name, std::vector<i64Matrix> &T){
+    std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
-void read_plain(int pIdx, const std::string &table_name, aby3::i64Matrix &T){
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Unable to open file " << filename << " for writing" << std::endl;
+        return;
+    }
+
+    int rows = T[0].rows();
+    outFile << "Matrix dimensions: " << rows << std::endl;
+
+    for(size_t i = 0; i < T.size(); i++){
+        outFile << "Matrix_" << i << " values:" << std::endl;
+        for (int j = 0; j < rows; j++) {
+            outFile << T[i](j, 0) << std::endl;
+        }
+    }
+
+    outFile.close();
+
+    return;
+}
+
+    
+void read_plain(int pIdx, const std::string &table_name, std::vector<i64Matrix> &T){
     std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
     std::ifstream inFile(filename);
@@ -166,10 +191,12 @@ void read_plain(int pIdx, const std::string &table_name, aby3::i64Matrix &T){
     std::string dummy;
     int rows;
     inFile >> dummy >> dummy >> rows;
-    T.resize(rows, 1);
-    inFile >> dummy >> dummy;
-    for (int i = 0; i < rows; i++) {
-        inFile >> T(i, 0);
+    for(size_t i=0; i<T.size(); i++){
+        T[i].resize(rows, 1);
+        inFile >> dummy >> dummy;
+        for (int j = 0; j < rows; j++) {
+            inFile >> T[i](j, 0);
+        }
     }
 
     inFile.close();
@@ -360,7 +387,7 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
         si64Matrix keycol,valcol;
         keycol.resize(rows, 1);
         valcol.resize(rows, 1);
-        //sorted
+        //sorted : acoording to idx
         for(int i=0; i<rows ;i++){
             i64 idx_i=idx(i, 0);
             keycol.mShares[0](i, 0) = data[0].mShares[0](idx_i, 0);
@@ -370,21 +397,6 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
             valcol.mShares[1](i, 0) = data[1].mShares[1](idx_i, 0);
             //valcol(i,0) = data[1](idx_i, 0);
         }
-
-        //DEBUG
-        // i64Matrix tmp_0(rows,1),tmp_1(rows,1);
-        // enc.revealAll(runtime, keycol, tmp_0).get();
-        // enc.revealAll(runtime, valcol, tmp_1).get();
-        // std::cout<<"sorted data: "<<std::endl;
-        // for(int i=0;i<rows;i++){
-        //     std::cout<<"keycol: "<<tmp_0(i,0)<<"(pidx:"<<pIdx<<") ";
-        // }
-        // std::cout<<std::endl;
-        // for(int i=0;i<rows;i++){
-        //     std::cout<<"valcol: "<<tmp_1(i,0)<<"(pidx:"<<pIdx<<") " ;
-        // }
-        // std::cout<<std::endl;
-        //sorted correct
 
         
         for(int i=0; i<(rows-1) ;i++){
@@ -410,12 +422,7 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
             eqFlag.mShares[0](0,0)=equalFlag.mShares[0](i+1,0);
             eqFlag.mShares[1](0,0)=equalFlag.mShares[1](i+1,0);
             not_eqFlag=oneShared-eqFlag;
-            //DEBUG
-            // i64Matrix not_eqFlag_plain(1,1);
-            // enc.revealAll(runtime, not_eqFlag, not_eqFlag_plain).get();
-            // std::cout<<"not_eqFlag: "<<not_eqFlag_plain(0,0)<<"(pidx:"<<pIdx<<") " ;
-            // std::cout<<std::endl;
-            //not_eqFlag_plain correct
+
             cipher_mul(pIdx, leftval, not_eqFlag, new_leftval, eval, enc, runtime);
 
             si64Matrix leftval_times_eqFlag(1,1);
@@ -429,14 +436,6 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
 
         }
 
-        //DEBUG
-        // i64Matrix tmp_1(rows,1);
-        // enc.revealAll(runtime, valcol, tmp_1).get();
-        // for(int i=0;i<rows;i++){
-        //     std::cout<<"new_valcol: "<<tmp_1(i,0)<<"(pidx:"<<pIdx<<") " ;
-        // }
-        // std::cout<<std::endl;
-        //new_valcol correct
 
         sbMatrix valcol_sb(rows,64), zeroFlag_sb(rows,1);
         i64Matrix zero(rows,1);
@@ -450,14 +449,6 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
         si64Matrix zeroFlag(rows,1);
         bool2arith(pIdx, zeroFlag_sb, zeroFlag, enc, eval, runtime);
 
-        //DEBUG
-        // i64Matrix tmp_2(rows,1);
-        // enc.revealAll(runtime, zeroFlag, tmp_2).get();
-        // for(int i=0;i<rows;i++){
-        //     std::cout<<"zeroFlag: "<<tmp_2(i,0)<<"(pidx:"<<pIdx<<") " ;
-        // }
-        // std::cout<<std::endl;
-        //zeroFlag correct
 
         std::vector<si64Matrix> res(3), shuffledRes(3);
         res[0]=keycol;
@@ -468,18 +459,6 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
         zeroFlag=shuffledRes[2];
         i64Matrix zeroFlag_plain(rows,1);
         enc.revealAll(runtime, zeroFlag, zeroFlag_plain).get();
-
-        //DEBUG
-        // i64Matrix res_0(rows,1),res_1(rows,1);
-        // enc.revealAll(runtime, shuffledRes[0], res_0).get();
-        // enc.revealAll(runtime, shuffledRes[1], res_1).get();
-        // for(int i=0;i<rows;i++){
-        //     std::cout<<"res_0: "<<res_0(i,0)<<"(pidx:"<<pIdx<<") ;" ;
-        //     std::cout<<"res_1: "<<res_1(i,0)<<"(pidx:"<<pIdx<<") ;" ;
-        //     std::cout<<"res_2: "<<zeroFlag_plain(i,0)<<"(pidx:"<<pIdx<<") ;" ;
-        // }
-        // std::cout<<std::endl;
-        //shuffledRes correct
 
         int resRows=0;
         for(int i=0;i<rows;i++){

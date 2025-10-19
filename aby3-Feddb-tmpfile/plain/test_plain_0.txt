@@ -1,5 +1,104 @@
 Matrix dimensions: 10
-Matrix values:
+Matrix_0 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_1 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_2 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_3 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_4 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_5 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_6 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_7 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_8 values:
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Matrix_9 values:
 0
 1
 2

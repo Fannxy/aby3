@@ -31,8 +31,9 @@ void shuffle(int pIdx, aby3::sbMatrix& T, aby3::sbMatrix &Tres,
 void shuffle(int pIdx, std::vector<aby3::si64Matrix>& T, std::vector<aby3::si64Matrix>& Tres,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
+//si64 & sb
 template<typename MatrixType>
-void persist_cipher(int pIdx, const std::string &table_name, MatrixType &T){
+void persist_cipher(int pIdx, const std::string &table_name, std::vector<MatrixType> &T){
     std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
     std::ofstream outFile(filename);
@@ -41,19 +42,19 @@ void persist_cipher(int pIdx, const std::string &table_name, MatrixType &T){
         return;
     }
     
-    int rows = T.rows();
-    //默认：n行1列
-    
-    outFile << "Matrix rows: " << rows  << std::endl;
+    int rows = T[0].rows();
+    outFile << "Matrix rows: " << rows << std::endl;
 
-    outFile << "Matrix shares[0]:" << std::endl;
+    for(size_t i = 0; i < T.size(); i++){
+        outFile << "Matrix_" << i << " shares[0]:" << std::endl;
     //T.mShares[0]和T.mShares[1]分别写入
-    for (int i = 0; i < rows; i++) {
-        outFile << T.mShares[0](i, 0) << " "<< std::endl;
-    }
-    outFile << "Matrix shares[1]:" << std::endl;
-    for (int i = 0; i < rows; i++) {
-        outFile << T.mShares[1](i, 0) << " "<< std::endl;
+        for (int j = 0; j < rows; j++) {
+            outFile << T[i].mShares[0](j, 0) << std::endl;
+        }
+        outFile << "Matrix_" << i << " shares[1]:" << std::endl;
+        for (int j = 0; j < rows; j++) {
+            outFile << T[i].mShares[1](j, 0) << std::endl;
+        }
     }
 
     outFile.close();
@@ -62,7 +63,7 @@ void persist_cipher(int pIdx, const std::string &table_name, MatrixType &T){
 }
 
 template<typename MatrixType>
-void read_cipher(int pIdx, const std::string &table_name, MatrixType &T){
+void read_cipher(int pIdx, const std::string &table_name, std::vector<MatrixType> &T){
     std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
     std::ifstream inFile(filename);
@@ -74,25 +75,26 @@ void read_cipher(int pIdx, const std::string &table_name, MatrixType &T){
     std::string dummy;
     int rows;
     inFile >> dummy >> dummy >> rows;  
-    T.resize(rows, 1);
-    
-    inFile >> dummy >> dummy; 
-    for (int i = 0; i < rows; i++) {
-        inFile >> T.mShares[0](i, 0);
-    }
-    
-    inFile >> dummy >> dummy;  
-    for (int i = 0; i < rows; i++) {
-        inFile >> T.mShares[1](i, 0);
+    for(size_t i = 0; i < T.size(); i++){
+        T[i].resize(rows, 1);
+        inFile >> dummy >> dummy;
+        for (int j = 0; j < rows; j++) {
+            inFile >> T[i].mShares[0](j, 0);
+        }
+
+        inFile >> dummy >> dummy;
+        for (int j = 0; j < rows; j++) {
+            inFile >> T[i].mShares[1](j, 0);
+        }
     }
 
     inFile.close();
     return;
 }
 
-void persist_plain(int pIdx, const std::string &table_name, aby3::i64Matrix &T);
+void persist_plain(int pIdx, const std::string &table_name, std::vector<aby3::i64Matrix> &T);
 
-void read_plain(int pIdx, const std::string &table_name, aby3::i64Matrix &T);
+void read_plain(int pIdx, const std::string &table_name, std::vector<aby3::i64Matrix> &T);
 
 void oblivious_idx_select(int pIdx, aby3::si64Matrix &v, aby3::si64Matrix &idx, aby3::si64Matrix &result,              
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);

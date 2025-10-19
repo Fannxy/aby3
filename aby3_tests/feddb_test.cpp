@@ -409,58 +409,142 @@ int persist_test(CLP &cmd){
     basic_setup((u64)role, ios, enc, eval, runtime);
 
     size_t TEST_SIZE = 10;
+    size_t UNIT_SIZE = TEST_SIZE;
     // generate the test data.
-    i64Matrix input_x(TEST_SIZE, 1);
+    std::vector<i64Matrix> input_x(TEST_SIZE);
     for (size_t i = 0; i < TEST_SIZE; i++) {
-        input_x(i, 0) = i;
+        input_x[i].resize(UNIT_SIZE, 1);
+        for (size_t j = 0; j < UNIT_SIZE; j++) {
+            input_x[i](j, 0) = j;
+        }
     }
 
     // persist_plain test
     persist_plain(role, "test_plain", input_x);
 
     // encrypt the inputs.
-    sbMatrix bsharedX(TEST_SIZE, 1);
-    if (role == 0) {
-        enc.localBinMatrix(runtime, input_x, bsharedX).get();
-    } else {
-        enc.remoteBinMatrix(runtime, bsharedX).get();
+    std::vector<sbMatrix> bsharedX(TEST_SIZE);
+    for (size_t i = 0; i < TEST_SIZE; i++) {
+        bsharedX[i].resize(UNIT_SIZE, 1);
+        if (role == 0) {
+            enc.localBinMatrix(runtime, input_x[i], bsharedX[i]).get();
+        } else {
+            enc.remoteBinMatrix(runtime, bsharedX[i]).get();
+        }
     }
     // persist_sbMatrix test
     persist_cipher(role, "test_sbMatrix", bsharedX);
 
-    si64Matrix sisharedX(TEST_SIZE, 1);
-    if (role == 0) {
-        enc.localIntMatrix(runtime, input_x, sisharedX).get();
-    } else {
-        enc.remoteIntMatrix(runtime, sisharedX).get();
+    std::vector<si64Matrix> sisharedX(TEST_SIZE);
+    for (size_t i = 0; i < TEST_SIZE; i++) {
+        sisharedX[i].resize(UNIT_SIZE, 1);
+        if (role == 0) {
+            enc.localIntMatrix(runtime, input_x[i], sisharedX[i]).get();
+        } else {
+            enc.remoteIntMatrix(runtime, sisharedX[i]).get();
+        }
     }
     // persist_si64Matrix test
     persist_cipher(role, "test_si64Matrix", sisharedX);
 
     // read the plain text
-    i64Matrix read_plain_x(TEST_SIZE, 1);
+    std::vector<i64Matrix> read_plain_x(TEST_SIZE);
     read_plain(role, "test_plain", read_plain_x);
+
     if (role == 0) {
-        check_result("Persist&Read Plain Test", read_plain_x, input_x);
+        bool check_flag = true;
+        for (size_t i = 0; i < TEST_SIZE; i++) {
+            for (size_t j = 0; j < UNIT_SIZE; j++) {
+                if (read_plain_x[i](j,0) != input_x[i](j, 0)) {
+                    check_flag = false; 
+                }
+            }
+
+
+        }
+        if (check_flag) {
+            debug_info("\033[32m Vector<i64Matrix> PRESIST&READ CHECK SUCCESS ! \033[0m\n");
+        } else {
+            debug_info("\033[31m Vector<i64Matrix> PRESIST&READ CHECK ERROR ! \033[0m\n");
+            debug_info("True result: \n");
+            for (size_t i = 0; i < TEST_SIZE; i++) {
+                debug_output_matrix(input_x[i]);
+            }
+            debug_info("Func result: \n");
+            for (size_t i = 0; i < TEST_SIZE; i++) {
+                debug_output_matrix(read_plain_x[i]);
+            }
+        }
     }
     
     // read the sbMatrix
-    sbMatrix read_sbMatrix_x(TEST_SIZE, 1);
+    std::vector<sbMatrix> read_sbMatrix_x(TEST_SIZE);
     read_cipher(role, "test_sbMatrix", read_sbMatrix_x);
-    i64Matrix sbMatrix_test(TEST_SIZE, 1);
-    enc.revealAll(runtime, read_sbMatrix_x, sbMatrix_test).get();
-  
+    std::vector<i64Matrix> sbMatrix_test(TEST_SIZE);
+    for(size_t i=0; i<TEST_SIZE; i++){
+        sbMatrix_test[i].resize(UNIT_SIZE, 1);
+        enc.revealAll(runtime, read_sbMatrix_x[i], sbMatrix_test[i]).get();
+    }
+
     if (role == 0) {
-        check_result("Persist&Read sbMatrix Test", sbMatrix_test, input_x);
+        bool check_flag = true;
+        for (size_t i = 0; i < TEST_SIZE; i++) {
+            for (size_t j = 0; j < UNIT_SIZE; j++) {
+                if (sbMatrix_test[i](j,0) != input_x[i](j, 0)) {
+                    check_flag = false; 
+                }
+            }
+
+
+        }
+        if (check_flag) {
+            debug_info("\033[32m Vector<sb64Matrix> PRESIST&READ CHECK SUCCESS ! \033[0m\n");
+        } else {
+            debug_info("\033[31m Vector<sb64Matrix> PRESIST&READ CHECK ERROR ! \033[0m\n");
+            debug_info("True result: \n");
+            for (size_t i = 0; i < TEST_SIZE; i++) {
+                debug_output_matrix(input_x[i]);
+            }
+            debug_info("Func result: \n");
+            for (size_t i = 0; i < TEST_SIZE; i++) {
+                debug_output_matrix(sbMatrix_test[i]);
+            }
+        }
     }
 
     // read the si64Matrix
-    si64Matrix read_si64Matrix_x(TEST_SIZE, 1);
+    std::vector<si64Matrix> read_si64Matrix_x(TEST_SIZE);
     read_cipher(role, "test_si64Matrix", read_si64Matrix_x);
-    i64Matrix si64Matrix_test(TEST_SIZE, 1);
-    enc.revealAll(runtime, read_si64Matrix_x, si64Matrix_test).get();
+    std::vector<i64Matrix> si64Matrix_test(TEST_SIZE);
+    for(size_t i=0; i<TEST_SIZE; i++){
+        si64Matrix_test[i].resize(UNIT_SIZE, 1);
+        enc.revealAll(runtime, read_si64Matrix_x[i], si64Matrix_test[i]).get();
+    }
+
     if (role == 0) {
-        check_result("Persist&Read si64Matrix Test", si64Matrix_test, input_x);
+        bool check_flag = true;
+        for (size_t i = 0; i < TEST_SIZE; i++) {
+            for (size_t j = 0; j < UNIT_SIZE; j++) {
+                if (si64Matrix_test[i](j,0) != input_x[i](j, 0)) {
+                    check_flag = false; 
+                }
+            }
+
+
+        }
+        if (check_flag) {
+            debug_info("\033[32m Vector<si64Matrix> PRESIST&READ CHECK SUCCESS ! \033[0m\n");
+        } else {
+            debug_info("\033[31m Vector<si64Matrix> PRESIST&READ CHECK ERROR ! \033[0m\n");
+            debug_info("True result: \n");
+            for (size_t i = 0; i < TEST_SIZE; i++) {
+                debug_output_matrix(input_x[i]);
+            }
+            debug_info("Func result: \n");
+            for (size_t i = 0; i < TEST_SIZE; i++) {
+                debug_output_matrix(si64Matrix_test[i]);
+            }
+        }
     }
     
     return 0;
