@@ -43,7 +43,7 @@
     Install mininet by:
 
     ```bash
-    git clone git@github.com:mininet/mininet.git
+    git clone git@github.com:Fannxy/mininet.git
     cp ./install_wo_sudo.sh ./mininet/util/
     ```
     
@@ -53,7 +53,8 @@
     cd ./mininet/
     ./util/install.sh -a
     ```
-
+    (You can use `tmux` since this will take a while.)
+   
     Then, install and enable the ``openvswitch`` by:
 
     ```bash
@@ -107,6 +108,7 @@
 
     Install the requirement from opensource version: https://docs.openvswitch.org/en/latest/intro/install/general/
 
+If failed! see `## Problems with BTF Errors`, which records some of my previous attempts,  and ask for GPT with help :) 233333. This problem is highly correlated with your physical nodes so...
 
 ## Define customized ssh-based mininet environment
 
@@ -163,11 +165,11 @@ Note that the version currently being testes is v3.2.0
 2. Using the following commands to maunally start the vswitch.
 
     # 创建数据库目录
-    sudo mkdir -p /usr/local/etc/openvswitch
-    sudo mkdir -p /usr/local/var/run/openvswitch
+    mkdir -p /usr/local/etc/openvswitch
+    mkdir -p /usr/local/var/run/openvswitch
 
     # 初始化 OVS 数据库
-    sudo ovsdb-tool create /usr/local/etc/openvswitch/conf.db vswitchd/vswitch.ovsschema
+    ovsdb-tool create /usr/local/etc/openvswitch/conf.db vswitchd/vswitch.ovsschema
 
     # 启动 ovsdb-server
     ovsdb-server /usr/local/etc/openvswitch/conf.db --remote=punix:/usr/local/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile=/usr/local/var/run/openvswitch/ovsdb-server.pid --detach --log-file=/var/log/openvswitch/ovsdb-server.log
