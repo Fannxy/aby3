@@ -160,27 +160,32 @@ In this case, we can manually start the ovs vswitch to bypass the BTF problems.
 
 1. Install the ovs through the source code, following: https://docs.openvswitch.org/en/latest/intro/install/general/
 
-Note that the version currently being testes is v3.2.0
+!!! Note that the version currently being tests is v3.2.0! Then follow the commands in the previous doc to build from source till `make install`.
 
-2. Using the following commands to maunally start the vswitch.
+2. Try to start `ovs` through the Starting recommendations in the previous doc. If you succeed, congratulations!
 
-    # 创建数据库目录
+You can use `mn --test pingall` to test whether you succeed or not!
+
+
+4. If failed, we can also use the following commands to maunally start the vswitch (succeeded once, but I do not know why...) In this case, ask GPT for detailed help!
+
+    创建数据库目录
     mkdir -p /usr/local/etc/openvswitch
     mkdir -p /usr/local/var/run/openvswitch
 
-    # 初始化 OVS 数据库
+    初始化 OVS 数据库
     ovsdb-tool create /usr/local/etc/openvswitch/conf.db vswitchd/vswitch.ovsschema
 
-    # 启动 ovsdb-server
+    启动 ovsdb-server
     ovsdb-server /usr/local/etc/openvswitch/conf.db --remote=punix:/usr/local/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile=/usr/local/var/run/openvswitch/ovsdb-server.pid --detach --log-file=/var/log/openvswitch/ovsdb-server.log
 
-    # 初始化 OVS 控制数据库（只需执行一次）
+    初始化 OVS 控制数据库（只需执行一次）
     ovs-vsctl --db=unix:/usr/local/var/run/openvswitch/db.sock --no-wait init
 
-    # 启动 ovs-vswitchd（使用 netdev 用户态 datapath）
+    启动 ovs-vswitchd（使用 netdev 用户态 datapath）
     ovs-vswitchd --pidfile --detach --log-file=/var/log/openvswitch/ovs-vswitchd.log --unixctl=/usr/local/var/run/openvswitch/vswitchd.sock
 
-3. In this case, using the following code to define the virtual switch.
+5. In this case, using the following code to define the virtual switch.
 
     ```
     s1 = net.addSwitch('s1', datapath='user', cls=OVSSwitch)
