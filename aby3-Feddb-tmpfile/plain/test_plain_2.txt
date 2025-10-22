@@ -1,4 +1,5 @@
-Matrix dimensions: 10
+Matrix cols: 10
+Matrix rows: 10
 Matrix_0 values:
 0
 1

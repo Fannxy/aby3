@@ -142,8 +142,11 @@ void persist_plain(int pIdx, const std::string &table_name, std::vector<i64Matri
         return;
     }
 
+    int cols = T.size();
+    outFile << "Matrix cols: " << cols << std::endl;
     int rows = T[0].rows();
-    outFile << "Matrix dimensions: " << rows << std::endl;
+    outFile << "Matrix rows: " << rows << std::endl;
+
 
     for(size_t i = 0; i < T.size(); i++){
         outFile << "Matrix_" << i << " values:" << std::endl;
@@ -168,6 +171,10 @@ void read_plain(int pIdx, const std::string &table_name, std::vector<i64Matrix> 
     }
 
     std::string dummy;
+    int cols;
+    inFile >> dummy >> dummy >> cols;
+    T.resize(cols);
+    
     int rows;
     inFile >> dummy >> dummy >> rows;
     for(size_t i=0; i<T.size(); i++){

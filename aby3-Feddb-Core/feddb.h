@@ -42,6 +42,9 @@ void persist_cipher(int pIdx, const std::string &table_name, std::vector<MatrixT
         return;
     }
     
+    
+    int cols = T.size();
+    outFile << "Matrix cols: " << cols << std::endl;
     int rows = T[0].rows();
     outFile << "Matrix rows: " << rows << std::endl;
 
@@ -73,6 +76,10 @@ void read_cipher(int pIdx, const std::string &table_name, std::vector<MatrixType
     }
 
     std::string dummy;
+    int cols;
+    inFile >> dummy >> dummy >> cols;
+    T.resize(cols);
+    
     int rows;
     inFile >> dummy >> dummy >> rows;  
     for(size_t i = 0; i < T.size(); i++){
