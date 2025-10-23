@@ -34,7 +34,7 @@ void shuffle(int pIdx, std::vector<aby3::si64Matrix>& T, std::vector<aby3::si64M
 //si64 & sb
 template<typename MatrixType>
 void persist_cipher(int pIdx, const std::string &table_name, std::vector<MatrixType> &T){
-    std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".txt";
+    std::string filename = "./aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
     std::ofstream outFile(filename);
     if (!outFile.is_open()) {
@@ -67,7 +67,7 @@ void persist_cipher(int pIdx, const std::string &table_name, std::vector<MatrixT
 
 template<typename MatrixType>
 void read_cipher(int pIdx, const std::string &table_name, std::vector<MatrixType> &T){
-    std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".txt";
+    std::string filename = "./aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
     std::ifstream inFile(filename);
     if (!inFile.is_open()) {

@@ -13,6 +13,7 @@ def getLibOTe(install, prefix, par,libOTe, boost, relic):
     os.chdir(cwd + "/libOTe")
     os.system("git checkout cf537295c47a3924c13030a9b796cee9d6ebeace ")
     os.system("git submodule update ")
+    os.system("cd ./out/macoro/; git checkout cfd155c11bd52c000c0c1afd6f03ed247c49610e; cd ../../")
 
     osStr = (platform.system())
     

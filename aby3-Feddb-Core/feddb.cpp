@@ -134,7 +134,7 @@ void shuffle(int pIdx, std::vector<si64Matrix>& T, std::vector<si64Matrix>& Tres
 
 
 void persist_plain(int pIdx, const std::string &table_name, std::vector<i64Matrix> &T){
-    std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
+    std::string filename = "./aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
     std::ofstream outFile(filename);
     if (!outFile.is_open()) {
@@ -162,7 +162,7 @@ void persist_plain(int pIdx, const std::string &table_name, std::vector<i64Matri
 
     
 void read_plain(int pIdx, const std::string &table_name, std::vector<i64Matrix> &T){
-    std::string filename = "/root/GORAM-ABY3/aby3/aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
+    std::string filename = "./aby3-Feddb-tmpfile/plain/" + table_name + "_" + std::to_string(pIdx) + ".txt";
     
     std::ifstream inFile(filename);
     if (!inFile.is_open()) {

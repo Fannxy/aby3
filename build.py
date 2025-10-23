@@ -71,6 +71,8 @@ def Build(mainArgs, cmakeArgs,install, prefix, par):
         cmakeArgs.append(f"-DDEBUG_FILE=\"{debug_file}\"")
 
     cmakeArgs.append("-DCMAKE_BUILD_TYPE={0}".format(buildType))
+    ##ymn
+    # cmakeArgs.append("-DCMAKE_CXX_STANDARD=20")
     
     if "--MPI" in mainArgs:
         cmakeArgs.append("-DMPI_APP=ON")

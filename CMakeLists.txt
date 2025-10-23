@@ -9,9 +9,11 @@ if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
 
 	else()
 
-	
+	#ymn
 		set(CMAKE_C_FLAGS "-Wall  -maes -msse2 -msse4.1 -msse3 -mavx -mavx2 -mpclmul -Wfatal-errors -pthread -Wno-ignored-attributes -Wno-int-in-bool-context")
 		set(CMAKE_CXX_FLAGS  "${CMAKE_C_FLAGS}  -std=c++14")
+		#set(CMAKE_C_FLAGS "-Wall  -maes -msse2 -msse4.1 -msse3 -mavx -mavx2 -mpclmul -Wfatal-errors -pthread -Wno-ignored-attributes -Wno-int-in-bool-context")
+		#set(CMAKE_CXX_FLAGS  "${CMAKE_C_FLAGS}  -std=c++20")
 
 	
 		# Select flags.
