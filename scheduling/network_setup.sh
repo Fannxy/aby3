@@ -1,5 +1,6 @@
 # start network and set the bandwidth
 bw_list="$1 $2 $3"
+latency_list="$4 $5 $6"
 mn -c
 root_folder=/root/aby3
 log_file=${root_folder}/network_setup.log
@@ -17,7 +18,7 @@ fi
 
 cd ${root_folder}/Net/mininet;
 # tmux new-session -d -s $MININET_SESSION "python ./examples/p2p_3pc_net.py --ip 10.1.0.12 --bw $bw_list; bash"
-tmux send-keys -t $MININET_SESSION "cd ${root_folder}/Net/mininet; python ./examples/p2p_3pc_net.py --ip 10.233.115.94 --bw $bw_list; bash" C-m
+tmux send-keys -t $MININET_SESSION "cd ${root_folder}/Net/mininet; python ./examples/p2p_3pc_net.py --ip 10.233.115.94 --bw $bw_list --latency $latency_list; bash" C-m
 
 # wait for the network to be set up
 # 等待网络设置完成

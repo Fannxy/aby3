@@ -9,7 +9,7 @@ num_parties=3
 node_id=(11 12 13)
 server_host="aby30 aby31 aby32"
 parallelism_limit=96
-min_parallelism=16
+min_parallelism=8
 
 # prepare the test cpp.
 cp ${root_folder}/frontend/main.test ${root_folder}/frontend/main.cpp
@@ -24,6 +24,7 @@ assignment_strategy_list=("roundrole" "baseline")
 
 net_config_list=(${NETNAME})
 data_size_micro=1416810830
+# data_size_micro=33554432
 if [ $NETNAME = "Homo-10G" ]; then
     data_size_micro=1416810830
 fi
@@ -31,8 +32,8 @@ if [[ $NETNAME == "Hetero-"* ]]; then
     data_size_micro=1416810830
 fi
 
-# micro_benchmarks=("ff-mul" "ib-mul" "a2b" "b2a-single" "shuffle")
-micro_benchmarks=("ff-mul" "ib-mul")
+micro_benchmarks=("ib-mul" "a2b" "b2a-single" "shuffle" "fake_test")
+# micro_benchmarks=("ff-mul" "ib-mul")
 # micro_benchmarks=("shuffle")
 for task in ${micro_benchmarks[@]}; do
     for net_config in ${net_config_list[@]}; do
@@ -46,7 +47,8 @@ for task in ${micro_benchmarks[@]}; do
     done
 done
 
-DIR="/ssdshare/fanxy/roundrole1/Result"
+DIR="/ssdshare/fanxy/ndss_revi2/Result"
+CONFIG_DIR="/ssdshare/fanxy/ndss_revi2/Config"
 
 if [ ! -d "$DIR" ]; then
   mkdir -p "$DIR"
@@ -55,6 +57,15 @@ else
   echo "目录 $DIR 已存在。"
 fi
 
-cp -r ${root_folder}/scheduling/Record_test /ssdshare/fanxy/roundrole1/Result
-mv /ssdshare/fanxy/roundrole1/Result/Record_test /ssdshare/fanxy/roundrole1/Result/Record_${NETNAME}
+if [ ! -d "$CONFIG_DIR" ]; then
+  mkdir -p "$CONFIG_DIR"
+  echo "目录 $CONFIG_DIR 已创建。"
+else
+  echo "目录 $CONFIG_DIR 已存在。"
+fi
+
+cp -r ${root_folder}/scheduling/Record_test ${DIR}/Record_${NETNAME}
 rm -rf ${root_folder}/scheduling/Record_test
+
+cp -r ${root_folder}/scheduling/Result/${NETNAME} ${CONFIG_DIR}/${NETNAME}
+rm -rf ${root_folder}/scheduling/Result/${NETNAME}

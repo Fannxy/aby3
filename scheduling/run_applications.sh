@@ -2,17 +2,34 @@ root_folder=/root/aby3
 
 # rm -rf ${root_folder}/scheduling/Result
 
-NETWORK_NAME="Homo-100M"
-${root_folder}/scheduling/network_setup.sh 100 100 100
+NETWORK_NAME="Homo-100M-100ms"
+${root_folder}/scheduling/network_setup.sh 100 100 100 25ms 25ms 25ms
 wait;
 ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
 
-NETWORK_NAME="Homo-1G"
-${root_folder}/scheduling/network_setup.sh 1050 1050 1050
+NETWORK_NAME="Homo-100M-50ms"
+${root_folder}/scheduling/network_setup.sh 100 100 100 12.5ms 12.5ms 12.5ms
 wait;
 ${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
 
-mv /ssdshare/fanxy/roundrole1/Result /ssdshare/fanxy/roundrole1/Result_basic
+NETWORK_NAME="Homo-100M-10ms"
+${root_folder}/scheduling/network_setup.sh 100 100 100 2.5ms 2.5ms 2.5ms
+wait;
+${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
+
+
+NETWORK_NAME="Homo-100M-1ms"
+${root_folder}/scheduling/network_setup.sh 100 100 100 0.25ms 0.25ms 0.25ms
+wait;
+${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
+
+
+NETWORK_NAME="Homo-100M-0.1ms"
+${root_folder}/scheduling/network_setup.sh 100 100 100 0.1us 0.1us 0.1us
+wait;
+${root_folder}/scheduling/benchmark_mininet.sh ${NETWORK_NAME}
+
+# mv /ssdshare/fanxy/roundrole1/Result /ssdshare/fanxy/roundrole1/Result_basic
 
 # NETWORK_NAME="Homo-10G"
 # ${root_folder}/scheduling/network_setup.sh 10000 10000 10000

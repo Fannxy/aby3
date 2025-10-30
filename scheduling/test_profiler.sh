@@ -17,7 +17,7 @@ num_parties=3
 server_host="aby30 aby31 aby32"
 get_bandwidth_time=2
 
-fitting_length=16
+fitting_length=8
 fitting_step=2048576
 complexity="n"
 
