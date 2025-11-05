@@ -234,3 +234,38 @@ void permutate(int pIdx, si64Matrix &data, si64Matrix &res, i64Matrix  &permutat
     }
     return ;
 }
+
+// void set_null_share(int pIdx, si64Matrix &res, Sh3Encryptor& enc,Sh3Evaluator& eval, Sh3Runtime& runtime){
+//     size_t len = res.rows();
+//     i64Matrix null_value(len, 1);
+//     //取i64的最大值
+//     for(size_t i=0; i<len; i++){
+//         null_value(i, 0) = std::numeric_limits<i64>::max();
+//     }
+
+//     if(pIdx==0){
+//         enc.localIntMatrix(runtime, null_value, res).get();
+//     }
+//     else{
+//         enc.remoteIntMatrix(runtime, res).get();
+//     }
+    
+//     return ;
+// }
+
+void set_const_share(int pIdx, i64 const_value, si64Matrix &res, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+    size_t len = res.rows();
+    i64Matrix const_value_matrix(len, 1);
+    for(size_t i=0; i<len; i++){
+        const_value_matrix(i, 0) = const_value;
+    }
+    
+    if(pIdx==0){
+        enc.localIntMatrix(runtime, const_value_matrix, res).get();
+    }
+    else{
+        enc.remoteIntMatrix(runtime, res).get();
+    }
+    
+    return ;
+}

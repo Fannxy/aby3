@@ -1,5 +1,5 @@
 # compile the main.
-cp ./frontend/main.test ./frontend/main.cpp
+cp ./frontend/main0.test ./frontend/main.cpp
 current_path=$(pwd)
 debugFile="${current_path}/debug.txt"
 graphFolder="${current_path}/aby3-GORAM/data/"
@@ -11,7 +11,7 @@ for pfile in ./party-*.txt; do
     rm ${pfile};
 done
 
-./Eval/graph_test.sh
+#./Eval/graph_test.sh
 
 # # synchronize with others
 # scp ./out/build/linux/frontend/frontend aby31:~/aby3/out/build/linux/frontend/ &

@@ -6,6 +6,7 @@
 #include "../aby3-GORAM-Core/Shuffle.h"
 #include "../aby3/sh3/Sh3Converter.h"
 #include "../aby3/aby3-Feddb-Core/genperm.h"
+#include <cmath>
 
 
 
@@ -109,4 +110,45 @@ void oblivious_idx_select(int pIdx, aby3::si64Matrix &v, aby3::si64Matrix &idx, 
 void index_agg(int pIdx, aby3::si64Matrix &equalFlag, aby3::i64Matrix &idx,std::vector<aby3::si64Matrix> &data,std::vector<aby3::si64Matrix> &finalRes,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
+void group_by_common(int pIdx, aby3::si64Matrix &key, aby3::si64Matrix &val, 
+    aby3::si64Matrix &key_g, aby3::si64Matrix &val_g, aby3::si64Matrix &e, aby3::si64Matrix &perm_GN, aby3::si64Matrix &key_GN, aby3::si64Matrix &key_out,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void group_by_common_without_val(int pIdx, aby3::i64Matrix &key, 
+    aby3::si64Matrix &key_g, aby3::si64Matrix &e, aby3::si64Matrix &perm_GN, aby3::si64Matrix &key_GN, aby3::si64Matrix &key_out,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void group_count(int pIdx, aby3::si64Matrix &key, 
+    aby3::si64Matrix &key_out, aby3::si64Matrix &c, 
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void group_sum(int pIdx, aby3::si64Matrix &key, aby3::si64Matrix &val, 
+    aby3::si64Matrix &key_out, aby3::si64Matrix &sum,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void group_max(int pIdx, aby3::si64Matrix &key, aby3::si64Matrix &val, 
+    aby3::si64Matrix &key_out, aby3::si64Matrix &max,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void group_min(int pIdx, aby3::si64Matrix &key, aby3::si64Matrix &val, 
+    aby3::si64Matrix &key_out, aby3::si64Matrix &min,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void augment_table(int pIdx, std::vector<aby3::si64Matrix> &T_1, std::vector<aby3::si64Matrix> &T_2,
+    std::vector<aby3::si64Matrix> &T_1_auged, std::vector<aby3::si64Matrix> &T_2_auged,  
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void oblivious_expand(int pIdx, std::vector<aby3::si64Matrix> &T, std::vector<aby3::si64Matrix> &A, aby3::i64 tid,
+    aby3::i64Matrix &s_plain,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void oblivious_distribute(int pIdx, std::vector<aby3::si64Matrix> &T_prime, aby3::sbMatrix &flag, aby3::si64Matrix &fx, aby3::i64Matrix &s_plain,
+    std::vector<aby3::si64Matrix> &A, aby3::si64Matrix &flag_sorted_auged,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void align_table(int pIdx, std::vector<aby3::si64Matrix> &T, std::vector<aby3::si64Matrix> &T_aligned,
+        aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void join(int pIdx, std::vector<aby3::si64Matrix> &T_1, std::vector<aby3::si64Matrix> &T_2, std::vector<aby3::si64Matrix> &T_joined,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 #endif

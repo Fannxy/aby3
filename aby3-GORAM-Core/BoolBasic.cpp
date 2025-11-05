@@ -29,8 +29,11 @@ void bool_cipher_lt(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
     auto cir = lib.int_int_lt(bitSize, bitSize);
 
     binEng.setCir(cir, i64Size, eval.mShareGen);
-    binEng.setInput(0, sharedB);
-    binEng.setInput(1, sharedA);
+    // binEng.setInput(0, sharedB);
+    // binEng.setInput(1, sharedA);
+    //ymn
+    binEng.setInput(0, sharedA);
+    binEng.setInput(1, sharedB);
 
     auto dep = binEng.asyncEvaluate(runtime).then([&](Sh3Task self) {
         res.resize(i64Size, 1);

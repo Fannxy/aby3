@@ -178,3 +178,30 @@ void arith_cipher_max_min_split(int pIdx, aby3::si64Matrix &sharedA, aby3::si64M
 
     return;
 }
+
+//ymn
+void compare_consecutive_rows_arith(int pIdx, aby3::si64Matrix &matrix, aby3::sbMatrix &eq_result,
+                     aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime) {
+    size_t num_rows = matrix.rows();
+    if (num_rows < 2) {
+        eq_result.resize(0, 1);
+        return;
+    }
+    
+    size_t num_comparisons = num_rows - 1;
+    
+    // 创建两个子矩阵：行 i (0 到 n-2) 和 行 i+1 (1 到 n-1)
+    aby3::si64Matrix rows_i(num_comparisons, 1);
+    aby3::si64Matrix rows_i_plus_1(num_comparisons, 1);
+    
+    // block(行起始索引, 列起始索引, 行数, 列数)
+    rows_i.mShares[0] = matrix.mShares[0].block(0, 0, num_comparisons, 1);
+    rows_i.mShares[1] = matrix.mShares[1].block(0, 0, num_comparisons, 1);
+    rows_i_plus_1.mShares[0] = matrix.mShares[0].block(1, 0, num_comparisons, 1);
+    rows_i_plus_1.mShares[1] = matrix.mShares[1].block(1, 0, num_comparisons, 1);
+    
+    // 比较连续行
+    cipher_eq(pIdx, rows_i, rows_i_plus_1, eq_result, eval, runtime);
+    
+    return;
+}

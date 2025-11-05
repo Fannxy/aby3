@@ -1125,6 +1125,110 @@ int odd_even_merge(aby3::si64Matrix& data1, aby3::si64Matrix& data2, aby3::si64M
     return 0;
 }
 
+int odd_even_merge_sort(aby3::si64Matrix& data, aby3::si64Matrix& res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+    
+    size_t n = data.rows();
+    
+    if(n <= 1){
+        res.resize(n, 1);
+        for(size_t i = 0; i < n; i++){
+            res.mShares[0](i, 0) = data.mShares[0](i, 0);
+            res.mShares[1](i, 0) = data.mShares[1](i, 0);
+        }
+        return 0;
+    }
+    
+    if(n == 2){
+        si64Matrix data1(1, 1), data2(1, 1);
+        data1.mShares[0](0, 0) = data.mShares[0](0, 0);
+        data1.mShares[1](0, 0) = data.mShares[1](0, 0);
+        data2.mShares[0](0, 0) = data.mShares[0](1, 0);
+        data2.mShares[1](0, 0) = data.mShares[1](1, 0);
+        
+        odd_even_merge(data1, data2, res, pIdx, enc, eval, runtime);
+        
+        return 0;
+    }
+    
+    size_t mid = n / 2;
+    size_t left_size = mid;
+    size_t right_size = n - mid;
+    
+    si64Matrix left(left_size, 1);
+    for(size_t i = 0; i < left_size; i++){
+        left.mShares[0](i, 0) = data.mShares[0](i, 0);
+        left.mShares[1](i, 0) = data.mShares[1](i, 0);
+    }
+    
+    si64Matrix right(right_size, 1);
+    for(size_t i = 0; i < right_size; i++){
+        right.mShares[0](i, 0) = data.mShares[0](mid + i, 0);
+        right.mShares[1](i, 0) = data.mShares[1](mid + i, 0);
+    }
+    
+    si64Matrix left_sorted;
+    odd_even_merge_sort(left, left_sorted, pIdx, enc, eval, runtime);
+    
+    si64Matrix right_sorted;
+    odd_even_merge_sort(right, right_sorted, pIdx, enc, eval, runtime);
+    
+    odd_even_merge(left_sorted, right_sorted, res, pIdx, enc, eval, runtime);
+    
+    return 0;
+}
+
+int odd_even_merge_sort(aby3::sbMatrix& data, aby3::sbMatrix& res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+    
+    size_t n = data.rows();
+    
+    if(n <= 1){
+        res.resize(n, 64);
+        for(size_t i = 0; i < n; i++){
+            res.mShares[0](i, 0) = data.mShares[0](i, 0);
+            res.mShares[1](i, 0) = data.mShares[1](i, 0);
+        }
+        return 0;
+    }
+    
+    if(n == 2){
+        sbMatrix data1(1, 64), data2(1, 64);
+        data1.mShares[0](0, 0) = data.mShares[0](0, 0);
+        data1.mShares[1](0, 0) = data.mShares[1](0, 0);
+        data2.mShares[0](0, 0) = data.mShares[0](1, 0);
+        data2.mShares[1](0, 0) = data.mShares[1](1, 0);
+        
+        odd_even_merge(data1, data2, res, pIdx, enc, eval, runtime);
+        
+        return 0;
+    }
+    
+    size_t mid = n / 2;
+    size_t left_size = mid;
+    size_t right_size = n - mid;
+    
+    sbMatrix left(left_size, 64);
+    for(size_t i = 0; i < left_size; i++){
+        left.mShares[0](i, 0) = data.mShares[0](i, 0);
+        left.mShares[1](i, 0) = data.mShares[1](i, 0);
+    }
+    
+    sbMatrix right(right_size, 64);
+    for(size_t i = 0; i < right_size; i++){
+        right.mShares[0](i, 0) = data.mShares[0](mid + i, 0);
+        right.mShares[1](i, 0) = data.mShares[1](mid + i, 0);
+    }
+    
+    sbMatrix left_sorted;
+    odd_even_merge_sort(left, left_sorted, pIdx, enc, eval, runtime);
+    
+    sbMatrix right_sorted;
+    odd_even_merge_sort(right, right_sorted, pIdx, enc, eval, runtime);
+    
+    odd_even_merge(left_sorted, right_sorted, res, pIdx, enc, eval, runtime);
+    
+    return 0;
+}
+
 int odd_even_multi_merge(std::vector<aby3::si64Matrix> &data, aby3::si64Matrix& sorted_res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
 
     int k = data.size();

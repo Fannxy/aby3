@@ -341,6 +341,84 @@ void genPerm(int pIdx, si64Matrix &k, si64Matrix &perm, Sh3Encryptor& enc, Sh3Ev
     return;
 }
 
+void concat_k_v(int pIdx, sbMatrix& k, sbMatrix& v, sbMatrix& res){
+
+    //assume k、v less than 32bit
+    for(size_t i=0;i<k.rows();i++){
+        res.mShares[0](i, 0) = (k.mShares[0](i, 0) << 32) | (v.mShares[0](i, 0)&0xFFFFFFFF);
+        res.mShares[1](i, 0) = (k.mShares[1](i, 0) << 32) | (v.mShares[1](i, 0)&0xFFFFFFFF);
+    }
+    return;
+}
+
+void genPerm_kv(int pIdx, si64Matrix &k,si64Matrix &v, si64Matrix &perm, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+    int n = k.rows();
+
+    sbMatrix k_bool(n,64);
+    arith2bool(pIdx, k, k_bool, enc, eval, runtime);
+    sbMatrix v_bool(n,64);
+    arith2bool(pIdx, v, v_bool, enc, eval, runtime);
+
+    //k和v拼接
+    sbMatrix key_concat(n,64);
+    concat_k_v(pIdx, k_bool, v_bool, key_concat);
+
+    si64Matrix k_0(n,1);
+    getBitKey(pIdx, key_concat, 0, k_0, enc, eval, runtime);
+    
+    si64Matrix pre_perm(n,1);
+    genBitPerm(pIdx, k_0, pre_perm, enc, eval, runtime);
+
+    for(int d=1;d<64;d++){
+        si64Matrix k_j(n,1),k_j_prime(n,1);
+        getBitKey(pIdx, key_concat, d, k_j, enc, eval, runtime);
+        //DEBUG
+        // i64Matrix k_j_plain(n,1);
+        // enc.revealAll(runtime, k_j, k_j_plain).get();
+        // std::cout << "k_j: " << std::endl;
+        // for(size_t i=0;i<n;i++){
+        //     std::cout << k_j_plain(i,0) << " ";
+        // }
+        // std::cout << std::endl;
+        //----k_j correct
+        applyPerm(pIdx, pre_perm, k_j,k_j_prime, enc, eval, runtime);
+        //DEBUG
+        // i64Matrix k_j_prime_plain(n,1);
+        // enc.revealAll(runtime, k_j_prime, k_j_prime_plain).get();
+        // std::cout <<"d: " << d << " k_j_prime: " << std::endl;
+        // for(size_t i=0;i<n;i++){
+        //     std::cout << k_j_prime_plain(i,0) << " ";
+        // }
+        // std::cout << std::endl;
+        //----k_j_prime correct
+
+        si64Matrix next_perm(n,1);
+        genBitPerm(pIdx, k_j_prime, next_perm, enc, eval, runtime);
+        //DEBUG
+        // i64Matrix next_perm_plain(n,1);
+        // enc.revealAll(runtime, next_perm, next_perm_plain).get();
+        // std::cout << "next_perm: " << std::endl;
+        // for(size_t i=0;i<n;i++){
+        //     std::cout << next_perm_plain(i,0) << " ";
+        // }
+        // std::cout << std::endl;
+        //----next_perm correct
+        composePerm(pIdx, pre_perm, next_perm, perm, enc, eval, runtime);
+        //DEBUG
+        // i64Matrix perm_plain(n,1);
+        // enc.revealAll(runtime, perm, perm_plain).get();
+        // std::cout << "perm: " << std::endl;
+        // for(size_t i=0;i<n;i++){
+        //     std::cout << perm_plain(i,0) << " ";
+        // }
+        // std::cout << std::endl;
+        pre_perm=perm;
+    }
+    
+    return;
+}
+
+
 
 
 

@@ -26,4 +26,8 @@ void permutate(int pIdx, std::vector<aby3::si64Matrix> &data, std::vector<aby3::
 
 void permutate(int pIdx, aby3::si64Matrix &data, aby3::si64Matrix &res, aby3::i64Matrix  &permutation);
 
+//void set_null_share(int pIdx, aby3::si64Matrix &res, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void set_const_share(int pIdx, aby3::i64 const_value, aby3::si64Matrix &res, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
 #endif

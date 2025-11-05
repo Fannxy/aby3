@@ -18,3 +18,11 @@ int feddb_shuffle_test(oc::CLP &cmd);
 int persist_test(oc::CLP &cmd);
 
 int index_agg_test(oc::CLP &cmd);
+
+int group_by_common_test(oc::CLP &cmd);
+
+int group_by_test(oc::CLP &cmd);
+
+int odd_even_merge_sort_test(oc::CLP &cmd);
+
+int join_test(oc::CLP &cmd);
