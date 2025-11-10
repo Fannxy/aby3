@@ -79,9 +79,9 @@ int main(int argc, char** argv) {
 		//feddb_shuffle_test(cmd);
 		//persist_test(cmd);
 		//index_agg_test(cmd);
-		group_by_common_test(cmd);
-		group_by_test(cmd);
-		odd_even_merge_sort_test(cmd);
+		//group_by_common_test(cmd);
+		//group_by_test(cmd);
+		//odd_even_merge_sort_test(cmd);
 		join_test(cmd);
 	}
   return 0;

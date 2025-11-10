@@ -265,6 +265,11 @@ void bool_cipher_selector(int pIdx, boolShare &flag, aby3::sbMatrix &trueVal,
                           aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
                           aby3::Sh3Runtime &runtime);
 
+void bool_cipher_selector(int pIdx, aby3::sbMatrix &flag, aby3::sbMatrix &trueVal, 
+                          aby3::sbMatrix &falseVal, aby3::sbMatrix &res, 
+                          aby3::Sh3Encryptor &enc,aby3::Sh3Evaluator &eval, 
+                          aby3::Sh3Runtime &runtime);
+
 void bool2arith(int pIdx, aby3::sbMatrix &boolInput, aby3::si64Matrix &res,
                 aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
                 aby3::Sh3Runtime &runtime);
@@ -281,6 +286,10 @@ void bool_get_first_zero_mask(int pIdx, std::vector<boolShare> &inputA,
 void bool_init_false(int pIdx, aby3::sbMatrix &res);
 
 void bool_init_true(int pIdx, aby3::sbMatrix &res);
+
+void bool_init_i64(int pIdx, aby3::i64 value, aby3::sbMatrix &res, 
+                    aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, 
+                    aby3::Sh3Runtime &runtime);
 
 void bool_init_false(int pIdx, boolShare &res);
 

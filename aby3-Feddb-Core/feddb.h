@@ -135,18 +135,18 @@ void group_min(int pIdx, aby3::si64Matrix &key, aby3::si64Matrix &val,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 void augment_table(int pIdx, std::vector<aby3::si64Matrix> &T_1, std::vector<aby3::si64Matrix> &T_2,
-    std::vector<aby3::si64Matrix> &T_1_auged, std::vector<aby3::si64Matrix> &T_2_auged,  
+    std::vector<aby3::sbMatrix> &T_1_auged, std::vector<aby3::sbMatrix> &T_2_auged,  
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
-void oblivious_expand(int pIdx, std::vector<aby3::si64Matrix> &T, std::vector<aby3::si64Matrix> &A, aby3::i64 tid,
+void oblivious_expand(int pIdx, std::vector<aby3::sbMatrix> &T, std::vector<aby3::sbMatrix> &A, aby3::i64 tid,
     aby3::i64Matrix &s_plain,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
-void oblivious_distribute(int pIdx, std::vector<aby3::si64Matrix> &T_prime, aby3::sbMatrix &flag, aby3::si64Matrix &fx, aby3::i64Matrix &s_plain,
-    std::vector<aby3::si64Matrix> &A, aby3::si64Matrix &flag_sorted_auged,
+void oblivious_distribute(int pIdx, std::vector<aby3::sbMatrix> &T_prime, aby3::sbMatrix &flag, aby3::sbMatrix &fx, aby3::i64Matrix &s_plain,
+    std::vector<aby3::sbMatrix> &A, aby3::sbMatrix &flag_sorted_auged,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
-void align_table(int pIdx, std::vector<aby3::si64Matrix> &T, std::vector<aby3::si64Matrix> &T_aligned,
+void align_table(int pIdx, std::vector<aby3::sbMatrix> &T, std::vector<aby3::sbMatrix> &T_aligned,
         aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 void join(int pIdx, std::vector<aby3::si64Matrix> &T_1, std::vector<aby3::si64Matrix> &T_2, std::vector<aby3::si64Matrix> &T_joined,

@@ -463,6 +463,36 @@ void bool_cipher_selector(int pIdx, boolShare &flag, aby3::sbMatrix &trueVal,
     return;
 }
 
+
+//ymn
+void bool_cipher_selector(int pIdx, aby3::sbMatrix &flag, aby3::sbMatrix &trueVal, aby3::sbMatrix &falseVal, aby3::sbMatrix &res, 
+    aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime) {
+
+    int rows = flag.rows();
+    int bitSize = trueVal.bitCount();
+
+    aby3::sbMatrix comp(rows, 1);
+    comp = flag;
+
+    comp.resize(rows, bitSize);
+    for(size_t i=0; i<rows; i++){
+        comp.mShares[0](i, 0) = (comp.mShares[0](i, 0) == 1) ? -1 : -0;
+        comp.mShares[1](i, 0) = (comp.mShares[1](i, 0) == 1) ? -1 : -0;
+    }
+
+    aby3::sbMatrix tmp1, tmp2;
+    bool_cipher_and(pIdx, comp, trueVal, tmp1, enc, eval, runtime);
+    bool_cipher_not(pIdx, comp, comp);
+    bool_cipher_and(pIdx, comp, falseVal, tmp2, enc, eval, runtime);
+    res.resize(rows, bitSize);
+    for(size_t i=0; i<rows; i++){
+        res.mShares[0](i, 0) = tmp1.mShares[0](i, 0) ^ tmp2.mShares[0](i, 0);
+        res.mShares[1](i, 0) = tmp1.mShares[1](i, 0) ^ tmp2.mShares[1](i, 0);
+    }
+
+    return;
+}
+
 void bool_cipher_dot(int pIdx, std::vector<aby3::sbMatrix> &sharedA,
                      aby3::sbMatrix &sharedB, aby3::sbMatrix &res,
                      aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,
@@ -689,6 +719,25 @@ void bool_init_true(int pIdx, aby3::sbMatrix &res) {
                 throw std::runtime_error("bool_init_true: pIdx out of range.");
         }
     }
+    return;
+}
+
+//ymn
+void bool_init_i64(int pIdx, aby3::i64 value, aby3::sbMatrix &res, 
+    aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime) {
+
+    int rows = res.rows();
+    
+    i64Matrix value_plain(rows, 1);
+    for(size_t i=0; i<rows; i++){
+        value_plain(i, 0) = value;
+    }
+    if(pIdx == 0){
+        enc.localBinMatrix(runtime, value_plain, res).get();
+    } else {
+        enc.remoteBinMatrix(runtime, res).get();
+    }
+
     return;
 }
 
