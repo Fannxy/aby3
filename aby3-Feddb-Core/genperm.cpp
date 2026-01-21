@@ -13,11 +13,14 @@ si64Matrix reshare_matrix(int pIdx, si64Matrix& x, int targetPartyIdx, Sh3Encryp
     auto& comm = runtime.mComm;
     
     int n = x.rows();
+    int cols = x.cols();
     //generate random shares r_1, r_2, r_3 such that r_1 + r_2 + r_3 = 0
-    i64Matrix r(n,1);   
-    si64Matrix r_share(n,1);
+    i64Matrix r(n,cols);   
+    si64Matrix r_share(n,cols);
     for(size_t i=0;i<n;i++){
-        r(i,0)=0;
+        for(size_t j=0;j<cols;j++){
+            r(i,j)=0;
+        }
     }
     if (pIdx == prevPartyIdx) {
         enc.localIntMatrix(runtime, r, r_share).get();
@@ -25,19 +28,23 @@ si64Matrix reshare_matrix(int pIdx, si64Matrix& x, int targetPartyIdx, Sh3Encryp
         enc.remoteIntMatrix(runtime, r_share).get();
     }
 
-    si64Matrix x_re(n,1);
+    si64Matrix x_re(n, cols);
     if (pIdx == prevPartyIdx) {
         for(size_t i=0;i<n;i++){
-            x_re.mShares[0](i,0) = x.mShares[0](i,0) + r_share.mShares[0](i,0);
-            x_re.mShares[1](i,0) = x.mShares[1](i,0) + r_share.mShares[1](i,0);
+            for(size_t j=0;j<cols;j++){
+                x_re.mShares[0](i,j) = x.mShares[0](i,j) + r_share.mShares[0](i,j);
+                x_re.mShares[1](i,j) = x.mShares[1](i,j) + r_share.mShares[1](i,j);
+            }
         }
         large_data_sending(pIdx, x_re.mShares[0], runtime, true);
         return x_re;
 
     } else if (pIdx == nextPartyIdx) {//p2
         for(size_t i=0;i<n;i++){
-            x_re.mShares[0](i,0) = x.mShares[0](i,0) + r_share.mShares[0](i,0);
-            x_re.mShares[1](i,0) = x.mShares[1](i,0) + r_share.mShares[1](i,0);
+            for(size_t j=0;j<cols;j++){
+                x_re.mShares[0](i,j) = x.mShares[0](i,j) + r_share.mShares[0](i,j);
+                x_re.mShares[1](i,j) = x.mShares[1](i,j) + r_share.mShares[1](i,j);
+            }
         }
         large_data_sending(pIdx, x_re.mShares[1], runtime, false);
         return x_re;
@@ -50,6 +57,7 @@ si64Matrix reshare_matrix(int pIdx, si64Matrix& x, int targetPartyIdx, Sh3Encryp
 
 }
 
+//取出key的第d位
 void getBitKey(int pIdx, sbMatrix &k_bool, int d, si64Matrix &k_j_arith, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
     sbMatrix k_j(k_bool.rows(),64);
     
@@ -58,14 +66,15 @@ void getBitKey(int pIdx, sbMatrix &k_bool, int d, si64Matrix &k_j_arith, Sh3Encr
         auto word = d / 64;
         auto offset = d % 64;
 
-        k_j.mShares[0](i, word) = (k_bool.mShares[0](i, word) >> offset) & 1;
-        k_j.mShares[1](i, word) = (k_bool.mShares[1](i, word) >> offset) & 1;
+        k_j.mShares[0](i, 0) = (k_bool.mShares[0](i, word) >> offset) & 1;
+        k_j.mShares[1](i, 0) = (k_bool.mShares[1](i, word) >> offset) & 1;
     }
 
     bool2arith(pIdx, k_j, k_j_arith, enc, eval, runtime);
     return;
 }
 
+//k_j只有一位
 void genBitPerm(int pIdx, si64Matrix &k_j, si64Matrix &perm, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
     int n = k_j.rows();
 
@@ -133,6 +142,7 @@ void applyPerm(int pIdx, si64Matrix &perm, si64Matrix &k_j, si64Matrix &k_j_prim
     block prevSeed = enc.mShareGen.mPrevCommon.getSeed();
     block nextSeed = enc.mShareGen.mNextCommon.getSeed();
     size_t len = k_j.rows();
+    size_t cols = k_j.cols();
 
     // generate the prev, next - correlated randomness.
     // 1 - generate the permutations. pi
@@ -166,7 +176,9 @@ void applyPerm(int pIdx, si64Matrix &perm, si64Matrix &k_j, si64Matrix &k_j_prim
 
 
     //3-shuffle:pi(k_j)=k_j_perm
-    si64Matrix k_j_perm(len,1);
+    si64Matrix k_j_perm(len,cols);
+    next_perm.resize(len,cols);
+    prev_perm.resize(len,cols);
     prev_perm=k_j;
     for(int id=0;id<3;id++){
         if(pIdx==id){
@@ -179,9 +191,12 @@ void applyPerm(int pIdx, si64Matrix &perm, si64Matrix &k_j, si64Matrix &k_j_prim
         }
         
         else if(pIdx==(id+1)%3){
-            std::fill_n(next_perm.mShares[0].data(),len,0);
-            std::fill_n(next_perm.mShares[1].data(),len,0);
-           
+            for(size_t i=0;i<len;i++){
+                for(size_t j=0;j<cols;j++){
+                    next_perm.mShares[0](i, j) = 0;
+                    next_perm.mShares[1](i, j) = 0;
+                }
+            }
         }
         prev_perm=reshare_matrix(pIdx, next_perm, (id+1)%3, enc, runtime);
         //DEBUG
@@ -199,6 +214,8 @@ void applyPerm(int pIdx, si64Matrix &perm, si64Matrix &k_j, si64Matrix &k_j_prim
     i64Matrix perm_prime_plain(len,1);
     enc.revealAll(runtime, perm_prime, perm_prime_plain).get();
     permutate(pIdx, k_j_perm, k_j_prime, perm_prime_plain);
+
+
 
     return ;
 }
@@ -282,8 +299,10 @@ void composePerm(int pIdx, si64Matrix &perm_a, si64Matrix &perm_b, si64Matrix &p
 
 void genPerm(int pIdx, si64Matrix &k, si64Matrix &perm, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
     int n = k.rows();
+    int cols = k.cols();
+    int bitcount = 64*cols;
 
-    sbMatrix k_bool(n,64);
+    sbMatrix k_bool(n,bitcount);
     arith2bool(pIdx, k, k_bool, enc, eval, runtime);
 
     si64Matrix k_0(n,1);
@@ -292,7 +311,8 @@ void genPerm(int pIdx, si64Matrix &k, si64Matrix &perm, Sh3Encryptor& enc, Sh3Ev
     si64Matrix pre_perm(n,1);
     genBitPerm(pIdx, k_0, pre_perm, enc, eval, runtime);
 
-    for(int d=1;d<64;d++){
+    
+    for(int d=1;d<bitcount;d++){
         si64Matrix k_j(n,1),k_j_prime(n,1);
         getBitKey(pIdx, k_bool, d, k_j, enc, eval, runtime);
         //DEBUG

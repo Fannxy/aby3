@@ -44,6 +44,9 @@
 
 #define SHOW_TEST_CASE
 
+//ymn
+int bit_expand_test(oc::CLP &cmd);
+
 int arith_basic_test(oc::CLP& cmd);
 int bool_basic_test(oc::CLP& cmd);
 int bool_basic_test2(oc::CLP& cmd);

@@ -17,11 +17,12 @@ int main(int argc, char** argv) {
 
   // set the role for this process.
 	if (cmd.isSet("Bool")){
-		bool_basic_test(cmd);
-		bool_basic_test2(cmd);
-		get_first_zero_test(cmd);
-		bool_aggregation_test(cmd);
-		share_conversion_test(cmd);
+		bit_expand_test(cmd);
+		//bool_basic_test(cmd);
+		//bool_basic_test2(cmd);
+		//get_first_zero_test(cmd);
+		//bool_aggregation_test(cmd);
+		//share_conversion_test(cmd);
 	}
 
 	if (cmd.isSet("Arith")){
@@ -74,15 +75,16 @@ int main(int argc, char** argv) {
 	}
 
 	if(cmd.isSet("Feddb")){
-		//oblivious_idx_select_test(cmd);
-		//genperm_test(cmd);
-		//feddb_shuffle_test(cmd);
+		oblivious_idx_select_test(cmd);
+		genperm_test(cmd);
+		feddb_shuffle_test(cmd);
 		//persist_test(cmd);
 		//index_agg_test(cmd);
-		//group_by_common_test(cmd);
-		//group_by_test(cmd);
-		//odd_even_merge_sort_test(cmd);
+		group_by_common_test(cmd);
+		group_by_test(cmd);
+		odd_even_merge_sort_test(cmd);
 		join_test(cmd);
+		filter_test(cmd);
 	}
   return 0;
 }

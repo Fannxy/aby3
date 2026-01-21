@@ -26,3 +26,5 @@ int group_by_test(oc::CLP &cmd);
 int odd_even_merge_sort_test(oc::CLP &cmd);
 
 int join_test(oc::CLP &cmd);
+
+int filter_test(oc::CLP &cmd);

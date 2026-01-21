@@ -426,7 +426,7 @@ int fetch_msb(int pIdx, si64Matrix &diffAB, sbMatrix &res, Sh3Evaluator &eval, S
       break;  
     }
     case 1: {
-      circuitInput1.mShares[0].resize(diffAB.rows(), diffAB.cols());
+      circuitInput1.mShares[0].resize(diffAB.size(), 1);
       circuitInput1.mShares[1].setZero();
       memcpy(circuitInput1.mShares[0].data(), diffAB.mShares[0].data(), diffAB.size() * sizeof(i64));
       circuitInput0.mShares[0].setZero();
@@ -434,7 +434,7 @@ int fetch_msb(int pIdx, si64Matrix &diffAB, sbMatrix &res, Sh3Evaluator &eval, S
     }
     case 2: {
       circuitInput1.mShares[0].setZero();
-      circuitInput1.mShares[1].resize(diffAB.rows(), diffAB.cols());
+      circuitInput1.mShares[1].resize(diffAB.size(), 1);
       memcpy(circuitInput1.mShares[1].data(), diffAB.mShares[1].data(), diffAB.size() * sizeof(i64));
       circuitInput0.mShares[0].setZero();
     }
@@ -482,7 +482,7 @@ int fetch_msb(int pIdx, si64Matrix &diffAB, sbMatrix &res, Sh3Evaluator &eval, S
       break;
     }
     case 1: {
-      circuitInput1.mShares[0].resize(diffAB.rows(), diffAB.cols());
+      circuitInput1.mShares[0].resize(diffAB.size(), 1);
       circuitInput1.mShares[1].setZero();
       memcpy(circuitInput1.mShares[0].data(), diffAB.mShares[0].data(), diffAB.size() * sizeof(i64));
       circuitInput0.mShares[0].setZero();
@@ -490,7 +490,7 @@ int fetch_msb(int pIdx, si64Matrix &diffAB, sbMatrix &res, Sh3Evaluator &eval, S
     }
     case 2: {
       circuitInput1.mShares[0].setZero();
-      circuitInput1.mShares[1].resize(diffAB.rows(), diffAB.cols());
+      circuitInput1.mShares[1].resize(diffAB.size(), 1);
       memcpy(circuitInput1.mShares[1].data(), diffAB.mShares[1].data(), diffAB.size() * sizeof(i64));
       circuitInput0.mShares[0].setZero();
     }
@@ -671,16 +671,17 @@ int cipher_eq(int pIdx, si64Matrix &intA, si64Matrix &intB, sbMatrix &res, Sh3Ev
   Sh3BinaryEvaluator binEng;
   CircuitLibrary lib;
 
-  sbMatrix circuitInput0;
-  sbMatrix circuitInput1;
-  circuitInput0.resize(intA.size(), 64);
-  circuitInput1.resize(intB.size(), 64);
+  // sbMatrix circuitInput0;
+  // sbMatrix circuitInput1;
+  // circuitInput0.resize(intA.size(), 64);
+  // circuitInput1.resize(intB.size(), 64);
 
   sbMatrix binGt(intA.size(), 1);
   sbMatrix binLt(intB.size(), 1);
 
   fetch_msb(pIdx, diffAB, binGt, eval, runtime);
   fetch_msb(pIdx, diffBA, binLt, eval, runtime);
+  
 
   auto cirOr = lib.bits_nor_helper(1);
   binEng.setCir(cirOr, intA.size(), eval.mShareGen);

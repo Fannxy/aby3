@@ -196,6 +196,11 @@ int large_data_encryption(int pIdx, aby3::i64Matrix &plainA, aby3::sbMatrix &sha
 int large_data_decryption(int pIdx, aby3::sbMatrix &sharedA, aby3::i64Matrix &plainA,
                           aby3::Sh3Encryptor &enc, aby3::Sh3Runtime &runtime);
 
+void compare_consecutive_rows_bool(int pIdx, aby3::sbMatrix &matrix, aby3::sbMatrix &eq_result, 
+                            aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
+                            
+void bool_cols_expand(aby3::sbMatrix &sharedA, aby3::sbMatrix &res);
+
 void bool_cipher_lt(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &sharedB,
                     aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
                     aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
@@ -318,6 +323,7 @@ void arith_cipher_max_min_split(int pIdx, aby3::si64Matrix &sharedA, aby3::si64M
                       aby3::si64Matrix &res_max, aby3::si64Matrix &res_min, aby3::Sh3Encryptor &enc,
                       aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 //ymn
+void arith_cols_expand(aby3::si64Matrix &sharedA, aby3::si64Matrix &res);
 void compare_consecutive_rows_arith(int pIdx, aby3::si64Matrix &matrix,
                                      aby3::sbMatrix &eq_result,
                                      aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);

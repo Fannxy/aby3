@@ -57,22 +57,26 @@ void prefixsum_inv(int pIdx, si64Matrix &v, si64Matrix &result){
 void permutation_inverse(i64Matrix& rsigma_plain, i64Matrix& rsigma_inv_plain) {
     int n = rsigma_plain.rows();
     rsigma_inv_plain.resize(n, rsigma_plain.cols());
-    
-    // hash
-    std::unordered_map<int, int> value_to_position;
-    
-    // step0：建立值到位置的映射
-    for (int i = 0; i < n; i++) {
-        int value = rsigma_plain(i, 0);
-        value_to_position[value] = i ;  
+
+    //inverse_permutation[permutation[i]] = i;
+    for(size_t i=0; i<n; i++){
+        rsigma_inv_plain(rsigma_plain(i, 0), 0) = i;
     }
     
-    // step1：构建逆置换
-    for (int i = 0; i < n; i++) {
-        int value = rsigma_plain(i, 0);
-        rsigma_inv_plain(value , 0) = value_to_position[value];
-    }
+    // // hash
+    // std::unordered_map<int, int> value_to_position;
     
+    // // step0：建立值到位置的映射
+    // for (int i = 0; i < n; i++) {
+    //     int value = rsigma_plain(i, 0);
+    //     value_to_position[value] = i ;  
+    // }
+    
+    // // step1：构建逆置换
+    // for (int i = 0; i < n; i++) {
+    //     int value = rsigma_plain(i, 0);
+    //     rsigma_inv_plain(value , 0) = value_to_position[value];
+    // }
     return ;
 }
 
@@ -193,11 +197,15 @@ void plain_argsort(i64Matrix& v, i64Matrix& result){
 
 void permutate(int pIdx, si64Matrix &data, si64Matrix &res, std::vector<size_t> &permutation){
     size_t len = data.rows();
+    size_t cols = data.cols();
+    res.resize(len, cols);
     for (size_t i = 0; i < len; i++) {
         size_t new_pos = permutation[i];
         if (new_pos < len) {
-            res.mShares[0](new_pos, 0) = data.mShares[0](i, 0);
-            res.mShares[1](new_pos, 0) = data.mShares[1](i, 0);
+            for(size_t j=0;j<cols;j++){
+                res.mShares[0](new_pos, j) = data.mShares[0](i, j);
+                res.mShares[1](new_pos, j) = data.mShares[1](i, j);
+            }
         }
     }
     return ;
@@ -225,11 +233,16 @@ void permutate(int pIdx, std::vector<si64Matrix> &data, std::vector<si64Matrix> 
 
 void permutate(int pIdx, si64Matrix &data, si64Matrix &res, i64Matrix  &permutation){
     size_t len = data.rows();
+    size_t cols = data.cols();
+    res.resize(len, cols);
+    
     for (size_t i = 0; i < len; i++) {
         size_t new_pos = permutation(i,0);
         if (new_pos < len) {
-            res.mShares[0](new_pos, 0) = data.mShares[0](i, 0);
-            res.mShares[1](new_pos, 0) = data.mShares[1](i, 0);
+            for(size_t j=0;j<cols;j++){
+                res.mShares[0](new_pos, j) = data.mShares[0](i, j);
+                res.mShares[1](new_pos, j) = data.mShares[1](i, j);
+            }
         }
     }
     return ;
@@ -255,9 +268,12 @@ void permutate(int pIdx, si64Matrix &data, si64Matrix &res, i64Matrix  &permutat
 
 void set_const_share(int pIdx, i64 const_value, si64Matrix &res, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
     size_t len = res.rows();
-    i64Matrix const_value_matrix(len, 1);
+    size_t cols = res.cols();
+    i64Matrix const_value_matrix(len, cols);
     for(size_t i=0; i<len; i++){
-        const_value_matrix(i, 0) = const_value;
+        for(size_t j=0; j<cols; j++){
+            const_value_matrix(i, j) = const_value;
+        }
     }
     
     if(pIdx==0){

@@ -2,6 +2,7 @@
 #include <chrono>
 #include <random>
 #include <thread>
+#include <algorithm>
 #include <mpi.h>
 #include <tests_cryptoTools/UnitTests.h>
 
@@ -42,24 +43,24 @@ int main(int argc, char** argv) {
     basic_setup((u64)role, ios, enc, eval, runtime);
 
 //create
-    std::vector<i64Matrix> eq_flags_hybrid_agg_1(1);
-    i64Matrix eq_flags_hybrid_agg_1_unit_size(1, 1);
+    std::vector<i64Matrix> customer_0(2);
+    i64Matrix customer_0_unit_size(1, 1);
     if (role == (1 - 1)%3 ){
-        std::string path = "/root/plantest/benchmarks/ssn/db/1/data/update/eq_flags_hybrid_agg_1.csv" ;
+        std::string path = "/root/plantest/benchmarks/tpch_test/8192/db/1/data/update/customer_0.csv" ;
         std::ifstream file(path);
         if (!file.is_open()) {
             throw std::runtime_error("Failed to open file: " + path);
         }
 
-        std::string eq_flags_hybrid_agg_1_line;
-        std::vector<std::vector<i64>> eq_flags_hybrid_agg_1_data_rows;
+        std::string customer_0_line;
+        std::vector<std::vector<i64>> customer_0_data_rows;
         
         //read data from path
-        while (std::getline(file, eq_flags_hybrid_agg_1_line)) {
-            if (eq_flags_hybrid_agg_1_line.empty()) continue;
+        while (std::getline(file, customer_0_line)) {
+            if (customer_0_line.empty()) continue;
             
             std::vector<i64> row;
-            std::istringstream iss(eq_flags_hybrid_agg_1_line);
+            std::istringstream iss(customer_0_line);
             std::string token;
             
             while (std::getline(iss, token, ',')) {
@@ -69,69 +70,91 @@ int main(int argc, char** argv) {
             }
             
             if (!row.empty()) {
-                eq_flags_hybrid_agg_1_data_rows.push_back(row);
+                customer_0_data_rows.push_back(row);
             }
         }
         file.close();
         
-        if (eq_flags_hybrid_agg_1_data_rows.empty()) {
+        if (customer_0_data_rows.empty()) {
             throw std::runtime_error("No data found in file: " + path);
         }
         
-        size_t eq_flags_hybrid_agg_1_num_cols = eq_flags_hybrid_agg_1_data_rows[0].size();
-        size_t eq_flags_hybrid_agg_1_num_rows = eq_flags_hybrid_agg_1_data_rows.size();
+        size_t customer_0_num_cols = customer_0_data_rows[0].size();
+        size_t customer_0_num_rows = customer_0_data_rows.size();
 
         
-        eq_flags_hybrid_agg_1_unit_size(0, 0) = eq_flags_hybrid_agg_1_num_rows ;
-        large_data_sending(role, eq_flags_hybrid_agg_1_unit_size, runtime, true);
-        large_data_sending(role, eq_flags_hybrid_agg_1_unit_size, runtime, false);
+        customer_0_unit_size(0, 0) = customer_0_num_rows ;
+        large_data_sending(role, customer_0_unit_size, runtime, true);
+        large_data_sending(role, customer_0_unit_size, runtime, false);
         
-        for (size_t col = 0; col < eq_flags_hybrid_agg_1_num_cols; col++) {
-            eq_flags_hybrid_agg_1[col].resize(eq_flags_hybrid_agg_1_num_rows, 1); 
-            for (size_t row = 0; row < eq_flags_hybrid_agg_1_num_rows; row++) {
-                eq_flags_hybrid_agg_1[col](row, 0) = eq_flags_hybrid_agg_1_data_rows[row][col];
+        for (size_t col = 0; col < customer_0_num_cols; col++) {
+            customer_0[col].resize(customer_0_num_rows, 1); 
+            for (size_t row = 0; row < customer_0_num_rows; row++) {
+                customer_0[col](row, 0) = customer_0_data_rows[row][col];
             }
         }
         
     }
     else if(role == (1)%3){
-        large_data_receiving(role, eq_flags_hybrid_agg_1_unit_size, runtime, true);
+        large_data_receiving(role, customer_0_unit_size, runtime, true);
     }
     else if(role == (1 + 1)%3){
-        large_data_receiving(role, eq_flags_hybrid_agg_1_unit_size, runtime, false);
+        large_data_receiving(role, customer_0_unit_size, runtime, false);
     }
     
 //close
-    std::vector<si64Matrix> closed_eq_flags_hybrid_agg_1(1);
+    std::vector<i64Matrix> customer_close_to_joined_1_plain_cols;
+    std::vector<si64Matrix> customer_close_to_joined_1_cipher_cols;
 
-    for (size_t i = 0; i< 1; i++){
-        closed_eq_flags_hybrid_agg_1[i].resize(eq_flags_hybrid_agg_1_unit_size(0, 0), 1);
-        if (role == (1 - 1)%3){
-            enc.localIntMatrix(runtime, eq_flags_hybrid_agg_1[i], closed_eq_flags_hybrid_agg_1[i]).get();
-        } else {
-            enc.remoteIntMatrix(runtime, closed_eq_flags_hybrid_agg_1[i]).get();
+    std::vector<int> customer_close_to_joined_1_plain_cols_idx = {};
+    std::vector<int> customer_close_to_joined_1_cipher_cols_idx = {0, 1};
+
+    for(const auto &idx : customer_close_to_joined_1_plain_cols_idx){
+        if(role == (1 - 1)%3){    
+            large_data_sending(role, customer_0[idx], runtime, true);
+            large_data_sending(role, customer_0[idx], runtime, false);
         }
+        else if(role == (1)%3){
+            customer_0[idx].resize(customer_0_unit_size(0, 0), 1);
+            large_data_receiving(role, customer_0[idx], runtime, true);
+        }
+        else if(role == (1 + 1)%3){
+            customer_0[idx].resize(customer_0_unit_size(0, 0), 1);
+            large_data_receiving(role, customer_0[idx], runtime, false);
+        }
+        customer_close_to_joined_1_plain_cols.push_back(customer_0[idx]);
+    }
+
+
+    for (const auto &idx : customer_close_to_joined_1_cipher_cols_idx){
+        si64Matrix customer_close_to_joined_1_i(customer_0_unit_size(0, 0), 1);
+        if (role == (1 - 1)%3){
+            enc.localIntMatrix(runtime, customer_0[idx], customer_close_to_joined_1_i).get();
+        } else {
+            enc.remoteIntMatrix(runtime, customer_close_to_joined_1_i).get();
+        }
+        customer_close_to_joined_1_cipher_cols.push_back(customer_close_to_joined_1_i);
     }
 
 //create
-    std::vector<i64Matrix> sorted_by_key_dummy_hybrid_agg_1(1);
-    i64Matrix sorted_by_key_dummy_hybrid_agg_1_unit_size(1, 1);
-    if (role == (1 - 1)%3 ){
-        std::string path = "/root/plantest/benchmarks/ssn/db/1/data/update/sorted_by_key_dummy_hybrid_agg_1.csv" ;
+    std::vector<i64Matrix> orders_2(3);
+    i64Matrix orders_2_unit_size(1, 1);
+    if (role == (2 - 1)%3 ){
+        std::string path = "/root/plantest/benchmarks/tpch_test/8192/db/2/data/update/orders_2.csv" ;
         std::ifstream file(path);
         if (!file.is_open()) {
             throw std::runtime_error("Failed to open file: " + path);
         }
 
-        std::string sorted_by_key_dummy_hybrid_agg_1_line;
-        std::vector<std::vector<i64>> sorted_by_key_dummy_hybrid_agg_1_data_rows;
+        std::string orders_2_line;
+        std::vector<std::vector<i64>> orders_2_data_rows;
         
         //read data from path
-        while (std::getline(file, sorted_by_key_dummy_hybrid_agg_1_line)) {
-            if (sorted_by_key_dummy_hybrid_agg_1_line.empty()) continue;
+        while (std::getline(file, orders_2_line)) {
+            if (orders_2_line.empty()) continue;
             
             std::vector<i64> row;
-            std::istringstream iss(sorted_by_key_dummy_hybrid_agg_1_line);
+            std::istringstream iss(orders_2_line);
             std::string token;
             
             while (std::getline(iss, token, ',')) {
@@ -141,90 +164,323 @@ int main(int argc, char** argv) {
             }
             
             if (!row.empty()) {
-                sorted_by_key_dummy_hybrid_agg_1_data_rows.push_back(row);
+                orders_2_data_rows.push_back(row);
             }
         }
         file.close();
         
-        if (sorted_by_key_dummy_hybrid_agg_1_data_rows.empty()) {
+        if (orders_2_data_rows.empty()) {
             throw std::runtime_error("No data found in file: " + path);
         }
         
-        size_t sorted_by_key_dummy_hybrid_agg_1_num_cols = sorted_by_key_dummy_hybrid_agg_1_data_rows[0].size();
-        size_t sorted_by_key_dummy_hybrid_agg_1_num_rows = sorted_by_key_dummy_hybrid_agg_1_data_rows.size();
+        size_t orders_2_num_cols = orders_2_data_rows[0].size();
+        size_t orders_2_num_rows = orders_2_data_rows.size();
 
         
-        sorted_by_key_dummy_hybrid_agg_1_unit_size(0, 0) = sorted_by_key_dummy_hybrid_agg_1_num_rows ;
-        large_data_sending(role, sorted_by_key_dummy_hybrid_agg_1_unit_size, runtime, true);
-        large_data_sending(role, sorted_by_key_dummy_hybrid_agg_1_unit_size, runtime, false);
+        orders_2_unit_size(0, 0) = orders_2_num_rows ;
+        large_data_sending(role, orders_2_unit_size, runtime, true);
+        large_data_sending(role, orders_2_unit_size, runtime, false);
         
-        for (size_t col = 0; col < sorted_by_key_dummy_hybrid_agg_1_num_cols; col++) {
-            sorted_by_key_dummy_hybrid_agg_1[col].resize(sorted_by_key_dummy_hybrid_agg_1_num_rows, 1); 
-            for (size_t row = 0; row < sorted_by_key_dummy_hybrid_agg_1_num_rows; row++) {
-                sorted_by_key_dummy_hybrid_agg_1[col](row, 0) = sorted_by_key_dummy_hybrid_agg_1_data_rows[row][col];
+        for (size_t col = 0; col < orders_2_num_cols; col++) {
+            orders_2[col].resize(orders_2_num_rows, 1); 
+            for (size_t row = 0; row < orders_2_num_rows; row++) {
+                orders_2[col](row, 0) = orders_2_data_rows[row][col];
             }
         }
         
     }
-    else if(role == (1)%3){
-        large_data_receiving(role, sorted_by_key_dummy_hybrid_agg_1_unit_size, runtime, true);
+    else if(role == (2)%3){
+        large_data_receiving(role, orders_2_unit_size, runtime, true);
     }
-    else if(role == (1 + 1)%3){
-        large_data_receiving(role, sorted_by_key_dummy_hybrid_agg_1_unit_size, runtime, false);
+    else if(role == (2 + 1)%3){
+        large_data_receiving(role, orders_2_unit_size, runtime, false);
     }
     
 //close
-    std::vector<si64Matrix> closed_sorted_by_key_hybrid_agg_1(1);
+    std::vector<i64Matrix> orders_close_to_joined_3_plain_cols;
+    std::vector<si64Matrix> orders_close_to_joined_3_cipher_cols;
 
-    for (size_t i = 0; i< 1; i++){
-        closed_sorted_by_key_hybrid_agg_1[i].resize(sorted_by_key_dummy_hybrid_agg_1_unit_size(0, 0), 1);
-        if (role == (1 - 1)%3){
-            enc.localIntMatrix(runtime, sorted_by_key_dummy_hybrid_agg_1[i], closed_sorted_by_key_hybrid_agg_1[i]).get();
+    std::vector<int> orders_close_to_joined_3_plain_cols_idx = {};
+    std::vector<int> orders_close_to_joined_3_cipher_cols_idx = {0, 1, 2};
+
+    for(const auto &idx : orders_close_to_joined_3_plain_cols_idx){
+        if(role == (2 - 1)%3){    
+            large_data_sending(role, orders_2[idx], runtime, true);
+            large_data_sending(role, orders_2[idx], runtime, false);
+        }
+        else if(role == (2)%3){
+            orders_2[idx].resize(orders_2_unit_size(0, 0), 1);
+            large_data_receiving(role, orders_2[idx], runtime, true);
+        }
+        else if(role == (2 + 1)%3){
+            orders_2[idx].resize(orders_2_unit_size(0, 0), 1);
+            large_data_receiving(role, orders_2[idx], runtime, false);
+        }
+        orders_close_to_joined_3_plain_cols.push_back(orders_2[idx]);
+    }
+
+
+    for (const auto &idx : orders_close_to_joined_3_cipher_cols_idx){
+        si64Matrix orders_close_to_joined_3_i(orders_2_unit_size(0, 0), 1);
+        if (role == (2 - 1)%3){
+            enc.localIntMatrix(runtime, orders_2[idx], orders_close_to_joined_3_i).get();
         } else {
-            enc.remoteIntMatrix(runtime, closed_sorted_by_key_hybrid_agg_1[i]).get();
+            enc.remoteIntMatrix(runtime, orders_close_to_joined_3_i).get();
+        }
+        orders_close_to_joined_3_cipher_cols.push_back(orders_close_to_joined_3_i);
+    }
+
+//join
+
+   //left/right_rel to all_cipher
+   std::vector<si64Matrix> customer_close_to_joined_1;
+   both2cipher(role, customer_close_to_joined_1_plain_cols_idx, customer_close_to_joined_1_cipher_cols_idx, customer_close_to_joined_1_plain_cols, customer_close_to_joined_1_cipher_cols
+               , customer_close_to_joined_1, enc, eval, runtime);
+   std::vector<si64Matrix> orders_close_to_joined_3;
+   both2cipher(role, orders_close_to_joined_3_plain_cols_idx, orders_close_to_joined_3_cipher_cols_idx, orders_close_to_joined_3_plain_cols, orders_close_to_joined_3_cipher_cols
+               , orders_close_to_joined_3, enc, eval, runtime);
+
+
+   //other_idxs
+   std::vector<int> customer_close_to_joined_1_join_idxs = {0} ;
+   std::vector<int> orders_close_to_joined_3_join_idxs = {0} ;
+   std::vector<int> customer_close_to_joined_1_other_idxs, orders_close_to_joined_3_other_idxs;
+
+   if(customer_close_to_joined_1_join_idxs.size() != orders_close_to_joined_3_join_idxs.size()){
+      throw std::runtime_error("join key_cols is not consistent") ;
+   }
+
+   for(size_t i = 0; i < customer_close_to_joined_1.size(); i++){
+      if (std::find(customer_close_to_joined_1_join_idxs.begin(),
+                    customer_close_to_joined_1_join_idxs.end(),
+                    static_cast<int>(i)) == customer_close_to_joined_1_join_idxs.end()) {
+         customer_close_to_joined_1_other_idxs.push_back(static_cast<int>(i));
+      }
+   }
+
+   for(size_t i = 0; i < orders_close_to_joined_3.size(); i++){
+      if (std::find(orders_close_to_joined_3_join_idxs.begin(),
+                    orders_close_to_joined_3_join_idxs.end(),
+                    static_cast<int>(i)) == orders_close_to_joined_3_join_idxs.end()) {
+         orders_close_to_joined_3_other_idxs.push_back(static_cast<int>(i));
+      }
+   }
+
+   //分别得到两方的key和other列
+   std::vector<si64Matrix> customer_close_to_joined_1_key, customer_close_to_joined_1_other;
+   std::vector<si64Matrix> orders_close_to_joined_3_key, orders_close_to_joined_3_other;
+   for(size_t i = 0; i < customer_close_to_joined_1_join_idxs.size(); i++){
+      customer_close_to_joined_1_key.push_back(customer_close_to_joined_1[customer_close_to_joined_1_join_idxs[i]]);
+   }
+   for(size_t i = 0; i < customer_close_to_joined_1_other_idxs.size(); i++){
+      customer_close_to_joined_1_other.push_back(customer_close_to_joined_1[customer_close_to_joined_1_other_idxs[i]]);
+   }
+   for(size_t i = 0; i < orders_close_to_joined_3_join_idxs.size(); i++){
+      orders_close_to_joined_3_key.push_back(orders_close_to_joined_3[orders_close_to_joined_3_join_idxs[i]]);
+   }
+   for(size_t i = 0; i < orders_close_to_joined_3_other_idxs.size(); i++){
+      orders_close_to_joined_3_other.push_back(orders_close_to_joined_3[orders_close_to_joined_3_other_idxs[i]]);
+   }
+
+   //join
+   std::vector<i64Matrix> joined_4_plain_cols = {};
+   std::vector<si64Matrix> joined_4_cipher_cols ;
+
+   join(role, customer_close_to_joined_1_key, customer_close_to_joined_1_other, 
+      orders_close_to_joined_3_key, orders_close_to_joined_3_other,
+      joined_4_cipher_cols, enc, eval, runtime);
+
+
+   int joined_4_size = customer_close_to_joined_1_join_idxs.size() + customer_close_to_joined_1_other_idxs.size() + orders_close_to_joined_3_other_idxs.size() ;
+   std::vector<int> joined_4_plain_cols_idx = {} ;
+   std::vector<int> joined_4_cipher_cols_idx(joined_4_size);
+   for(size_t i = 0; i < joined_4_size; i++){
+      joined_4_cipher_cols_idx[i] = i ;
+   }
+
+  //filter(全转成密文的版本)
+    std::vector<si64Matrix> joined_4;
+    both2cipher(role, joined_4_plain_cols_idx, joined_4_cipher_cols_idx, joined_4_plain_cols, joined_4_cipher_cols
+        , joined_4, enc, eval, runtime);
+
+
+    std::vector<i64Matrix> joined_filtered_5_plain_cols = {};
+    std::vector<si64Matrix> joined_filtered_5_cipher_cols;
+    std::vector<int> joined_filtered_5_plain_cols_idx = {} ;
+    std::vector<int> joined_filtered_5_cipher_cols_idx;
+
+    //就把3和{{{OTHER_COL}}}写成一个就好
+    //bool joined_filtered_5_is_scalar = true ; 
+    filter(role, joined_4, 3, 3, 
+        true, "=", joined_filtered_5_cipher_cols,
+        enc, eval, runtime);
+
+    
+    //输出必然是全密文的
+    for(size_t i = 0; i <  joined_filtered_5_cipher_cols.size() ; i++){
+        joined_filtered_5_cipher_cols_idx.push_back(i);
+    }
+
+    //agg_count
+    //input所有列先全部转成密文
+    std::vector<si64Matrix> joined_filtered_5;
+    both2cipher(role, joined_filtered_5_plain_cols_idx, joined_filtered_5_cipher_cols_idx, joined_filtered_5_plain_cols, joined_filtered_5_cipher_cols
+                , joined_filtered_5, enc, eval, runtime);
+
+
+    std::vector<int> joined_filtered_5_group_idxs = {0} ;
+    
+    std::vector<si64Matrix> joined_filtered_5_group_cols;
+    std::vector<si64Matrix> grouped_c_count_joined_filtered_6_group_cols;
+    si64Matrix grouped_c_count_joined_filtered_6_cnt_col;
+
+    for(size_t i = 0; i < joined_filtered_5_group_idxs.size(); i++){
+        joined_filtered_5_group_cols.push_back(joined_filtered_5[joined_filtered_5_group_idxs[i]]);
+    }
+    group_count(role, joined_filtered_5_group_cols, grouped_c_count_joined_filtered_6_group_cols,
+                    grouped_c_count_joined_filtered_6_cnt_col, enc, eval, runtime);
+
+    
+    std::vector<i64Matrix> grouped_c_count_joined_filtered_6_plain_cols = {};
+    std::vector<si64Matrix> grouped_c_count_joined_filtered_6_cipher_cols ;
+    grouped_c_count_joined_filtered_6_cipher_cols = grouped_c_count_joined_filtered_6_group_cols;
+    grouped_c_count_joined_filtered_6_cipher_cols.push_back(grouped_c_count_joined_filtered_6_cnt_col);
+
+    std::vector<int> grouped_c_count_joined_filtered_6_plain_cols_idx = {} ;
+    std::vector<int> grouped_c_count_joined_filtered_6_cipher_cols_idx;
+    for(size_t i = 0; i < grouped_c_count_joined_filtered_6_cipher_cols.size(); i++){
+        grouped_c_count_joined_filtered_6_cipher_cols_idx.push_back(i);
+    }
+
+
+   
+
+
+//project
+
+    std::map<int, int> c_orders_7_select_map = {{0, 0}, {1, 1}} ;
+
+    std::vector<int> grouped_c_count_joined_filtered_6_select_idx;
+    for(const auto &pair : c_orders_7_select_map){
+        grouped_c_count_joined_filtered_6_select_idx.push_back(pair.first);
+    }
+    std::vector<int> grouped_c_count_joined_filtered_6_plain_select_idx ;
+    std::vector<int> grouped_c_count_joined_filtered_6_cipher_select_idx ;
+
+    std::vector<si64Matrix> c_orders_7_cipher_cols;
+    std::vector<i64Matrix> c_orders_7_plain_cols ;
+
+    //select_idx : plain / cipher
+    for(size_t i = 0 ; i < grouped_c_count_joined_filtered_6_plain_cols_idx.size() ; i++){
+        if(std::find(grouped_c_count_joined_filtered_6_select_idx.begin(), grouped_c_count_joined_filtered_6_select_idx.end(), grouped_c_count_joined_filtered_6_plain_cols_idx[i]) != grouped_c_count_joined_filtered_6_select_idx.end()){
+            grouped_c_count_joined_filtered_6_plain_select_idx.push_back(grouped_c_count_joined_filtered_6_plain_cols_idx[i]);
+            c_orders_7_plain_cols.push_back(grouped_c_count_joined_filtered_6_plain_cols[i]);
         }
     }
 
-//index_agg
-    i64Matrix closed_sorted_by_key_hybrid_agg_1_plain(closed_sorted_by_key_hybrid_agg_1[0].rows(), 1);
-    enc.revealAll(runtime, closed_sorted_by_key_hybrid_agg_1[0], closed_sorted_by_key_hybrid_agg_1_plain).get();
+    for(size_t i = 0 ; i < grouped_c_count_joined_filtered_6_cipher_cols_idx.size() ; i++){
+        if(std::find(grouped_c_count_joined_filtered_6_select_idx.begin(), grouped_c_count_joined_filtered_6_select_idx.end(), grouped_c_count_joined_filtered_6_cipher_cols_idx[i]) != grouped_c_count_joined_filtered_6_select_idx.end()){
+            grouped_c_count_joined_filtered_6_cipher_select_idx.push_back(grouped_c_count_joined_filtered_6_cipher_cols_idx[i]);
+            c_orders_7_cipher_cols.push_back(grouped_c_count_joined_filtered_6_cipher_cols[i]);
+        }
+    }
+    
 
-    std::string persisted_hybrid_agg_1_name = "persisted_hybrid_agg_1";
-    std::vector<si64Matrix> persisted_hybrid_agg_1;
-    read_cipher(role, persisted_hybrid_agg_1_name, persisted_hybrid_agg_1);
+    std::vector<int> c_orders_7_plain_cols_idx;
+    std::vector<int> c_orders_7_cipher_cols_idx;
+    for(const auto &idx : grouped_c_count_joined_filtered_6_plain_select_idx){
+        c_orders_7_plain_cols_idx.push_back(c_orders_7_select_map[idx]);
+    }
 
-    std::vector<si64Matrix> persisted_hybrid_agg_1_for_agg(2);
-    persisted_hybrid_agg_1_for_agg[0] = persisted_hybrid_agg_1[1];
-    persisted_hybrid_agg_1_for_agg[1] = persisted_hybrid_agg_1[3];
+    for(const auto &idx : grouped_c_count_joined_filtered_6_cipher_select_idx){
+        c_orders_7_cipher_cols_idx.push_back(c_orders_7_select_map[idx]);
+    }
+    
 
-    std::vector<si64Matrix> groupedjoined(2);
-    index_agg(role, closed_eq_flags_hybrid_agg_1[0], closed_sorted_by_key_hybrid_agg_1_plain, persisted_hybrid_agg_1_for_agg, groupedjoined,
-                enc, eval, runtime);
+
+
+//project
+
+    std::map<int, int> c_orders_projected_8_select_map = {{1, 0}} ;
+
+    std::vector<int> c_orders_7_select_idx;
+    for(const auto &pair : c_orders_projected_8_select_map){
+        c_orders_7_select_idx.push_back(pair.first);
+    }
+    std::vector<int> c_orders_7_plain_select_idx ;
+    std::vector<int> c_orders_7_cipher_select_idx ;
+
+    std::vector<si64Matrix> c_orders_projected_8_cipher_cols;
+    std::vector<i64Matrix> c_orders_projected_8_plain_cols ;
+
+    //select_idx : plain / cipher
+    for(size_t i = 0 ; i < c_orders_7_plain_cols_idx.size() ; i++){
+        if(std::find(c_orders_7_select_idx.begin(), c_orders_7_select_idx.end(), c_orders_7_plain_cols_idx[i]) != c_orders_7_select_idx.end()){
+            c_orders_7_plain_select_idx.push_back(c_orders_7_plain_cols_idx[i]);
+            c_orders_projected_8_plain_cols.push_back(c_orders_7_plain_cols[i]);
+        }
+    }
+
+    for(size_t i = 0 ; i < c_orders_7_cipher_cols_idx.size() ; i++){
+        if(std::find(c_orders_7_select_idx.begin(), c_orders_7_select_idx.end(), c_orders_7_cipher_cols_idx[i]) != c_orders_7_select_idx.end()){
+            c_orders_7_cipher_select_idx.push_back(c_orders_7_cipher_cols_idx[i]);
+            c_orders_projected_8_cipher_cols.push_back(c_orders_7_cipher_cols[i]);
+        }
+    }
+    
+
+    std::vector<int> c_orders_projected_8_plain_cols_idx;
+    std::vector<int> c_orders_projected_8_cipher_cols_idx;
+    for(const auto &idx : c_orders_7_plain_select_idx){
+        c_orders_projected_8_plain_cols_idx.push_back(c_orders_projected_8_select_map[idx]);
+    }
+
+    for(const auto &idx : c_orders_7_cipher_select_idx){
+        c_orders_projected_8_cipher_cols_idx.push_back(c_orders_projected_8_select_map[idx]);
+    }
+    
+
+
 
 //open
     if(role == (1) % 3){
-        for(size_t i = 0; i < groupedjoined.size(); i++){
-            large_data_sending(role, groupedjoined[i].mShares[0], runtime, false);
+        for(size_t i = 0; i < c_orders_projected_8_cipher_cols.size(); i++){
+            large_data_sending(role, c_orders_projected_8_cipher_cols[i].mShares[0], runtime, false);
         }
     }
     else if(role ==(1 - 1)%3){
-        std::vector<i64Matrix> groupedjoined_open(groupedjoined.size());
-        for(size_t i = 0; i < groupedjoined_open.size(); i++){
-            groupedjoined_open[i].resize(groupedjoined[i].rows(), 1);
-            large_data_receiving(role, groupedjoined_open[i], runtime, false);
-            groupedjoined_open[i] += groupedjoined[i].mShares[0];
-            groupedjoined_open[i] += groupedjoined[i].mShares[1];
+        //将cipher_cols恢复成明文
+        std::vector<i64Matrix> c_orders_projected_open_9_cipher_cols(c_orders_projected_8_cipher_cols.size());
+        for(size_t i = 0; i < c_orders_projected_open_9_cipher_cols.size(); i++){
+            c_orders_projected_open_9_cipher_cols[i].resize(c_orders_projected_8_cipher_cols[i].rows(), 1);
+            large_data_receiving(role, c_orders_projected_open_9_cipher_cols[i], runtime, false);
+            c_orders_projected_open_9_cipher_cols[i] += c_orders_projected_8_cipher_cols[i].mShares[0];
+            c_orders_projected_open_9_cipher_cols[i] += c_orders_projected_8_cipher_cols[i].mShares[1];
         }
 
+        //全明文c_orders_projected_open_9
+        size_t c_orders_projected_open_9_size = c_orders_projected_8_plain_cols.size() + c_orders_projected_8_cipher_cols.size();
+        std::vector<i64Matrix> c_orders_projected_open_9(c_orders_projected_open_9_size);
+
+        //直接加入明文列
+        for(size_t i=0 ; i < c_orders_projected_8_plain_cols.size() ; i++){
+            c_orders_projected_open_9[c_orders_projected_8_plain_cols_idx[i]] = c_orders_projected_8_plain_cols[i];
+        }
+        //加入恢复的密文列
+        for(size_t i=0 ; i < c_orders_projected_8_cipher_cols.size() ; i++){
+            c_orders_projected_open_9[c_orders_projected_8_cipher_cols_idx[i]] = c_orders_projected_open_9_cipher_cols[i];
+        }
+        
+
         //存储在STP下的i64Matrix
-        std::ofstream file("/root/plantest/benchmarks/ssn/db/1/data/update/groupedjoined_open.csv");
+        std::ofstream file("/root/plantest/benchmarks/tpch_test/8192/db/1/data/update/c_orders_projected_open_9.csv");
         if (!file.is_open()) {
             throw std::runtime_error("Failed to open file: ");
         }
-        for(size_t j = 0; j < groupedjoined_open[0].rows(); j++) {
-            for(size_t i = 0; i < groupedjoined_open.size(); i++) {
-                file << groupedjoined_open[i](j,0) ;
-                if(i < groupedjoined_open.size()-1){
+        for(size_t j = 0; j < c_orders_projected_open_9[0].rows(); j++) {
+            for(size_t i = 0; i < c_orders_projected_open_9.size(); i++) {
+                file << c_orders_projected_open_9[i](j,0) ;
+                if(i < c_orders_projected_open_9.size()-1){
                     file << "," ;
                 }
             }

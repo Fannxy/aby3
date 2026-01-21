@@ -5,13 +5,14 @@ static const size_t MAX_SENDING_SIZE = 1 << 25;
 int large_data_sending(int pIdx, aby3::i64Matrix &sharedA,
                        aby3::Sh3Runtime &runtime, bool toNext) {
     size_t len = sharedA.rows();
+    size_t cols = sharedA.cols();
     size_t round = (size_t)ceil(len / (double)MAX_SENDING_SIZE);
     size_t last_len = len - (round - 1) * MAX_SENDING_SIZE;
 
     if (toNext){
         for(size_t i=0; i<round; i++){
             size_t sending_len = (i == round - 1) ? last_len : MAX_SENDING_SIZE;
-            aby3::i64Matrix sending_data = sharedA.block(i * MAX_SENDING_SIZE, 0, sending_len, 1);
+            aby3::i64Matrix sending_data = sharedA.block(i * MAX_SENDING_SIZE, 0, sending_len, cols);
             auto sendFu = runtime.mComm.mNext.asyncSendFuture(sending_data.data(), sending_data.size());
             sendFu.get();
         }
@@ -19,7 +20,7 @@ int large_data_sending(int pIdx, aby3::i64Matrix &sharedA,
     else{
         for(size_t i=0; i<round; i++){
             size_t sending_len = (i == round - 1) ? last_len : MAX_SENDING_SIZE;
-            aby3::i64Matrix sending_data = sharedA.block(i * MAX_SENDING_SIZE, 0, sending_len, 1);
+            aby3::i64Matrix sending_data = sharedA.block(i * MAX_SENDING_SIZE, 0, sending_len, cols);
             auto sendFu = runtime.mComm.mPrev.asyncSendFuture(sending_data.data(), sending_data.size());
             sendFu.get();
         }
@@ -31,25 +32,26 @@ int large_data_sending(int pIdx, aby3::i64Matrix &sharedA,
 int large_data_receiving(int pIdx, aby3::i64Matrix &res,
                          aby3::Sh3Runtime &runtime, bool fromPrev) {
     size_t len = res.rows();
+    size_t cols = res.cols();
     size_t round = (size_t)ceil(len / (double)MAX_SENDING_SIZE);
     size_t last_len = len - (round - 1) * MAX_SENDING_SIZE;
 
     if(fromPrev){
         for(size_t i=0; i<round; i++){
             size_t recv_len = (i == round - 1) ? last_len : MAX_SENDING_SIZE;
-            aby3::i64Matrix receiving_data(recv_len, 1);
+            aby3::i64Matrix receiving_data(recv_len, cols);
             auto recvFu = runtime.mComm.mPrev.asyncRecv(receiving_data.data(), receiving_data.size());
             recvFu.get();
-            res.block(i * MAX_SENDING_SIZE, 0, recv_len, 1) = receiving_data;
+            res.block(i * MAX_SENDING_SIZE, 0, recv_len, cols) = receiving_data;
         }
     }
     else{
         for(size_t i=0; i<round; i++){
             size_t recv_len = (i == round - 1) ? last_len : MAX_SENDING_SIZE;
-            aby3::i64Matrix receiving_data(recv_len, 1);
+            aby3::i64Matrix receiving_data(recv_len, cols);
             auto recvFu = runtime.mComm.mNext.asyncRecv(receiving_data.data(), receiving_data.size());
             recvFu.get();
-            res.block(i * MAX_SENDING_SIZE, 0, recv_len, 1) = receiving_data;
+            res.block(i * MAX_SENDING_SIZE, 0, recv_len, cols) = receiving_data;
         }
     }
 

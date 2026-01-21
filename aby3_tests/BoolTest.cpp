@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "../aby3-GORAM-Core/Basics.h"
+#include "../aby3-GORAM-Core/Sort.h"
 #include "../aby3-RTR/BuildingBlocks.h"
 #include "../aby3-RTR/debug.h"
 
@@ -17,6 +18,162 @@ using namespace std;
 const int TEST_SIZE = 16;
 const int TEST_UNIT_SIZE = 10;
 
+int bit_expand_test(CLP &cmd) {
+    // get the configs.
+    int role = -1;
+    if (cmd.isSet("role")) {
+        auto keys = cmd.getMany<int>("role");
+        role = keys[0];
+    }
+    if (role == -1) {
+        throw std::runtime_error(LOCATION);
+    }
+    
+    if (role == 0) {
+        debug_info("RUN BOOL BITCOUNT TEST");
+    }
+    
+    // setup communications.
+    IOService ios;
+    Sh3Encryptor enc;
+    Sh3Evaluator eval;
+    Sh3Runtime runtime;
+    // distribute_setup((u64)role, ios, enc, eval, runtime);
+    basic_setup((u64)role, ios, enc, eval, runtime);
+
+    i64Matrix input_x(4, 3);
+    i64Matrix input_y(4, 3);
+
+   
+    input_x(0, 0) = 0;
+    input_x(1, 0) = 0;
+    input_x(2, 0) = 1;
+    input_x(3, 0) = 3;
+    input_x(0, 1) = 1;
+    input_x(1, 1) = 2;
+    input_x(2, 1) = 3;
+    input_x(3, 1) = 4;
+    input_x(0, 2) = 7;
+    input_x(1, 2) = 6;
+    input_x(2, 2) = 2;
+    input_x(3, 2) = 3;
+
+    input_y(0, 0) = 0;
+    input_y(1, 0) = 0;
+    input_y(2, 0) = 1;
+    input_y(3, 0) = 2;
+    input_y(0, 1) = 2;
+    input_y(1, 1) = 2;
+    input_y(2, 1) = 0;
+    input_y(3, 1) = 4;
+    input_y(0, 2) = 6;
+    input_y(1, 2) = 6;
+    input_y(2, 2) = 1;
+    input_y(3, 2) = 5;
+  
+
+    sbMatrix bsharedX(4, 192);
+    sbMatrix bsharedY(4, 192);
+    if (role == 0) {
+        enc.localBinMatrix(runtime, input_x, bsharedX).get();
+        enc.localBinMatrix(runtime, input_y, bsharedY).get();
+    } else {
+        enc.remoteBinMatrix(runtime, bsharedX).get();
+        enc.remoteBinMatrix(runtime, bsharedY).get();
+    }
+
+    sbMatrix shared_lt(4, 1);
+    bool_cipher_lt(role, bsharedX, bsharedY, shared_lt, enc, eval, runtime);
+    i64Matrix test_lt(4, 1);
+    enc.revealAll(runtime, shared_lt, test_lt).get();
+
+    // sbMatrix shared_max(4, 192);
+    // bool_cipher_max(role, bsharedX, bsharedY, shared_max, enc, eval, runtime);
+    // i64Matrix test_max(4, 3);
+    // enc.revealAll(runtime, shared_max, test_max).get();
+
+    sbMatrix shared_max(4, 192);
+    sbMatrix shared_min(4, 192);
+    bool_cipher_max_min_split(role, bsharedX, bsharedY, shared_max, shared_min, enc, eval, runtime);
+    i64Matrix test_max(4, 3);
+    i64Matrix test_min(4, 3);
+    enc.revealAll(runtime, shared_max, test_max).get();
+    enc.revealAll(runtime, shared_min, test_min).get();
+
+
+    sbMatrix shared_x_sorted(4, 192);
+    odd_even_merge_sort(bsharedX, shared_x_sorted, role, enc, eval, runtime);
+    i64Matrix test_x_sorted(4, 3);
+    enc.revealAll(runtime, shared_x_sorted, test_x_sorted).get();
+
+    sbMatrix shared_y_sorted(4, 192);
+    odd_even_merge_sort(bsharedY, shared_y_sorted, role, enc, eval, runtime);
+    i64Matrix test_y_sorted(4, 3);
+    enc.revealAll(runtime, shared_y_sorted, test_y_sorted).get();
+
+    si64Matrix shared_x_i64(4, 3);
+    if (role == 0) {
+        enc.localIntMatrix(runtime, input_x, shared_x_i64).get();
+    } else {
+        enc.remoteIntMatrix(runtime, shared_x_i64).get();
+    }
+    sbMatrix shared_x_sb(4, 192);
+    sbMatrix shared_x_0(4, 64),shared_x_1(4, 64),shared_x_2(4, 64);
+    arith2bool(role, shared_x_i64, shared_x_sb, enc, eval, runtime);
+    for(int i=0; i<4; i++){
+        shared_x_0.mShares[0](i, 0) = shared_x_sb.mShares[0](i, 0);
+        shared_x_0.mShares[1](i, 0) = shared_x_sb.mShares[1](i, 0);
+
+        shared_x_1.mShares[0](i, 0) = shared_x_sb.mShares[0](i, 1);
+        shared_x_1.mShares[1](i, 0) = shared_x_sb.mShares[1](i, 1);
+
+        shared_x_2.mShares[0](i, 0) = shared_x_sb.mShares[0](i, 2);
+        shared_x_2.mShares[1](i, 0) = shared_x_sb.mShares[1](i, 2);
+    }
+    i64Matrix test_x_0(4, 1), test_x_1(4, 1), test_x_2(4, 1);
+    enc.revealAll(runtime, shared_x_0, test_x_0).get();
+    enc.revealAll(runtime, shared_x_1, test_x_1).get();
+    enc.revealAll(runtime, shared_x_2, test_x_2).get();
+
+    if(role == 0){
+        std::cout<<"x_0:"<<std::endl;
+        for(int i=0; i<4; i++){
+            std::cout<<test_x_0(i, 0)<<" ";
+        }
+        std::cout<<std::endl;
+        std::cout<<"x_1:"<<std::endl;
+        for(int i=0; i<4; i++){
+            std::cout<<test_x_1(i, 0)<<" ";
+        }
+        std::cout<<std::endl;
+        std::cout<<"x_2:"<<std::endl;
+        for(int i=0; i<4; i++){
+            std::cout<<test_x_2(i, 0)<<" ";
+        }
+        std::cout<<std::endl;
+    }
+
+    // check the result.
+    if (role == 0) {
+        debug_output_matrix(test_lt);
+        std::cout<<"x_sorted:"<<std::endl;
+        for(int i=0; i<4; i++){
+            for(int j=0; j<3; j++){
+                std::cout<<test_x_sorted(i, j)<<" ";
+            }
+            std::cout<<std::endl;
+        }
+        std::cout<<"y_sorted:"<<std::endl;
+        for(int i=0; i<4; i++){
+            for(int j=0; j<3; j++){
+                std::cout<<test_y_sorted(i, j)<<" ";
+            }
+            std::cout<<std::endl;
+        }
+    }
+    
+    return 0;
+}
 
 int bool_basic_test(CLP &cmd) {
     // get the configs.

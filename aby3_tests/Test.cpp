@@ -20,11 +20,15 @@ static size_t MAX_COMM_SIZE = 1 << 25;
 
 bool check_result(const std::string &func_name, i64Matrix &test,
                   i64Matrix &res) {
-    int size = test.rows();
+    int rows = test.rows();
+    int cols = test.cols();
     bool check_flag = true;
-    for (int i = 0; i < size; i++) {
-        if (test(i, 0) != res(i, 0)) check_flag = false;
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            if (test(i, j) != res(i, j)) check_flag = false;
+        }
     }
+
 
     if (!check_flag) {
         debug_info("\033[31m" + func_name + " ERROR !" + "\033[0m\n");

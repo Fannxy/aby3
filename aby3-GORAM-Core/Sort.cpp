@@ -1125,6 +1125,117 @@ int odd_even_merge(aby3::si64Matrix& data1, aby3::si64Matrix& data2, aby3::si64M
     return 0;
 }
 
+int odd_even_merge_ex(aby3::sbMatrix& data1, aby3::sbMatrix& data2, aby3::sbMatrix& res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+
+    int arr1_length = data1.rows();
+    int arr2_length = data2.rows();
+    int length = std::max(arr1_length, arr2_length);
+    
+    // 从输入获取 bitCount，而不是使用全局 BITSIZE
+    size_t bitCount = data1.bitCount();
+    size_t numCols = data1.i64Cols(); // 获取列数
+
+    // init the result.
+    sbMatrix result(length*2, bitCount);
+    sbMatrix max_ele, max1, max2;
+    
+    // 直接获取最后一个元素的所有列（创建 1 行的 sbMatrix）
+    max1.resize(1, bitCount);
+    max2.resize(1, bitCount);
+    
+    // 复制 data1 最后一行的所有列
+    for(size_t col = 0; col < numCols; col++){
+        max1.mShares[0](0, col) = data1.mShares[0](arr1_length - 1, col);
+        max1.mShares[1](0, col) = data1.mShares[1](arr1_length - 1, col);
+    }
+    
+    // 复制 data2 最后一行的所有列
+    for(size_t col = 0; col < numCols; col++){
+        max2.mShares[0](0, col) = data2.mShares[0](arr2_length - 1, col);
+        max2.mShares[1](0, col) = data2.mShares[1](arr2_length - 1, col);
+    }
+
+    bool_cipher_max(pIdx, max1, max2, max_ele, enc, eval, runtime);
+    
+    // 填充所有列的最大值
+    for(size_t row = 0; row < result.rows(); row++){
+        for(size_t col = 0; col < numCols; col++){
+            result.mShares[0](row, col) = max_ele.mShares[0](0, col);
+            result.mShares[1](row, col) = max_ele.mShares[1](0, col);
+        }
+    }
+
+    // organize the result - 复制所有列
+    for(size_t i=0; i<arr1_length; i++){
+        for(size_t col = 0; col < numCols; col++){
+            result.mShares[0](i*2, col) = data1.mShares[0](i, col);
+            result.mShares[1](i*2, col) = data1.mShares[1](i, col);
+        }
+    }
+    for(size_t i=0; i<arr2_length; i++){
+        for(size_t col = 0; col < numCols; col++){
+            result.mShares[0](i*2 + 1, col) = data2.mShares[0](i, col);
+            result.mShares[1](i*2 + 1, col) = data2.mShares[1](i, col);
+        }
+    }
+
+    // begin the odd_even merge
+    size_t t = (size_t) std::ceil((std::log2((double)length)) + 1);
+    size_t q = std::pow(2, t-1);
+    size_t d = 1;
+    size_t r = 0;
+
+    while(d > 0){
+        // get the to-be-compared indexing mask.
+        std::vector<int> x_mask, y_mask;
+        for(int i=r; i<length*2 - d; i+=2){
+            x_mask.push_back(i);
+            y_mask.push_back(i + d);
+        }
+
+        // get the result into the sbMatrix - 复制所有列
+        sbMatrix x_mask_mat(x_mask.size(), bitCount);
+        sbMatrix y_mask_mat(y_mask.size(), bitCount);
+        for(int i=0; i<x_mask.size(); i++){
+            for(size_t col = 0; col < numCols; col++){
+                x_mask_mat.mShares[0](i, col) = result.mShares[0](x_mask[i], col);
+                x_mask_mat.mShares[1](i, col) = result.mShares[1](x_mask[i], col);
+                y_mask_mat.mShares[0](i, col) = result.mShares[0](y_mask[i], col);
+                y_mask_mat.mShares[1](i, col) = result.mShares[1](y_mask[i], col);
+            }
+        }
+
+       
+        sbMatrix max_mat, min_mat;
+        bool_cipher_max_min_split(pIdx, x_mask_mat, y_mask_mat, max_mat, min_mat, enc, eval, runtime);
+        
+        // update the result - 更新所有列
+        for(int i=0; i<x_mask.size(); i++){
+            for(size_t col = 0; col < numCols; col++){
+                result.mShares[0](x_mask[i], col) = min_mat.mShares[0](i, col);
+                result.mShares[1](x_mask[i], col) = min_mat.mShares[1](i, col);
+                result.mShares[0](y_mask[i], col) = max_mat.mShares[0](i, col);
+                result.mShares[1](y_mask[i], col) = max_mat.mShares[1](i, col);
+            }
+        }
+
+        // update the d, r.
+        d = (size_t) (q - 1);
+        q = q >> 1;
+        r = 1;
+    }
+    
+    res.resize(arr1_length+arr2_length, bitCount);
+    for(size_t i=0; i<arr1_length+arr2_length; i++){
+        for(size_t col = 0; col < numCols; col++){
+            res.mShares[0](i, col) = result.mShares[0](i, col);
+            res.mShares[1](i, col) = result.mShares[1](i, col);
+        }
+    }
+
+    return 0;
+}
+
 int odd_even_merge_sort(aby3::si64Matrix& data, aby3::si64Matrix& res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
     
     size_t n = data.rows();
@@ -1178,26 +1289,32 @@ int odd_even_merge_sort(aby3::si64Matrix& data, aby3::si64Matrix& res, int pIdx,
 }
 
 int odd_even_merge_sort(aby3::sbMatrix& data, aby3::sbMatrix& res, int pIdx, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
-    
+    int bitCount = data.bitCount();
+    int numCols = data.i64Cols();
     size_t n = data.rows();
+
     
     if(n <= 1){
-        res.resize(n, 64);
+        res.resize(n, bitCount);
         for(size_t i = 0; i < n; i++){
-            res.mShares[0](i, 0) = data.mShares[0](i, 0);
-            res.mShares[1](i, 0) = data.mShares[1](i, 0);
+            for(size_t col = 0; col < numCols; col++){
+                res.mShares[0](i, col) = data.mShares[0](i, col);
+                res.mShares[1](i, col) = data.mShares[1](i, col);
+            }
         }
         return 0;
     }
     
     if(n == 2){
-        sbMatrix data1(1, 64), data2(1, 64);
-        data1.mShares[0](0, 0) = data.mShares[0](0, 0);
-        data1.mShares[1](0, 0) = data.mShares[1](0, 0);
-        data2.mShares[0](0, 0) = data.mShares[0](1, 0);
-        data2.mShares[1](0, 0) = data.mShares[1](1, 0);
+        sbMatrix data1(1, bitCount), data2(1, bitCount);
+        for(size_t col = 0; col < numCols; col++){
+            data1.mShares[0](0, col) = data.mShares[0](0, col);
+            data1.mShares[1](0, col) = data.mShares[1](0, col);
+            data2.mShares[0](0, col) = data.mShares[0](1, col);
+            data2.mShares[1](0, col) = data.mShares[1](1, col);
+        }
         
-        odd_even_merge(data1, data2, res, pIdx, enc, eval, runtime);
+        odd_even_merge_ex(data1, data2, res, pIdx, enc, eval, runtime);
         
         return 0;
     }
@@ -1206,16 +1323,20 @@ int odd_even_merge_sort(aby3::sbMatrix& data, aby3::sbMatrix& res, int pIdx, aby
     size_t left_size = mid;
     size_t right_size = n - mid;
     
-    sbMatrix left(left_size, 64);
+    sbMatrix left(left_size, bitCount);
     for(size_t i = 0; i < left_size; i++){
-        left.mShares[0](i, 0) = data.mShares[0](i, 0);
-        left.mShares[1](i, 0) = data.mShares[1](i, 0);
+        for(size_t col = 0; col < numCols; col++){
+            left.mShares[0](i, col) = data.mShares[0](i, col);
+            left.mShares[1](i, col) = data.mShares[1](i, col);
+        }
     }
     
-    sbMatrix right(right_size, 64);
+    sbMatrix right(right_size, bitCount);
     for(size_t i = 0; i < right_size; i++){
-        right.mShares[0](i, 0) = data.mShares[0](mid + i, 0);
-        right.mShares[1](i, 0) = data.mShares[1](mid + i, 0);
+        for(size_t col = 0; col < numCols; col++){
+            right.mShares[0](i, col) = data.mShares[0](mid + i, col);
+            right.mShares[1](i, col) = data.mShares[1](mid + i, col);
+        }
     }
     
     sbMatrix left_sorted;
@@ -1224,7 +1345,7 @@ int odd_even_merge_sort(aby3::sbMatrix& data, aby3::sbMatrix& res, int pIdx, aby
     sbMatrix right_sorted;
     odd_even_merge_sort(right, right_sorted, pIdx, enc, eval, runtime);
     
-    odd_even_merge(left_sorted, right_sorted, res, pIdx, enc, eval, runtime);
+    odd_even_merge_ex(left_sorted, right_sorted, res, pIdx, enc, eval, runtime);
     
     return 0;
 }

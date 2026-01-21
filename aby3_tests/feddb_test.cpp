@@ -199,6 +199,7 @@ int genperm_test(CLP &cmd){
 
     si64Matrix key_shared(data_size, 1);
     si64Matrix value_shared(data_size, 1);
+    si64Matrix k_v_shared(data_size, 2);
     si64Matrix perm_kv_shared(perm_size, 1);
     if (role == 0) {
         enc.localIntMatrix(runtime, key_plain, key_shared).get();
@@ -207,7 +208,14 @@ int genperm_test(CLP &cmd){
         enc.remoteIntMatrix(runtime, key_shared).get();
         enc.remoteIntMatrix(runtime, value_shared).get();
     }
-    genPerm_kv(role, key_shared, value_shared, perm_kv_shared, enc, eval, runtime);
+    for(size_t i=0; i<data_size; i++){
+        k_v_shared.mShares[0](i, 1) = key_shared.mShares[0](i, 0);
+        k_v_shared.mShares[1](i, 1) = key_shared.mShares[1](i, 0);
+        k_v_shared.mShares[0](i, 0) = value_shared.mShares[0](i, 0);
+        k_v_shared.mShares[1](i, 0) = value_shared.mShares[1](i, 0);
+    }
+    //genPerm_kv(role, key_shared, value_shared, perm_kv_shared, enc, eval, runtime);
+    genPerm(role, k_v_shared, perm_kv_shared, enc, eval, runtime);
     i64Matrix perm_kv_test(perm_size, 1);
     enc.revealAll(runtime, perm_kv_shared, perm_kv_test).get();
     if(role == 0){
@@ -604,118 +612,119 @@ int persist_test(CLP &cmd){
 
 }
 
-int index_agg_test(CLP &cmd){
-    int role = -1;
-    if (cmd.isSet("role")) {
-        auto keys = cmd.getMany<int>("role");
-        role = keys[0];
-    }
-    if (role == -1) {
-        throw std::runtime_error(LOCATION);
-    }
+//TODO key_col expand test
+// int index_agg_test(CLP &cmd){
+//     int role = -1;
+//     if (cmd.isSet("role")) {
+//         auto keys = cmd.getMany<int>("role");
+//         role = keys[0];
+//     }
+//     if (role == -1) {
+//         throw std::runtime_error(LOCATION);
+//     }
 
-    if (role == 0) {
-        debug_info("RUN INDEX_AGG TEST");
-    }
+//     if (role == 0) {
+//         debug_info("RUN INDEX_AGG TEST");
+//     }
 
-    // setup communications.
-    IOService ios;
-    Sh3Encryptor enc;
-    Sh3Evaluator eval;
-    Sh3Runtime runtime;
-    basic_setup((u64)role, ios, enc, eval, runtime);
+//     // setup communications.
+//     IOService ios;
+//     Sh3Encryptor enc;
+//     Sh3Evaluator eval;
+//     Sh3Runtime runtime;
+//     basic_setup((u64)role, ios, enc, eval, runtime);
 
-    size_t TEST_SIZE = 8;
-    std::vector<i64Matrix> input_data(2);
-    input_data[0].resize(TEST_SIZE,1);
-    input_data[1].resize(TEST_SIZE,1);
+//     size_t TEST_SIZE = 8;
+//     std::vector<i64Matrix> input_data(2);
+//     input_data[0].resize(TEST_SIZE,1);
+//     input_data[1].resize(TEST_SIZE,1);
 
-    input_data[0](0,0)=1;
-    input_data[0](1,0)=3;
-    input_data[0](2,0)=5;
-    input_data[0](3,0)=4;
-    input_data[0](4,0)=3;
-    input_data[0](5,0)=2;
-    input_data[0](6,0)=2;
-    input_data[0](7,0)=3;
+//     input_data[0](0,0)=1;
+//     input_data[0](1,0)=3;
+//     input_data[0](2,0)=5;
+//     input_data[0](3,0)=4;
+//     input_data[0](4,0)=3;
+//     input_data[0](5,0)=2;
+//     input_data[0](6,0)=2;
+//     input_data[0](7,0)=3;
 
-    for(int i=0; i< TEST_SIZE; i++){
-        input_data[1](i,0)=i;
-    }
+//     for(int i=0; i< TEST_SIZE; i++){
+//         input_data[1](i,0)=i;
+//     }
 
-    std::vector<si64Matrix> dataShared(2);
-    dataShared[0].resize(TEST_SIZE,1);
-    dataShared[1].resize(TEST_SIZE,1);
-    if (role == 0) {
-        enc.localIntMatrix(runtime, input_data[0], dataShared[0]).get();
-        enc.localIntMatrix(runtime, input_data[1], dataShared[1]).get();
-    } else {
-        enc.remoteIntMatrix(runtime, dataShared[0]).get();
-        enc.remoteIntMatrix(runtime, dataShared[1]).get();
-    }
+//     std::vector<si64Matrix> dataShared(2);
+//     dataShared[0].resize(TEST_SIZE,1);
+//     dataShared[1].resize(TEST_SIZE,1);
+//     if (role == 0) {
+//         enc.localIntMatrix(runtime, input_data[0], dataShared[0]).get();
+//         enc.localIntMatrix(runtime, input_data[1], dataShared[1]).get();
+//     } else {
+//         enc.remoteIntMatrix(runtime, dataShared[0]).get();
+//         enc.remoteIntMatrix(runtime, dataShared[1]).get();
+//     }
 
-    i64Matrix idx(TEST_SIZE,1);
-    idx(0,0)=0;
-    idx(1,0)=5;
-    idx(2,0)=6;
-    idx(3,0)=1;
-    idx(4,0)=4;
-    idx(5,0)=7;
-    idx(6,0)=3;
-    idx(7,0)=2;
+//     i64Matrix idx(TEST_SIZE,1);
+//     idx(0,0)=0;
+//     idx(1,0)=5;
+//     idx(2,0)=6;
+//     idx(3,0)=1;
+//     idx(4,0)=4;
+//     idx(5,0)=7;
+//     idx(6,0)=3;
+//     idx(7,0)=2;
 
-    i64Matrix equalFlag(TEST_SIZE,1);
-    equalFlag(0,0)=0;
-    equalFlag(1,0)=0;
-    equalFlag(2,0)=1;
-    equalFlag(3,0)=0;
-    equalFlag(4,0)=1;
-    equalFlag(5,0)=1;
-    equalFlag(6,0)=0;
-    equalFlag(7,0)=0;
+//     i64Matrix equalFlag(TEST_SIZE,1);
+//     equalFlag(0,0)=0;
+//     equalFlag(1,0)=0;
+//     equalFlag(2,0)=1;
+//     equalFlag(3,0)=0;
+//     equalFlag(4,0)=1;
+//     equalFlag(5,0)=1;
+//     equalFlag(6,0)=0;
+//     equalFlag(7,0)=0;
 
-    si64Matrix equalFlagShared(TEST_SIZE,1);
-    if (role == 0) {
-        enc.localIntMatrix(runtime, equalFlag, equalFlagShared).get();
-    } else {
-        enc.remoteIntMatrix(runtime, equalFlagShared).get();
-    }
+//     si64Matrix equalFlagShared(TEST_SIZE,1);
+//     if (role == 0) {
+//         enc.localIntMatrix(runtime, equalFlag, equalFlagShared).get();
+//     } else {
+//         enc.remoteIntMatrix(runtime, equalFlagShared).get();
+//     }
 
-    std::vector<si64Matrix> test_res(2),test_res_sorted(2);
-    index_agg(role, equalFlagShared, idx, dataShared, test_res, enc, eval, runtime);
-    int resRows=test_res[0].rows();
-    test_res_sorted[0].resize(resRows,1);
-    test_res_sorted[1].resize(resRows,1);
+//     std::vector<si64Matrix> test_res(2),test_res_sorted(2);
+//     index_agg(role, equalFlagShared, idx, dataShared, test_res, enc, eval, runtime);
+//     int resRows=test_res[0].rows();
+//     test_res_sorted[0].resize(resRows,1);
+//     test_res_sorted[1].resize(resRows,1);
 
-    si64Matrix perm(resRows,1);
-    genPerm(role, test_res[0], perm, enc, eval, runtime);
-    i64Matrix perm_plain(resRows,1);
-    enc.revealAll(runtime, perm, perm_plain).get();
-    permutate(role, test_res[0], test_res_sorted[0], perm_plain);
-    permutate(role, test_res[1], test_res_sorted[1], perm_plain);
+//     si64Matrix perm(resRows,1);
+//     genPerm(role, test_res[0], perm, enc, eval, runtime);
+//     i64Matrix perm_plain(resRows,1);
+//     enc.revealAll(runtime, perm, perm_plain).get();
+//     permutate(role, test_res[0], test_res_sorted[0], perm_plain);
+//     permutate(role, test_res[1], test_res_sorted[1], perm_plain);
 
-    i64Matrix res_key(resRows,1),res_val(resRows,1);
-    res_key(0,0)=2;
-    res_key(1,0)=3;
-    res_key(2,0)=4;
-    res_key(3,0)=5;
+//     i64Matrix res_key(resRows,1),res_val(resRows,1);
+//     res_key(0,0)=2;
+//     res_key(1,0)=3;
+//     res_key(2,0)=4;
+//     res_key(3,0)=5;
 
-    res_val(0,0)=11;
-    res_val(1,0)=12;
-    res_val(2,0)=3;
-    res_val(3,0)=2;
+//     res_val(0,0)=11;
+//     res_val(1,0)=12;
+//     res_val(2,0)=3;
+//     res_val(3,0)=2;
 
-    i64Matrix test_res_key(resRows,1),test_res_val(resRows,1);
-    enc.revealAll(runtime, test_res_sorted[0], test_res_key).get();
-    enc.revealAll(runtime, test_res_sorted[1], test_res_val).get();
-    if (role == 0) {
-        check_result("Index Agg Test-key",test_res_key, res_key);
-        check_result("Index Agg Test-val",test_res_val, res_val);
-    }
+//     i64Matrix test_res_key(resRows,1),test_res_val(resRows,1);
+//     enc.revealAll(runtime, test_res_sorted[0], test_res_key).get();
+//     enc.revealAll(runtime, test_res_sorted[1], test_res_val).get();
+//     if (role == 0) {
+//         check_result("Index Agg Test-key",test_res_key, res_key);
+//         check_result("Index Agg Test-val",test_res_val, res_val);
+//     }
 
-    return 0;
+//     return 0;
 
-}
+// }
 
 int group_by_common_test(CLP &cmd){
     int role = -1;
@@ -739,13 +748,18 @@ int group_by_common_test(CLP &cmd){
     basic_setup((u64)role, ios, enc, eval, runtime);
     
     size_t TEST_SIZE = 5;
-    i64Matrix key(TEST_SIZE,1);
+    i64Matrix key(TEST_SIZE,2);
     i64Matrix val(TEST_SIZE,1);
     key(0,0)=1;
     key(1,0)=3;
     key(2,0)=1;
     key(3,0)=3;
     key(4,0)=2;
+    key(0,1)=1;
+    key(1,1)=2;
+    key(2,1)=1;
+    key(3,1)=3;
+    key(4,1)=1;
 
     val(0,0)=2;
     val(1,0)=4;
@@ -753,12 +767,17 @@ int group_by_common_test(CLP &cmd){
     val(3,0)=5;
     val(4,0)=1;
 
-    i64Matrix key_G(TEST_SIZE,1);
+    i64Matrix key_G(TEST_SIZE,2);
     key_G(0,0)=1;
     key_G(1,0)=1;
     key_G(2,0)=2;
     key_G(3,0)=3;
     key_G(4,0)=3;
+    key_G(0,1)=1;
+    key_G(1,1)=1;
+    key_G(2,1)=1;
+    key_G(3,1)=2;
+    key_G(4,1)=3;
 
     i64Matrix val_G(TEST_SIZE,1);
     val_G(0,0)=2;
@@ -771,32 +790,42 @@ int group_by_common_test(CLP &cmd){
     e(0,0)=0;
     e(1,0)=1;
     e(2,0)=1;
-    e(3,0)=0;
+    e(3,0)=1;
     e(4,0)=1;
 
-    i64Matrix key_GN(TEST_SIZE,1);
+    i64Matrix key_GN(TEST_SIZE,2);
     key_GN(0,0)=EMPTY_VALUE;
     key_GN(1,0)=1;
     key_GN(2,0)=2;
-    key_GN(3,0)=EMPTY_VALUE;
+    key_GN(3,0)=3;
     key_GN(4,0)=3;
+    key_GN(0,1)=EMPTY_VALUE;
+    key_GN(1,1)=1;
+    key_GN(2,1)=1;
+    key_GN(3,1)=2;
+    key_GN(4,1)=3; 
 
     i64Matrix perm_GN(TEST_SIZE,1);
-    perm_GN(0,0)=3;
+    perm_GN(0,0)=4;
     perm_GN(1,0)=0;
     perm_GN(2,0)=1;
-    perm_GN(3,0)=4;
-    perm_GN(4,0)=2;
+    perm_GN(3,0)=2;
+    perm_GN(4,0)=3;
 
-    i64Matrix key_out(TEST_SIZE,1);
+    i64Matrix key_out(TEST_SIZE,2);
     key_out(0,0)=1;
     key_out(1,0)=2;
     key_out(2,0)=3;
-    key_out(3,0)=EMPTY_VALUE;
+    key_out(3,0)=3;
     key_out(4,0)=EMPTY_VALUE;
+    key_out(0,1)=1;
+    key_out(1,1)=1;
+    key_out(2,1)=2;
+    key_out(3,1)=3;
+    key_out(4,1)=EMPTY_VALUE;
 
 
-    si64Matrix keyShared(TEST_SIZE,1);
+    si64Matrix keyShared(TEST_SIZE,2);
     si64Matrix valShared(TEST_SIZE,1);
     if (role == 0) {
         enc.localIntMatrix(runtime, key, keyShared).get();
@@ -806,15 +835,15 @@ int group_by_common_test(CLP &cmd){
         enc.remoteIntMatrix(runtime, valShared).get();
     }
 
-    si64Matrix keyGShared(TEST_SIZE,1);
+    si64Matrix keyGShared(TEST_SIZE,2);
     si64Matrix valGShared(TEST_SIZE,1);
     si64Matrix eShared(TEST_SIZE,1);
     si64Matrix perm_GNShared(TEST_SIZE,1);
-    si64Matrix key_GNShared(TEST_SIZE,1);
-    si64Matrix key_outShared(TEST_SIZE,1);
+    si64Matrix key_GNShared(TEST_SIZE,2);
+    si64Matrix key_outShared(TEST_SIZE,2);
     group_by_common(role, keyShared, valShared, keyGShared, valGShared, eShared, perm_GNShared, key_GNShared, key_outShared, enc, eval, runtime);
 
-    i64Matrix keyGPlain(TEST_SIZE,1);
+    i64Matrix keyGPlain(TEST_SIZE,2);
     enc.revealAll(runtime, keyGShared, keyGPlain).get();
     i64Matrix valGPlain(TEST_SIZE,1);
     enc.revealAll(runtime, valGShared, valGPlain).get();
@@ -822,9 +851,9 @@ int group_by_common_test(CLP &cmd){
     enc.revealAll(runtime, eShared, ePlain).get();
     i64Matrix perm_GNPlain(TEST_SIZE,1);
     enc.revealAll(runtime, perm_GNShared, perm_GNPlain).get();
-    i64Matrix key_GNPlain(TEST_SIZE,1);
+    i64Matrix key_GNPlain(TEST_SIZE,2);
     enc.revealAll(runtime, key_GNShared, key_GNPlain).get();
-    i64Matrix key_outPlain(TEST_SIZE,1);
+    i64Matrix key_outPlain(TEST_SIZE,2);
     enc.revealAll(runtime, key_outShared, key_outPlain).get();
 
     if (role == 0) {
@@ -862,13 +891,21 @@ int group_by_test(CLP &cmd){
     basic_setup((u64)role, ios, enc, eval, runtime);
     
     size_t TEST_SIZE = 5;
-    i64Matrix key(TEST_SIZE,1);
+    std::vector<i64Matrix> key(2);
+    key[0].resize(TEST_SIZE,1);
+    key[1].resize(TEST_SIZE,1);
     i64Matrix val(TEST_SIZE,1);
-    key(0,0)=1;
-    key(1,0)=3;
-    key(2,0)=1;
-    key(3,0)=3;
-    key(4,0)=2;
+    key[0](0,0)=1;
+    key[0](1,0)=3;
+    key[0](2,0)=1;
+    key[0](3,0)=3;
+    key[0](4,0)=2;
+    key[1](0,0)=1;
+    key[1](1,0)=2;
+    key[1](2,0)=1;
+    key[1](3,0)=3;
+    key[1](4,0)=1;
+
 
     val(0,0)=2;
     val(1,0)=4;
@@ -876,63 +913,81 @@ int group_by_test(CLP &cmd){
     val(3,0)=5;
     val(4,0)=1;
     
-    i64Matrix key_out(TEST_SIZE,1);
-    key_out(0,0)=1;
-    key_out(1,0)=2;
-    key_out(2,0)=3;
-    key_out(3,0)=EMPTY_VALUE;
-    key_out(4,0)=EMPTY_VALUE;
+    std::vector<i64Matrix> key_out(2);
+    key_out[0].resize(TEST_SIZE,1);
+    key_out[1].resize(TEST_SIZE,1);
+    key_out[0](0,0)=1;
+    key_out[0](1,0)=2;
+    key_out[0](2,0)=3;
+    key_out[0](3,0)=3;
+    key_out[0](4,0)=EMPTY_VALUE;
+    key_out[1](0,0)=1;
+    key_out[1](1,0)=1;
+    key_out[1](2,0)=2;
+    key_out[1](3,0)=3;
+    key_out[1](4,0)=EMPTY_VALUE;
+
 
     i64Matrix count(TEST_SIZE, 1);
     count(0,0)=2;
     count(1,0)=1;
-    count(2,0)=2;
-    count(3,0)=0;
+    count(2,0)=1;
+    count(3,0)=1;
     count(4,0)=0;
 
     i64Matrix sum(TEST_SIZE, 1);
     sum(0,0)=5;
     sum(1,0)=1;
-    sum(2,0)=9;
-    sum(3,0)=0;
+    sum(2,0)=4;
+    sum(3,0)=5;
     sum(4,0)=0;
 
     i64Matrix max(TEST_SIZE, 1);
     max(0,0)=3;
     max(1,0)=1;
-    max(2,0)=5;
-    max(3,0)=0;
+    max(2,0)=4;
+    max(3,0)=5;
     max(4,0)=0;
 
     i64Matrix min(TEST_SIZE, 1);
     min(0,0)=2;
     min(1,0)=1;
     min(2,0)=4;
-    min(3,0)=0;
+    min(3,0)=5;
     min(4,0)=0;
 
-    si64Matrix keyShared(TEST_SIZE,1);
+    std::vector<si64Matrix> keyShared(2);
+    keyShared[0].resize(TEST_SIZE,1);
+    keyShared[1].resize(TEST_SIZE,1);
     si64Matrix valShared(TEST_SIZE,1);
     if (role == 0) {
-        enc.localIntMatrix(runtime, key, keyShared).get();
+        enc.localIntMatrix(runtime, key[0], keyShared[0]).get();
+        enc.localIntMatrix(runtime, key[1], keyShared[1]).get();
         enc.localIntMatrix(runtime, val, valShared).get();
     } else {
-        enc.remoteIntMatrix(runtime, keyShared).get();
+        enc.remoteIntMatrix(runtime, keyShared[0]).get();
+        enc.remoteIntMatrix(runtime, keyShared[1]).get();
         enc.remoteIntMatrix(runtime, valShared).get();
     }
 
     //group_count
     si64Matrix countShared(TEST_SIZE,1);
-    si64Matrix key_outShared(TEST_SIZE,1);
+    std::vector<si64Matrix> key_outShared(2);
+    key_outShared[0].resize(TEST_SIZE,1);
+    key_outShared[1].resize(TEST_SIZE,1);
     group_count(role, keyShared, key_outShared, countShared, enc, eval, runtime);
 
     i64Matrix countPlain(TEST_SIZE,1);
     enc.revealAll(runtime, countShared, countPlain).get();
-    i64Matrix key_outPlain(TEST_SIZE,1);
-    enc.revealAll(runtime, key_outShared, key_outPlain).get();
+    std::vector<i64Matrix> key_outPlain(2);
+    key_outPlain[0].resize(TEST_SIZE,1);
+    key_outPlain[1].resize(TEST_SIZE,1);
+    enc.revealAll(runtime, key_outShared[0], key_outPlain[0]).get();
+    enc.revealAll(runtime, key_outShared[1], key_outPlain[1]).get();
 
     if (role == 0) {
-        check_result("Group By Count Test-key",key_outPlain, key_out);
+        check_result("Group By Count Test-key-0",key_outPlain[0], key_out[0]);
+        check_result("Group By Count Test-key-1",key_outPlain[1], key_out[1]);
         check_result("Group By Count Test-count",countPlain, count);
 
     }
@@ -1064,122 +1119,142 @@ int join_test(CLP &cmd){
     Sh3Runtime runtime;
     basic_setup((u64)role, ios, enc, eval, runtime);
 
-    std::vector<i64Matrix> T_1(2);
-    std::vector<i64Matrix> T_2(2);
-    std::vector<i64Matrix> T_join(3);
+    std::vector<i64Matrix> T_1_key(2);
+    std::vector<i64Matrix> T_1_other(2);
+    std::vector<i64Matrix> T_2_key(2);
+    std::vector<i64Matrix> T_2_other(1);
+    std::vector<i64Matrix> T_join(5);
     // std::vector<i64Matrix> T_1_auged(4);
     // std::vector<i64Matrix> T_2_auged(4);
-    size_t len1 = 6;
+    size_t len1 = 5;
     size_t len2 = 6;
-    size_t m = 14 ;
-    T_1[0].resize(len1, 1);
-    T_1[1].resize(len1, 1);
-    T_2[0].resize(len2, 1);
-    T_2[1].resize(len2, 1);
-    for(size_t i = 0; i < 3; i++){
+    size_t m = 5 ;
+    T_1_key[0].resize(len1, 1);
+    T_1_key[1].resize(len1, 1);
+    T_1_other[0].resize(len1, 1);
+    T_1_other[1].resize(len1, 1);
+    T_2_key[0].resize(len2, 1);
+    T_2_key[1].resize(len2, 1);
+    T_2_other[0].resize(len2, 1);
+    for(size_t i = 0; i < 5; i++){
         T_join[i].resize(m, 1);
     }
 
     //set T_1
-    T_1[0](0,0)=5;
-    T_1[0](1,0)=5;
-    T_1[0](2,0)=6;
-    T_1[0](3,0)=6;
-    T_1[0](4,0)=6;
-    T_1[0](5,0)=6;
+    T_1_key[0](0,0)=1;
+    T_1_key[0](1,0)=1;
+    T_1_key[0](2,0)=2;
+    T_1_key[0](3,0)=3;
+    T_1_key[0](4,0)=4;
+    T_1_key[1](0,0)=2;
+    T_1_key[1](1,0)=2;
+    T_1_key[1](2,0)=2;
+    T_1_key[1](3,0)=3;
+    T_1_key[1](4,0)=1;
 
-    T_1[1](0,0)=1;
-    T_1[1](1,0)=3;
-    T_1[1](2,0)=1;
-    T_1[1](3,0)=2;
-    T_1[1](4,0)=4;
-    T_1[1](5,0)=8;
+    T_1_other[0](0,0)=14;
+    T_1_other[0](1,0)=2;
+    T_1_other[0](2,0)=4;
+    T_1_other[0](3,0)=4;
+    T_1_other[0](4,0)=2;
+    T_1_other[1](0,0)=15;
+    T_1_other[1](1,0)=4;
+    T_1_other[1](2,0)=6;
+    T_1_other[1](3,0)=6;
+    T_1_other[1](4,0)=0;
+
 
     //set T_2
-    T_2[0](0,0)=5;
-    T_2[0](1,0)=5;
-    T_2[0](2,0)=5;
-    T_2[0](3,0)=6;
-    T_2[0](4,0)=6;
-    T_2[0](5,0)=10;
+    T_2_key[0](0,0)=1;
+    T_2_key[0](1,0)=2;
+    T_2_key[0](2,0)=3;
+    T_2_key[0](3,0)=3;
+    T_2_key[0](4,0)=4;
+    T_2_key[0](5,0)=4;
+    T_2_key[1](0,0)=2;
+    T_2_key[1](1,0)=3;
+    T_2_key[1](2,0)=3;
+    T_2_key[1](3,0)=3;
+    T_2_key[1](4,0)=1;
+    T_2_key[1](5,0)=2;
 
-    T_2[1](0,0)=2;
-    T_2[1](1,0)=5;
-    T_2[1](2,0)=6;
-    T_2[1](3,0)=1;
-    T_2[1](4,0)=2;
-    T_2[1](5,0)=3;
+    T_2_other[0](0,0)=0;
+    T_2_other[0](1,0)=1;
+    T_2_other[0](2,0)=4;
+    T_2_other[0](3,0)=5;
+    T_2_other[0](4,0)=2;
+    T_2_other[0](5,0)=0;
 
-    //set T_join
-    for(size_t i=0; i<6; i++){
-        T_join[0](i,0)=5;
-    }
-    for(size_t i=6; i<14; i++){
-        T_join[0](i,0)=6;
-    }
-    
-    
-    T_join[1](0,0)=1;
-    T_join[1](1,0)=1;
-    T_join[1](2,0)=1;
+
+    // //set T_join
+    T_join[0](0,0)=1;
+    T_join[0](1,0)=1;
+    T_join[0](2,0)=3;
+    T_join[0](3,0)=3;
+    T_join[0](4,0)=4;
+    T_join[1](0,0)=2;
+    T_join[1](1,0)=2;
+    T_join[1](2,0)=3;
     T_join[1](3,0)=3;
-    T_join[1](4,0)=3;
-    T_join[1](5,0)=3;
-    T_join[1](6,0)=1;
-    T_join[1](7,0)=1;
-    T_join[1](8,0)=2;
-    T_join[1](9,0)=2;
-    T_join[1](10,0)=4;
-    T_join[1](11,0)=4;
-    T_join[1](12,0)=8;
-    T_join[1](13,0)=8;
-
-    
+    T_join[1](4,0)=1;
     T_join[2](0,0)=2;
-    T_join[2](1,0)=5;
-    T_join[2](2,0)=6;
-    T_join[2](3,0)=2;
-    T_join[2](4,0)=5;
-    T_join[2](5,0)=6;
-    T_join[2](6,0)=1;
-    T_join[2](7,0)=2;
-    T_join[2](8,0)=1;
-    T_join[2](9,0)=2;
-    T_join[2](10,0)=1;
-    T_join[2](11,0)=2;
-    T_join[2](12,0)=1;
-    T_join[2](13,0)=2;
+    T_join[2](1,0)=14;
+    T_join[2](2,0)=4;
+    T_join[2](3,0)=4;
+    T_join[2](4,0)=2;
+    T_join[3](0,0)=4;
+    T_join[3](1,0)=15;
+    T_join[3](2,0)=6;
+    T_join[3](3,0)=6;
+    T_join[3](4,0)=0;
+    T_join[4](0,0)=0;
+    T_join[4](1,0)=0;
+    T_join[4](2,0)=4;
+    T_join[4](3,0)=5;
+    T_join[4](4,0)=2;
 
-    std::vector<si64Matrix> T_1_Shared(2);
-    std::vector<si64Matrix> T_2_Shared(2);
-    T_1_Shared[0].resize(len1, 1);
-    T_1_Shared[1].resize(len1, 1);
-    T_2_Shared[0].resize(len2, 1);
-    T_2_Shared[1].resize(len2, 1);
+    std::vector<si64Matrix> T_1_keyShared(2);
+    std::vector<si64Matrix> T_1_otherShared(2);
+    std::vector<si64Matrix> T_2_keyShared(2);
+    std::vector<si64Matrix> T_2_otherShared(1);
+    T_1_keyShared[0].resize(len1, 1);
+    T_1_keyShared[1].resize(len1, 1);
+    T_1_otherShared[0].resize(len1, 1);
+    T_1_otherShared[1].resize(len1, 1);
+    T_2_keyShared[0].resize(len2, 1);
+    T_2_keyShared[1].resize(len2, 1);
+    T_2_otherShared[0].resize(len2, 1);
+  
     if (role == 0) {
-        enc.localIntMatrix(runtime, T_1[0], T_1_Shared[0]).get();
-        enc.localIntMatrix(runtime, T_1[1], T_1_Shared[1]).get();
-        enc.localIntMatrix(runtime, T_2[0], T_2_Shared[0]).get();
-        enc.localIntMatrix(runtime, T_2[1], T_2_Shared[1]).get();
+        enc.localIntMatrix(runtime, T_1_key[0], T_1_keyShared[0]).get();
+        enc.localIntMatrix(runtime, T_1_key[1], T_1_keyShared[1]).get();
+        enc.localIntMatrix(runtime, T_1_other[0], T_1_otherShared[0]).get();
+        enc.localIntMatrix(runtime, T_1_other[1], T_1_otherShared[1]).get();
+        enc.localIntMatrix(runtime, T_2_key[0], T_2_keyShared[0]).get();
+        enc.localIntMatrix(runtime, T_2_key[1], T_2_keyShared[1]).get();
+        enc.localIntMatrix(runtime, T_2_other[0], T_2_otherShared[0]).get();
     } else {
-        enc.remoteIntMatrix(runtime, T_1_Shared[0]).get();
-        enc.remoteIntMatrix(runtime, T_1_Shared[1]).get();
-        enc.remoteIntMatrix(runtime, T_2_Shared[0]).get();
-        enc.remoteIntMatrix(runtime, T_2_Shared[1]).get();
+        enc.remoteIntMatrix(runtime, T_1_keyShared[0]).get();
+        enc.remoteIntMatrix(runtime, T_1_keyShared[1]).get();
+        enc.remoteIntMatrix(runtime, T_1_otherShared[0]).get();
+        enc.remoteIntMatrix(runtime, T_1_otherShared[1]).get();
+        enc.remoteIntMatrix(runtime, T_2_keyShared[0]).get();
+        enc.remoteIntMatrix(runtime, T_2_keyShared[1]).get();
+        enc.remoteIntMatrix(runtime, T_2_otherShared[0]).get();
     }
 
-    std::vector<si64Matrix> T_join_Shared(3);
-    join(role, T_1_Shared, T_2_Shared, T_join_Shared, enc, eval, runtime);
+    std::vector<si64Matrix> T_join_Shared(5);
+    join(role, T_1_keyShared, T_1_otherShared, T_2_keyShared, T_2_otherShared, T_join_Shared, enc, eval, runtime);
 
-    std::vector<i64Matrix> T_join_Plain(3);
-    for(size_t i = 0; i < 3; i++){
+    std::vector<i64Matrix> T_join_Plain(5);
+    for(size_t i = 0; i < 5; i++){
         T_join_Plain[i].resize(m, 1);
         enc.revealAll(runtime, T_join_Shared[i], T_join_Plain[i]).get();
     }
 
     if (role == 0) {
         bool check_flag = true;
-        for (size_t i = 0; i < 3; i++) {
+        for (size_t i = 0; i < 5; i++) {
             for (size_t j = 0; j < m; j++) {
                 if (T_join_Plain[i](j,0) != T_join[i](j, 0)) {
                     check_flag = false; 
@@ -1192,14 +1267,18 @@ int join_test(CLP &cmd){
         } else {
             debug_info("\033[31m JOIN CHECK ERROR ! \033[0m\n");
             debug_info("True result: \n");
-            for (size_t i = 0; i < 3; i++) {
+            for (size_t i = 0; i < 5; i++) {
                 debug_output_matrix(T_join[i]);
             }
             debug_info("Func result: \n");
-            for (size_t i = 0; i < 3; i++) {
+            for (size_t i = 0; i < 5; i++) {
                 debug_output_matrix(T_join_Plain[i]);
             }
         }
+        //DEBUG
+            // for (size_t i = 0; i < 5; i++) {
+            //     debug_output_matrix(T_join_Plain[i]);
+            // }
     }
 
     
@@ -1228,4 +1307,72 @@ int join_test(CLP &cmd){
 
     return 0;
 
+}
+
+int filter_test(CLP &cmd){
+    int role = -1;
+    if (cmd.isSet("role")) {
+        auto keys = cmd.getMany<int>("role");
+        role = keys[0];
+    }
+    if (role == -1) {
+        throw std::runtime_error(LOCATION);
+    }
+    if (role == 0) {
+        debug_info("RUN FILTER TEST");
+    }
+
+    // setup communications.
+    IOService ios;
+    Sh3Encryptor enc;
+    Sh3Evaluator eval;
+    Sh3Runtime runtime;
+    basic_setup((u64)role, ios, enc, eval, runtime);
+
+    std::vector<i64Matrix> T(3);
+    size_t len = 6;
+    T[0].resize(len, 1);
+    T[1].resize(len, 1);
+    T[2].resize(len, 1);
+    
+    T[0](0,0)=5;
+    T[0](1,0)=5;
+    T[0](2,0)=6;
+    T[0](3,0)=6;
+    T[0](4,0)=6;
+    T[0](5,0)=6;
+    
+    
+    for(size_t i=0; i<len; i++){
+        T[1](i,0)=i;
+        T[2](i,0)=i;
+    }
+
+    std::vector<si64Matrix> T_Shared(3);
+    for(size_t i=0; i<3; i++){
+        T_Shared[i].resize(len, 1);
+        if (role == 0) {
+            enc.localIntMatrix(runtime, T[i], T_Shared[i]).get();
+        } else {
+            enc.remoteIntMatrix(runtime, T_Shared[i]).get();
+        }
+    }
+
+    std::vector<si64Matrix> T_Filtered(3);
+    filter(role, T_Shared, 0, 6, true, "<", T_Filtered, enc, eval, runtime);
+    //filter(role, T_Shared, 0, 1, false, "<=", T_Filtered, enc, eval, runtime);
+
+    std::vector<i64Matrix> T_Filtered_Plain(3);
+    for(size_t i = 0; i < 3; i++){
+        T_Filtered_Plain[i].resize(len, 1);
+        enc.revealAll(runtime, T_Filtered[i], T_Filtered_Plain[i]).get();
+    }
+
+    if (role == 0) {
+        for(size_t i=0; i<3; i++){
+            debug_output_matrix(T_Filtered_Plain[i]);
+        }
+    }
+
+    return 0;
 }
