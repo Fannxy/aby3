@@ -11,9 +11,10 @@ using namespace std;
 using namespace oc;
 
 // #define LOCAL_TEST
-#define P0_IP "127.0.0.1"
-#define P1_IP "127.0.0.1"
-
+#define P0_IP "10.0.0.11"
+#define P1_IP "10.0.0.12"
+// #define P0_IP "127.0.0.1"
+// #define P1_IP "127.0.0.1"
 static int BASEPORT=6000;
 
 double synchronized_time(int pIdx, double& time_slot, Sh3Runtime &runtime){
@@ -42,22 +43,28 @@ void distribute_setup(u64 partyIdx, IOService &ios, Sh3Encryptor &enc, Sh3Evalua
   CommPkg comm;
   switch (partyIdx) {
     case 0:
-      comm.mNext = Session(ios, "10.0.1.15:1419", SessionMode::Server, "01")
-                       .addChannel();
-      comm.mPrev = Session(ios, "10.0.1.15:1420", SessionMode::Server, "02")
-                       .addChannel();
+      //comm.mNext = Session(ios, "10.0.1.15:1419", SessionMode::Server, "01")  
+      comm.mNext = Session(ios, "10.0.0.11:1420", SessionMode::Server, "01")
+                        .addChannel();
+      //comm.mPrev = Session(ios, "10.0.1.15:1420", SessionMode::Server, "02")
+      comm.mPrev = Session(ios, "10.0.0.11:1421", SessionMode::Server, "02")
+                        .addChannel();
       break;
     case 1:
-      comm.mNext = Session(ios, "10.0.1.4:1421", SessionMode::Server, "12")
-                       .addChannel();
-      comm.mPrev = Session(ios, "10.0.1.15:1419", SessionMode::Client, "01")
-                       .addChannel();
+      //comm.mNext = Session(ios, "10.0.1.4:1421", SessionMode::Server, "12")
+      comm.mNext = Session(ios, "10.0.0.12:1420", SessionMode::Server, "12")
+                        .addChannel();
+      //comm.mPrev = Session(ios, "10.0.1.15:1419", SessionMode::Client, "01")
+      comm.mPrev = Session(ios, "10.0.0.12:1421", SessionMode::Client, "01")
+      .addChannel();
       break;
     default:
-      comm.mNext = Session(ios, "10.0.1.15:1420", SessionMode::Client, "02")
-                       .addChannel();
-      comm.mPrev = Session(ios, "10.0.1.4:1421", SessionMode::Client, "12")
-                       .addChannel();
+      //comm.mNext = Session(ios, "10.0.1.15:1420", SessionMode::Client, "02")
+      comm.mNext = Session(ios, "10.0.0.13:1420", SessionMode::Client, "02")
+                        .addChannel();
+      //comm.mPrev = Session(ios, "10.0.1.4:1421", SessionMode::Client, "12")
+      comm.mPrev = Session(ios, "10.0.0.13:1421", SessionMode::Client, "12")
+      .addChannel();
       break;
   }
     // Establishes some shared randomness needed for the later protocols

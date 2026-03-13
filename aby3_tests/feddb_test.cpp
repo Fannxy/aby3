@@ -1118,6 +1118,7 @@ int join_test(CLP &cmd){
     Sh3Evaluator eval;
     Sh3Runtime runtime;
     basic_setup((u64)role, ios, enc, eval, runtime);
+    //distribute_setup((u64)role, ios, enc, eval, runtime);
 
     std::vector<i64Matrix> T_1_key(2);
     std::vector<i64Matrix> T_1_other(2);

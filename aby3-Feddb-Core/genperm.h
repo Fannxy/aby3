@@ -16,6 +16,7 @@ void genBitPerm(int pIdx, aby3::si64Matrix &k_j, aby3::si64Matrix &perm, aby3::S
 void applyPerm(int pIdx, aby3::si64Matrix &perm, aby3::si64Matrix &k_j, aby3::si64Matrix &k_j_prime, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 void composePerm(int pIdx, aby3::si64Matrix &perm_a, aby3::si64Matrix &perm_b, aby3::si64Matrix &perm, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 void genPerm(int pIdx, aby3::si64Matrix &k, aby3::si64Matrix &perm, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+void genPerm_bool(int pIdx, aby3::sbMatrix &k, aby3::si64Matrix &perm, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 void concat_k_v(int pIdx, aby3::sbMatrix& k, aby3::sbMatrix& v, aby3::sbMatrix& res);
 void genPerm_kv(int pIdx, aby3::si64Matrix &k,aby3::si64Matrix &v, aby3::si64Matrix &perm, aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);

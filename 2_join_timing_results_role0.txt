@@ -1,0 +1,1323 @@
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 12.846 ms
+  augment_step2_sort_result: 1304747.375 ms
+  augment_step3_downward_scan: 216937.342 ms
+  augment_step3_upward_scan: 6146.851 ms
+  augment_step4_sort_result: 1968250.553 ms
+  augment_step5_abstract_from_Tc: 0.589 ms
+  augment_total: 3496095.578 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 1137439.840 ms
+  oblivious_distribute_step2_fill_null: 0.415 ms
+  oblivious_distribute_step3_distribute_loop: 627412.097 ms
+  oblivious_distribute_total: 1764852.847 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 55082.899 ms
+  oblivious_expand_step2_obli_distribute: 1764859.989 ms
+  oblivious_expand_step3_fill_down: 4131.194 ms
+  oblivious_expand_total: 1824074.086 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 1148446.369 ms
+  oblivious_distribute_step2_fill_null: 0.273 ms
+  oblivious_distribute_step3_distribute_loop: 628413.702 ms
+  oblivious_distribute_total: 1776860.896 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 55282.377 ms
+  oblivious_expand_step2_obli_distribute: 1776862.292 ms
+  oblivious_expand_step3_fill_down: 3540.337 ms
+  oblivious_expand_total: 1835685.011 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 133477.588 ms
+  align_table_step2_sort_j_ii: 576417.617 ms
+  align_table_total: 709896.966 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 3496101.660 ms
+oblivious_expand_T1: 1824075.327 ms
+oblivious_expand_T2: 1835685.921 ms
+align_table: 709904.247 ms
+bool2arith_loop: 16.019 ms
+total: 7865783.890 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 2.056 ms
+  augment_step2_sort_result: 108015.238 ms
+  augment_step3_downward_scan: 22571.983 ms
+  augment_step3_upward_scan: 640.123 ms
+  augment_step4_sort_result: 181259.683 ms
+  augment_step5_abstract_from_Tc: 0.062 ms
+  augment_total: 312489.164 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 121132.675 ms
+  oblivious_distribute_step2_fill_null: 0.018 ms
+  oblivious_distribute_step3_distribute_loop: 39124.515 ms
+  oblivious_distribute_total: 160257.272 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 6656.047 ms
+  oblivious_expand_step2_obli_distribute: 160264.351 ms
+  oblivious_expand_step3_fill_down: 437.437 ms
+  oblivious_expand_total: 167357.840 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 94439.309 ms
+  oblivious_distribute_step2_fill_null: 0.016 ms
+  oblivious_distribute_step3_distribute_loop: 39334.190 ms
+  oblivious_distribute_total: 133773.574 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 4748.686 ms
+  oblivious_expand_step2_obli_distribute: 133780.981 ms
+  oblivious_expand_step3_fill_down: 461.447 ms
+  oblivious_expand_total: 138991.122 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 12030.348 ms
+  align_table_step2_sort_j_ii: 40015.964 ms
+  align_table_total: 52047.127 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 312497.228 ms
+oblivious_expand_T1: 167364.607 ms
+oblivious_expand_T2: 138997.953 ms
+align_table: 52053.846 ms
+bool2arith_loop: 6.755 ms
+total: 670920.437 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 5.172 ms
+  augment_step2_sort_result: 142346.197 ms
+  augment_step3_downward_scan: 21573.978 ms
+  augment_step3_upward_scan: 647.858 ms
+  augment_step4_sort_result: 213734.215 ms
+  augment_step5_abstract_from_Tc: 0.034 ms
+  augment_total: 378307.505 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 95109.293 ms
+  oblivious_distribute_step2_fill_null: 0.259 ms
+  oblivious_distribute_step3_distribute_loop: 62278.574 ms
+  oblivious_distribute_total: 157388.170 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 4200.920 ms
+  oblivious_expand_step2_obli_distribute: 157395.336 ms
+  oblivious_expand_step3_fill_down: 604.492 ms
+  oblivious_expand_total: 162200.755 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 145144.243 ms
+  oblivious_distribute_step2_fill_null: 0.025 ms
+  oblivious_distribute_step3_distribute_loop: 63318.095 ms
+  oblivious_distribute_total: 208462.407 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 6861.451 ms
+  oblivious_expand_step2_obli_distribute: 208470.070 ms
+  oblivious_expand_step3_fill_down: 674.874 ms
+  oblivious_expand_total: 216006.399 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 17843.247 ms
+  align_table_step2_sort_j_ii: 74998.130 ms
+  align_table_total: 92842.104 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 378315.006 ms
+oblivious_expand_T1: 162207.529 ms
+oblivious_expand_T2: 216012.869 ms
+align_table: 92843.870 ms
+bool2arith_loop: 8.301 ms
+total: 849387.714 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 2.448 ms
+  augment_step2_sort_result: 221677.502 ms
+  augment_step3_downward_scan: 46009.301 ms
+  augment_step3_upward_scan: 1326.989 ms
+  augment_step4_sort_result: 368179.167 ms
+  augment_step5_abstract_from_Tc: 0.191 ms
+  augment_total: 637195.616 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 246937.004 ms
+  oblivious_distribute_step2_fill_null: 0.059 ms
+  oblivious_distribute_step3_distribute_loop: 88261.460 ms
+  oblivious_distribute_total: 335198.571 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 14196.503 ms
+  oblivious_expand_step2_obli_distribute: 335205.708 ms
+  oblivious_expand_step3_fill_down: 831.764 ms
+  oblivious_expand_total: 350233.979 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 190515.713 ms
+  oblivious_distribute_step2_fill_null: 0.077 ms
+  oblivious_distribute_step3_distribute_loop: 88844.709 ms
+  oblivious_distribute_total: 279360.624 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 9744.618 ms
+  oblivious_expand_step2_obli_distribute: 279367.751 ms
+  oblivious_expand_step3_fill_down: 724.795 ms
+  oblivious_expand_total: 289837.169 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 24314.593 ms
+  align_table_step2_sort_j_ii: 81509.430 ms
+  align_table_total: 105824.729 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 637197.403 ms
+oblivious_expand_T1: 350240.712 ms
+oblivious_expand_T2: 289838.059 ms
+align_table: 105831.884 ms
+bool2arith_loop: 8.067 ms
+total: 1383116.247 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 4.263 ms
+  augment_step2_sort_result: 286522.175 ms
+  augment_step3_downward_scan: 43592.087 ms
+  augment_step3_upward_scan: 957.879 ms
+  augment_step4_sort_result: 429777.597 ms
+  augment_step5_abstract_from_Tc: 0.081 ms
+  augment_total: 760854.104 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 189169.574 ms
+  oblivious_distribute_step2_fill_null: 0.222 ms
+  oblivious_distribute_step3_distribute_loop: 141515.432 ms
+  oblivious_distribute_total: 330685.348 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 8423.523 ms
+  oblivious_expand_step2_obli_distribute: 330692.583 ms
+  oblivious_expand_step3_fill_down: 1019.089 ms
+  oblivious_expand_total: 340135.200 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 287913.370 ms
+  oblivious_distribute_step2_fill_null: 0.142 ms
+  oblivious_distribute_step3_distribute_loop: 140307.164 ms
+  oblivious_distribute_total: 428220.740 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 13843.391 ms
+  oblivious_expand_step2_obli_distribute: 428227.792 ms
+  oblivious_expand_step3_fill_down: 1144.228 ms
+  oblivious_expand_total: 443215.417 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 35644.066 ms
+  align_table_step2_sort_j_ii: 150205.548 ms
+  align_table_total: 185850.422 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 760861.559 ms
+oblivious_expand_T1: 340141.889 ms
+oblivious_expand_T2: 443222.175 ms
+align_table: 185857.366 ms
+bool2arith_loop: 10.384 ms
+total: 1730093.641 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 4.293 ms
+  augment_step2_sort_result: 443608.202 ms
+  augment_step3_downward_scan: 91676.081 ms
+  augment_step3_upward_scan: 2428.908 ms
+  augment_step4_sort_result: 740069.733 ms
+  augment_step5_abstract_from_Tc: 0.761 ms
+  augment_total: 1277787.996 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 498035.675 ms
+  oblivious_distribute_step2_fill_null: 0.083 ms
+  oblivious_distribute_step3_distribute_loop: 189400.992 ms
+  oblivious_distribute_total: 687436.955 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 28395.139 ms
+  oblivious_expand_step2_obli_distribute: 687444.307 ms
+  oblivious_expand_step3_fill_down: 1441.801 ms
+  oblivious_expand_total: 717281.252 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 376677.288 ms
+  oblivious_distribute_step2_fill_null: 0.172 ms
+  oblivious_distribute_step3_distribute_loop: 189040.416 ms
+  oblivious_distribute_total: 565718.072 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 18931.321 ms
+  oblivious_expand_step2_obli_distribute: 565725.947 ms
+  oblivious_expand_step3_fill_down: 1480.730 ms
+  oblivious_expand_total: 586138.008 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 47374.693 ms
+  align_table_step2_sort_j_ii: 158395.670 ms
+  align_table_total: 205771.330 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 1277790.819 ms
+oblivious_expand_T1: 717282.778 ms
+oblivious_expand_T2: 586138.711 ms
+align_table: 205779.307 ms
+bool2arith_loop: 11.512 ms
+total: 2787003.423 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 16.555 ms
+  augment_step2_sort_result: 567510.269 ms
+  augment_step3_downward_scan: 85312.275 ms
+  augment_step3_upward_scan: 2446.672 ms
+  augment_step4_sort_result: 853858.880 ms
+  augment_step5_abstract_from_Tc: 0.343 ms
+  augment_total: 1509145.009 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 370513.768 ms
+  oblivious_distribute_step2_fill_null: 0.842 ms
+  oblivious_distribute_step3_distribute_loop: 307961.246 ms
+  oblivious_distribute_total: 678476.025 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 16000.548 ms
+  oblivious_expand_step2_obli_distribute: 678483.303 ms
+  oblivious_expand_step3_fill_down: 1957.248 ms
+  oblivious_expand_total: 696441.103 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 581126.154 ms
+  oblivious_distribute_step2_fill_null: 0.196 ms
+  oblivious_distribute_step3_distribute_loop: 306920.655 ms
+  oblivious_distribute_total: 888047.320 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 28336.788 ms
+  oblivious_expand_step2_obli_distribute: 888054.906 ms
+  oblivious_expand_step3_fill_down: 2214.744 ms
+  oblivious_expand_total: 918606.441 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 71319.127 ms
+  align_table_step2_sort_j_ii: 300288.882 ms
+  align_table_total: 371608.859 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 1509152.455 ms
+oblivious_expand_T1: 696446.971 ms
+oblivious_expand_T2: 918612.722 ms
+align_table: 371616.887 ms
+bool2arith_loop: 11.705 ms
+total: 3495841.342 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 5.884 ms
+  augment_step2_sort_result: 886284.301 ms
+  augment_step3_downward_scan: 182303.488 ms
+  augment_step3_upward_scan: 5312.404 ms
+  augment_step4_sort_result: 1478258.153 ms
+  augment_step5_abstract_from_Tc: 0.256 ms
+  augment_total: 2552164.509 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 989417.830 ms
+  oblivious_distribute_step2_fill_null: 0.372 ms
+  oblivious_distribute_step3_distribute_loop: 418324.047 ms
+  oblivious_distribute_total: 1407742.690 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 54884.624 ms
+  oblivious_expand_step2_obli_distribute: 1407751.163 ms
+  oblivious_expand_step3_fill_down: 2896.065 ms
+  oblivious_expand_total: 1465531.857 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 751438.388 ms
+  oblivious_distribute_step2_fill_null: 0.332 ms
+  oblivious_distribute_step3_distribute_loop: 416868.143 ms
+  oblivious_distribute_total: 1168307.358 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 37744.716 ms
+  oblivious_expand_step2_obli_distribute: 1168315.480 ms
+  oblivious_expand_step3_fill_down: 2808.879 ms
+  oblivious_expand_total: 1208869.086 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 94637.913 ms
+  align_table_step2_sort_j_ii: 319679.748 ms
+  align_table_total: 414319.792 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 2552166.955 ms
+oblivious_expand_T1: 1465533.710 ms
+oblivious_expand_T2: 1208875.767 ms
+align_table: 414328.482 ms
+bool2arith_loop: 13.315 ms
+total: 5640918.640 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 21.736 ms
+  augment_step2_sort_result: 1141506.049 ms
+  augment_step3_downward_scan: 172068.322 ms
+  augment_step3_upward_scan: 5180.105 ms
+  augment_step4_sort_result: 1711943.530 ms
+  augment_step5_abstract_from_Tc: 0.545 ms
+  augment_total: 3030720.306 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 746475.686 ms
+  oblivious_distribute_step2_fill_null: 0.907 ms
+  oblivious_distribute_step3_distribute_loop: 670418.070 ms
+  oblivious_distribute_total: 1416895.024 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 32359.700 ms
+  oblivious_expand_step2_obli_distribute: 1416903.232 ms
+  oblivious_expand_step3_fill_down: 4272.155 ms
+  oblivious_expand_total: 1453535.090 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 1150124.842 ms
+  oblivious_distribute_step2_fill_null: 0.135 ms
+  oblivious_distribute_step3_distribute_loop: 668452.022 ms
+  oblivious_distribute_total: 1818577.280 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 55728.634 ms
+  oblivious_expand_step2_obli_distribute: 1818585.528 ms
+  oblivious_expand_step3_fill_down: 3723.030 ms
+  oblivious_expand_total: 1878037.198 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 141496.112 ms
+  align_table_step2_sort_j_ii: 597397.236 ms
+  align_table_total: 738895.053 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 3030727.995 ms
+oblivious_expand_T1: 1453542.600 ms
+oblivious_expand_T2: 1878038.722 ms
+align_table: 738903.126 ms
+bool2arith_loop: 19.093 ms
+total: 7101232.773 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 33.466 ms
+  augment_step2_sort_result: 20554.924 ms
+  augment_step3_downward_scan: 3042.950 ms
+  augment_step3_upward_scan: 53.326 ms
+  augment_step4_sort_result: 28781.145 ms
+  augment_step5_abstract_from_Tc: 0.003 ms
+  augment_total: 52465.821 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12052.385 ms
+  oblivious_distribute_step2_fill_null: 0.017 ms
+  oblivious_distribute_step3_distribute_loop: 1139.833 ms
+  oblivious_distribute_total: 13192.245 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 705.984 ms
+  oblivious_expand_step2_obli_distribute: 13193.328 ms
+  oblivious_expand_step3_fill_down: 30.816 ms
+  oblivious_expand_total: 13930.132 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 15327.295 ms
+  oblivious_distribute_step2_fill_null: 0.008 ms
+  oblivious_distribute_step3_distribute_loop: 1137.476 ms
+  oblivious_distribute_total: 16464.790 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 845.509 ms
+  oblivious_expand_step2_obli_distribute: 16465.812 ms
+  oblivious_expand_step3_fill_down: 30.752 ms
+  oblivious_expand_total: 17342.077 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 2201.841 ms
+  align_table_step2_sort_j_ii: 7565.718 ms
+  align_table_total: 9780.692 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 52467.118 ms
+oblivious_expand_T1: 13930.786 ms
+oblivious_expand_T2: 17342.717 ms
+align_table: 9782.197 ms
+bool2arith_loop: 138.485 ms
+total: 93661.313 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 35.650 ms
+  augment_step2_sort_result: 20549.359 ms
+  augment_step3_downward_scan: 3039.733 ms
+  augment_step3_upward_scan: 53.400 ms
+  augment_step4_sort_result: 28749.151 ms
+  augment_step5_abstract_from_Tc: 0.003 ms
+  augment_total: 52427.304 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12035.499 ms
+  oblivious_distribute_step2_fill_null: 0.016 ms
+  oblivious_distribute_step3_distribute_loop: 1138.985 ms
+  oblivious_distribute_total: 13174.512 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 709.859 ms
+  oblivious_expand_step2_obli_distribute: 13181.255 ms
+  oblivious_expand_step3_fill_down: 30.826 ms
+  oblivious_expand_total: 13921.946 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 15338.683 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 1142.654 ms
+  oblivious_distribute_total: 16481.350 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 844.974 ms
+  oblivious_expand_step2_obli_distribute: 16487.975 ms
+  oblivious_expand_step3_fill_down: 30.771 ms
+  oblivious_expand_total: 17363.724 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 2204.308 ms
+  align_table_step2_sort_j_ii: 7543.513 ms
+  align_table_total: 9761.003 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 52434.290 ms
+oblivious_expand_T1: 13922.601 ms
+oblivious_expand_T2: 17364.444 ms
+align_table: 9767.770 ms
+bool2arith_loop: 133.763 ms
+total: 93622.877 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 36.701 ms
+  augment_step2_sort_result: 20581.681 ms
+  augment_step3_downward_scan: 3052.817 ms
+  augment_step3_upward_scan: 53.218 ms
+  augment_step4_sort_result: 28834.631 ms
+  augment_step5_abstract_from_Tc: 0.004 ms
+  augment_total: 52559.059 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12028.661 ms
+  oblivious_distribute_step2_fill_null: 0.015 ms
+  oblivious_distribute_step3_distribute_loop: 1139.113 ms
+  oblivious_distribute_total: 13167.799 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 708.310 ms
+  oblivious_expand_step2_obli_distribute: 13174.816 ms
+  oblivious_expand_step3_fill_down: 30.816 ms
+  oblivious_expand_total: 13913.944 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 15340.997 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 1139.706 ms
+  oblivious_distribute_total: 16480.716 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 843.923 ms
+  oblivious_expand_step2_obli_distribute: 16481.905 ms
+  oblivious_expand_step3_fill_down: 30.902 ms
+  oblivious_expand_total: 17356.736 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 2203.422 ms
+  align_table_step2_sort_j_ii: 7572.712 ms
+  align_table_total: 9789.265 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 52566.437 ms
+oblivious_expand_T1: 13915.196 ms
+oblivious_expand_T2: 17357.414 ms
+align_table: 9795.932 ms
+bool2arith_loop: 134.055 ms
+total: 93769.070 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 44.680 ms
+  augment_step2_sort_result: 3372452.409 ms
+  augment_step3_downward_scan: 559098.364 ms
+  augment_step3_upward_scan: 9137.765 ms
+  augment_step4_sort_result: 5046494.725 ms
+  augment_step5_abstract_from_Tc: 0.091 ms
+  augment_total: 8987228.055 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 2934926.726 ms
+  oblivious_distribute_step2_fill_null: 0.029 ms
+  oblivious_distribute_step3_distribute_loop: 1204416.740 ms
+  oblivious_distribute_total: 4139343.568 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 142085.301 ms
+  oblivious_expand_step2_obli_distribute: 4139344.787 ms
+  oblivious_expand_step3_fill_down: 4920.710 ms
+  oblivious_expand_total: 4286350.804 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 2935258.228 ms
+  oblivious_distribute_step2_fill_null: 0.048 ms
+  oblivious_distribute_step3_distribute_loop: 1205176.819 ms
+  oblivious_distribute_total: 4140435.193 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 142069.699 ms
+  oblivious_expand_step2_obli_distribute: 4140436.298 ms
+  oblivious_expand_step3_fill_down: 4915.190 ms
+  oblivious_expand_total: 4287421.195 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 393955.609 ms
+  align_table_step2_sort_j_ii: 1604222.171 ms
+  align_table_total: 1998190.884 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 8987235.412 ms
+oblivious_expand_T1: 4286357.742 ms
+oblivious_expand_T2: 4287427.731 ms
+align_table: 1998197.614 ms
+bool2arith_loop: 135.317 ms
+total: 19559353.938 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 28.272 ms
+  augment_step2_sort_result: 16663.636 ms
+  augment_step3_downward_scan: 2469.560 ms
+  augment_step3_upward_scan: 43.931 ms
+  augment_step4_sort_result: 23414.416 ms
+  augment_step5_abstract_from_Tc: 0.004 ms
+  augment_total: 42619.828 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 9768.265 ms
+  oblivious_distribute_step2_fill_null: 0.014 ms
+  oblivious_distribute_step3_distribute_loop: 926.266 ms
+  oblivious_distribute_total: 10694.555 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 574.433 ms
+  oblivious_expand_step2_obli_distribute: 10701.635 ms
+  oblivious_expand_step3_fill_down: 26.110 ms
+  oblivious_expand_total: 11302.183 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12456.006 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 928.673 ms
+  oblivious_distribute_total: 13384.691 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 684.583 ms
+  oblivious_expand_step2_obli_distribute: 13385.921 ms
+  oblivious_expand_step3_fill_down: 26.048 ms
+  oblivious_expand_total: 14096.557 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 1800.048 ms
+  align_table_step2_sort_j_ii: 6129.620 ms
+  align_table_total: 7940.407 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 42626.596 ms
+oblivious_expand_T1: 11302.967 ms
+oblivious_expand_T2: 14097.468 ms
+align_table: 7941.616 ms
+bool2arith_loop: 108.843 ms
+total: 76077.500 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 30.554 ms
+  augment_step2_sort_result: 16681.262 ms
+  augment_step3_downward_scan: 2464.050 ms
+  augment_step3_upward_scan: 38.161 ms
+  augment_step4_sort_result: 23329.752 ms
+  augment_step5_abstract_from_Tc: 0.004 ms
+  augment_total: 42543.795 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 9753.480 ms
+  oblivious_distribute_step2_fill_null: 0.017 ms
+  oblivious_distribute_step3_distribute_loop: 930.398 ms
+  oblivious_distribute_total: 10683.905 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 574.915 ms
+  oblivious_expand_step2_obli_distribute: 10690.864 ms
+  oblivious_expand_step3_fill_down: 25.480 ms
+  oblivious_expand_total: 11291.262 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12445.840 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 927.569 ms
+  oblivious_distribute_total: 13373.421 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 685.495 ms
+  oblivious_expand_step2_obli_distribute: 13380.210 ms
+  oblivious_expand_step3_fill_down: 26.185 ms
+  oblivious_expand_total: 14091.895 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 1789.023 ms
+  align_table_step2_sort_j_ii: 6115.126 ms
+  align_table_total: 7915.144 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 42546.612 ms
+oblivious_expand_T1: 11291.958 ms
+oblivious_expand_T2: 14092.720 ms
+align_table: 7922.091 ms
+bool2arith_loop: 108.688 ms
+total: 75962.080 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 29.307 ms
+  augment_step2_sort_result: 16744.462 ms
+  augment_step3_downward_scan: 2485.921 ms
+  augment_step3_upward_scan: 43.881 ms
+  augment_step4_sort_result: 23381.762 ms
+  augment_step5_abstract_from_Tc: 0.003 ms
+  augment_total: 42685.344 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 9773.372 ms
+  oblivious_distribute_step2_fill_null: 0.007 ms
+  oblivious_distribute_step3_distribute_loop: 927.799 ms
+  oblivious_distribute_total: 10701.185 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 575.075 ms
+  oblivious_expand_step2_obli_distribute: 10702.330 ms
+  oblivious_expand_step3_fill_down: 26.022 ms
+  oblivious_expand_total: 11303.432 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12432.729 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 928.963 ms
+  oblivious_distribute_total: 13361.704 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 693.372 ms
+  oblivious_expand_step2_obli_distribute: 13368.682 ms
+  oblivious_expand_step3_fill_down: 26.138 ms
+  oblivious_expand_total: 14088.196 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 1788.234 ms
+  align_table_step2_sort_j_ii: 6128.487 ms
+  align_table_total: 7927.467 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 42692.706 ms
+oblivious_expand_T1: 11304.148 ms
+oblivious_expand_T2: 14089.144 ms
+align_table: 7934.459 ms
+bool2arith_loop: 109.256 ms
+total: 76129.733 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 30.338 ms
+  augment_step2_sort_result: 2740308.123 ms
+  augment_step3_downward_scan: 453996.320 ms
+  augment_step3_upward_scan: 7462.335 ms
+  augment_step4_sort_result: 4096491.994 ms
+  augment_step5_abstract_from_Tc: 0.087 ms
+  augment_total: 7298289.295 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 2385214.696 ms
+  oblivious_distribute_step2_fill_null: 0.033 ms
+  oblivious_distribute_step3_distribute_loop: 982227.792 ms
+  oblivious_distribute_total: 3367442.602 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 115376.871 ms
+  oblivious_expand_step2_obli_distribute: 3367449.748 ms
+  oblivious_expand_step3_fill_down: 4154.448 ms
+  oblivious_expand_total: 3486981.073 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 2384269.904 ms
+  oblivious_distribute_step2_fill_null: 0.058 ms
+  oblivious_distribute_step3_distribute_loop: 979326.555 ms
+  oblivious_distribute_total: 3363596.659 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 115539.204 ms
+  oblivious_expand_step2_obli_distribute: 3363598.384 ms
+  oblivious_expand_step3_fill_down: 4113.843 ms
+  oblivious_expand_total: 3483251.437 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 319433.484 ms
+  align_table_step2_sort_j_ii: 1300694.505 ms
+  align_table_total: 1620138.729 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 7298291.182 ms
+oblivious_expand_T1: 3486987.295 ms
+oblivious_expand_T2: 3483252.812 ms
+align_table: 1620140.049 ms
+bool2arith_loop: 109.939 ms
+total: 15888781.454 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 26.793 ms
+  augment_step2_sort_result: 16657.178 ms
+  augment_step3_downward_scan: 2471.877 ms
+  augment_step3_upward_scan: 43.634 ms
+  augment_step4_sort_result: 23329.777 ms
+  augment_step5_abstract_from_Tc: 0.002 ms
+  augment_total: 42529.267 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 9780.225 ms
+  oblivious_distribute_step2_fill_null: 0.016 ms
+  oblivious_distribute_step3_distribute_loop: 927.451 ms
+  oblivious_distribute_total: 10707.701 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 574.573 ms
+  oblivious_expand_step2_obli_distribute: 10714.527 ms
+  oblivious_expand_step3_fill_down: 25.913 ms
+  oblivious_expand_total: 11315.019 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12438.567 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 927.824 ms
+  oblivious_distribute_total: 13366.402 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 685.883 ms
+  oblivious_expand_step2_obli_distribute: 13367.903 ms
+  oblivious_expand_step3_fill_down: 25.963 ms
+  oblivious_expand_total: 14079.754 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 1791.273 ms
+  align_table_step2_sort_j_ii: 6133.297 ms
+  align_table_total: 7937.927 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 42531.036 ms
+oblivious_expand_T1: 11315.582 ms
+oblivious_expand_T2: 14080.517 ms
+align_table: 7938.985 ms
+bool2arith_loop: 108.752 ms
+total: 75974.881 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 2.615 ms
+  augment_step2_sort_result: 747.211 ms
+  augment_step3_downward_scan: 156.263 ms
+  augment_step3_upward_scan: 4.610 ms
+  augment_step4_sort_result: 1385.410 ms
+  augment_step5_abstract_from_Tc: 0.003 ms
+  augment_total: 2296.121 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 524.494 ms
+  oblivious_distribute_step2_fill_null: 0.015 ms
+  oblivious_distribute_step3_distribute_loop: 62.864 ms
+  oblivious_distribute_total: 587.381 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 30.922 ms
+  oblivious_expand_step2_obli_distribute: 593.514 ms
+  oblivious_expand_step3_fill_down: 6.530 ms
+  oblivious_expand_total: 630.969 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 771.513 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 66.821 ms
+  oblivious_distribute_total: 838.345 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 44.615 ms
+  oblivious_expand_step2_obli_distribute: 844.761 ms
+  oblivious_expand_step3_fill_down: 6.593 ms
+  oblivious_expand_total: 895.973 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 113.274 ms
+  align_table_step2_sort_j_ii: 350.916 ms
+  align_table_total: 465.360 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 2302.572 ms
+oblivious_expand_T1: 632.142 ms
+oblivious_expand_T2: 897.212 ms
+align_table: 466.669 ms
+bool2arith_loop: 5.861 ms
+total: 4304.466 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 2.319 ms
+  augment_step2_sort_result: 848.093 ms
+  augment_step3_downward_scan: 157.194 ms
+  augment_step3_upward_scan: 4.261 ms
+  augment_step4_sort_result: 1342.046 ms
+  augment_step5_abstract_from_Tc: 0.006 ms
+  augment_total: 2353.953 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 591.577 ms
+  oblivious_distribute_step2_fill_null: 0.016 ms
+  oblivious_distribute_step3_distribute_loop: 66.548 ms
+  oblivious_distribute_total: 658.152 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 39.882 ms
+  oblivious_expand_step2_obli_distribute: 665.075 ms
+  oblivious_expand_step3_fill_down: 6.781 ms
+  oblivious_expand_total: 711.743 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 785.781 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 70.529 ms
+  oblivious_distribute_total: 856.322 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 43.827 ms
+  oblivious_expand_step2_obli_distribute: 863.034 ms
+  oblivious_expand_step3_fill_down: 6.377 ms
+  oblivious_expand_total: 913.242 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 99.620 ms
+  align_table_step2_sort_j_ii: 321.398 ms
+  align_table_total: 421.776 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 2355.466 ms
+oblivious_expand_T1: 712.585 ms
+oblivious_expand_T2: 913.891 ms
+align_table: 428.621 ms
+bool2arith_loop: 6.080 ms
+total: 4416.654 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 2.288 ms
+  augment_step2_sort_result: 798.005 ms
+  augment_step3_downward_scan: 124.441 ms
+  augment_step3_upward_scan: 3.821 ms
+  augment_step4_sort_result: 1343.938 ms
+  augment_step5_abstract_from_Tc: 0.003 ms
+  augment_total: 2272.502 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 583.766 ms
+  oblivious_distribute_step2_fill_null: 0.017 ms
+  oblivious_distribute_step3_distribute_loop: 68.360 ms
+  oblivious_distribute_total: 652.153 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 31.406 ms
+  oblivious_expand_step2_obli_distribute: 653.263 ms
+  oblivious_expand_step3_fill_down: 6.399 ms
+  oblivious_expand_total: 691.071 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 729.648 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 60.071 ms
+  oblivious_distribute_total: 789.730 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 44.303 ms
+  oblivious_expand_step2_obli_distribute: 790.651 ms
+  oblivious_expand_step3_fill_down: 6.464 ms
+  oblivious_expand_total: 841.422 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 109.896 ms
+  align_table_step2_sort_j_ii: 355.107 ms
+  align_table_total: 465.938 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 2279.311 ms
+oblivious_expand_T1: 691.709 ms
+oblivious_expand_T2: 842.070 ms
+align_table: 467.205 ms
+bool2arith_loop: 7.122 ms
+total: 4287.426 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 2.447 ms
+  augment_step2_sort_result: 883.750 ms
+  augment_step3_downward_scan: 158.091 ms
+  augment_step3_upward_scan: 4.518 ms
+  augment_step4_sort_result: 1303.495 ms
+  augment_step5_abstract_from_Tc: 0.003 ms
+  augment_total: 2352.311 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 495.149 ms
+  oblivious_distribute_step2_fill_null: 0.016 ms
+  oblivious_distribute_step3_distribute_loop: 59.361 ms
+  oblivious_distribute_total: 554.537 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 32.103 ms
+  oblivious_expand_step2_obli_distribute: 560.327 ms
+  oblivious_expand_step3_fill_down: 6.275 ms
+  oblivious_expand_total: 598.710 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 798.393 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 68.615 ms
+  oblivious_distribute_total: 867.020 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 40.155 ms
+  oblivious_expand_step2_obli_distribute: 873.636 ms
+  oblivious_expand_step3_fill_down: 6.489 ms
+  oblivious_expand_total: 920.285 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 118.687 ms
+  align_table_step2_sort_j_ii: 324.147 ms
+  align_table_total: 444.005 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 2353.486 ms
+oblivious_expand_T1: 599.317 ms
+oblivious_expand_T2: 921.058 ms
+align_table: 450.616 ms
+bool2arith_loop: 5.442 ms
+total: 4329.929 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step1_concat_T1_T2: 28.430 ms
+  augment_step2_sort_result: 16619.773 ms
+  augment_step3_downward_scan: 2458.828 ms
+  augment_step3_upward_scan: 38.503 ms
+  augment_step4_sort_result: 23343.756 ms
+  augment_step5_abstract_from_Tc: 0.004 ms
+  augment_total: 42489.304 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 9815.090 ms
+  oblivious_distribute_step2_fill_null: 0.016 ms
+  oblivious_distribute_step3_distribute_loop: 925.469 ms
+  oblivious_distribute_total: 10740.587 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 596.294 ms
+  oblivious_expand_step2_obli_distribute: 10752.155 ms
+  oblivious_expand_step3_fill_down: 26.155 ms
+  oblivious_expand_total: 11374.608 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12517.360 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 933.613 ms
+  oblivious_distribute_total: 13450.985 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 692.299 ms
+  oblivious_expand_step2_obli_distribute: 13463.273 ms
+  oblivious_expand_step3_fill_down: 26.208 ms
+  oblivious_expand_total: 14181.785 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 1800.716 ms
+  align_table_step2_sort_j_ii: 6152.077 ms
+  align_table_total: 7963.815 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 42499.832 ms
+oblivious_expand_T1: 11378.608 ms
+oblivious_expand_T2: 14186.351 ms
+align_table: 7971.369 ms
+bool2arith_loop: 109.149 ms
+total: 76145.325 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step2_perm_sort_result: 46627.925 ms
+  augment_step3_downward_scan: 2471.492 ms
+  augment_step3_upward_scan: 41.039 ms
+  augment_step4_sort_result: 23509.871 ms
+  augment_step5_abstract_from_Tc: 0.003 ms
+  augment_total: 72650.339 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 9859.185 ms
+  oblivious_distribute_step2_fill_null: 0.016 ms
+  oblivious_distribute_step3_distribute_loop: 933.960 ms
+  oblivious_distribute_total: 10793.171 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 580.956 ms
+  oblivious_expand_step2_obli_distribute: 10799.595 ms
+  oblivious_expand_step3_fill_down: 26.293 ms
+  oblivious_expand_total: 11406.849 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 12552.669 ms
+  oblivious_distribute_step2_fill_null: 0.001 ms
+  oblivious_distribute_step3_distribute_loop: 935.373 ms
+  oblivious_distribute_total: 13488.056 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 699.505 ms
+  oblivious_expand_step2_obli_distribute: 13489.146 ms
+  oblivious_expand_step3_fill_down: 26.556 ms
+  oblivious_expand_total: 14215.214 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 1803.984 ms
+  align_table_step2_sort_j_ii: 6180.320 ms
+  align_table_total: 7998.361 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 72657.573 ms
+oblivious_expand_T1: 11407.758 ms
+oblivious_expand_T2: 14216.077 ms
+align_table: 7999.610 ms
+bool2arith_loop: 114.035 ms
+total: 106395.065 ms
+================================================
+
+--- augment_table Internal Timing (Role 0) ---
+  augment_step2_perm_sort_result: 38083.163 ms
+  augment_step3_downward_scan: 457013.523 ms
+  augment_step3_upward_scan: 7570.893 ms
+  augment_step4_sort_result: 4129613.683 ms
+  augment_step5_abstract_from_Tc: 0.213 ms
+  augment_total: 4632281.485 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 2402023.968 ms
+  oblivious_distribute_step2_fill_null: 0.041 ms
+  oblivious_distribute_step3_distribute_loop: 986917.816 ms
+  oblivious_distribute_total: 3388941.920 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 116381.748 ms
+  oblivious_expand_step2_obli_distribute: 3388944.233 ms
+  oblivious_expand_step3_fill_down: 4228.461 ms
+  oblivious_expand_total: 3509554.460 ms
+----------------------------------------
+
+--- oblivious_distribute Internal Timing (Role 0) ---
+  oblivious_distribute_step1_sort_T_prime: 2400082.102 ms
+  oblivious_distribute_step2_fill_null: 0.036 ms
+  oblivious_distribute_step3_distribute_loop: 987363.968 ms
+  oblivious_distribute_total: 3387446.178 ms
+----------------------------------------
+
+--- oblivious_expand Internal Timing (Role 0) ---
+  oblivious_expand_step1_compute_fx_s: 116082.549 ms
+  oblivious_expand_step2_obli_distribute: 3387453.419 ms
+  oblivious_expand_step3_fill_down: 4229.821 ms
+  oblivious_expand_total: 3507765.810 ms
+----------------------------------------
+
+--- align_table Internal Timing (Role 0) ---
+  align_table_step1_set_e_ii: 322413.788 ms
+  align_table_step2_sort_j_ii: 1311164.012 ms
+  align_table_total: 1633588.429 ms
+----------------------------------------
+
+========== Join Function Timing (Role 0) ==========
+augment_table: 4632284.305 ms
+oblivious_expand_T1: 3509560.350 ms
+oblivious_expand_T2: 3507772.129 ms
+align_table: 1633590.655 ms
+bool2arith_loop: 113.715 ms
+total: 13283321.421 ms
+================================================
+

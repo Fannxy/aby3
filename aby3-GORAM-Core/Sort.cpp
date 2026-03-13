@@ -1144,39 +1144,51 @@ int odd_even_merge_ex(aby3::sbMatrix& data1, aby3::sbMatrix& data2, aby3::sbMatr
     max2.resize(1, bitCount);
     
     // 复制 data1 最后一行的所有列
-    for(size_t col = 0; col < numCols; col++){
-        max1.mShares[0](0, col) = data1.mShares[0](arr1_length - 1, col);
-        max1.mShares[1](0, col) = data1.mShares[1](arr1_length - 1, col);
-    }
-    
+    // for(size_t col = 0; col < numCols; col++){
+    //     max1.mShares[0](0, col) = data1.mShares[0](arr1_length - 1, col);
+    //     max1.mShares[1](0, col) = data1.mShares[1](arr1_length - 1, col);
+    // }
+    std::memcpy(max1.mShares[0].data(), data1.mShares[0].data() + (arr1_length - 1) * numCols, numCols * sizeof(data1.mShares[0](0,0)));
+    std::memcpy(max1.mShares[1].data(), data1.mShares[1].data() + (arr1_length - 1) * numCols, numCols * sizeof(data1.mShares[1](0,0)));
+
     // 复制 data2 最后一行的所有列
-    for(size_t col = 0; col < numCols; col++){
-        max2.mShares[0](0, col) = data2.mShares[0](arr2_length - 1, col);
-        max2.mShares[1](0, col) = data2.mShares[1](arr2_length - 1, col);
-    }
+    // for(size_t col = 0; col < numCols; col++){
+    //     max2.mShares[0](0, col) = data2.mShares[0](arr2_length - 1, col);
+    //     max2.mShares[1](0, col) = data2.mShares[1](arr2_length - 1, col);
+    // }
+    std::memcpy(max2.mShares[0].data(), data2.mShares[0].data() + (arr2_length - 1) * numCols, numCols * sizeof(data2.mShares[0](0,0)));
+    std::memcpy(max2.mShares[1].data(), data2.mShares[1].data() + (arr2_length - 1) * numCols, numCols * sizeof(data2.mShares[1](0,0)));
+
 
     bool_cipher_max(pIdx, max1, max2, max_ele, enc, eval, runtime);
     
     // 填充所有列的最大值
     for(size_t row = 0; row < result.rows(); row++){
-        for(size_t col = 0; col < numCols; col++){
-            result.mShares[0](row, col) = max_ele.mShares[0](0, col);
-            result.mShares[1](row, col) = max_ele.mShares[1](0, col);
-        }
+        // for(size_t col = 0; col < numCols; col++){
+        //     result.mShares[0](row, col) = max_ele.mShares[0](0, col);
+        //     result.mShares[1](row, col) = max_ele.mShares[1](0, col);
+        // }
+        std::memcpy(result.mShares[0].data() + row * numCols, max_ele.mShares[0].data(), numCols * sizeof(max_ele.mShares[0](0,0)));
+        std::memcpy(result.mShares[1].data() + row * numCols, max_ele.mShares[1].data(), numCols * sizeof(max_ele.mShares[1](0,0)));
     }
+    
 
     // organize the result - 复制所有列
     for(size_t i=0; i<arr1_length; i++){
-        for(size_t col = 0; col < numCols; col++){
-            result.mShares[0](i*2, col) = data1.mShares[0](i, col);
-            result.mShares[1](i*2, col) = data1.mShares[1](i, col);
-        }
+        // for(size_t col = 0; col < numCols; col++){
+        //     result.mShares[0](i*2, col) = data1.mShares[0](i, col);
+        //     result.mShares[1](i*2, col) = data1.mShares[1](i, col);
+        // }
+        std::memcpy(result.mShares[0].data() + i*2 * numCols, data1.mShares[0].data() + i * numCols, numCols * sizeof(data1.mShares[0](0,0)));
+        std::memcpy(result.mShares[1].data() + i*2 * numCols, data1.mShares[1].data() + i * numCols, numCols * sizeof(data1.mShares[1](0,0)));
     }
     for(size_t i=0; i<arr2_length; i++){
-        for(size_t col = 0; col < numCols; col++){
-            result.mShares[0](i*2 + 1, col) = data2.mShares[0](i, col);
-            result.mShares[1](i*2 + 1, col) = data2.mShares[1](i, col);
-        }
+        // for(size_t col = 0; col < numCols; col++){
+        //     result.mShares[0](i*2 + 1, col) = data2.mShares[0](i, col);
+        //     result.mShares[1](i*2 + 1, col) = data2.mShares[1](i, col);
+        // }
+        std::memcpy(result.mShares[0].data() + (i*2 + 1) * numCols, data2.mShares[0].data() + i * numCols, numCols * sizeof(data2.mShares[0](0,0)));
+        std::memcpy(result.mShares[1].data() + (i*2 + 1) * numCols, data2.mShares[1].data() + i * numCols, numCols * sizeof(data2.mShares[1](0,0)));
     }
 
     // begin the odd_even merge
@@ -1197,12 +1209,16 @@ int odd_even_merge_ex(aby3::sbMatrix& data1, aby3::sbMatrix& data2, aby3::sbMatr
         sbMatrix x_mask_mat(x_mask.size(), bitCount);
         sbMatrix y_mask_mat(y_mask.size(), bitCount);
         for(int i=0; i<x_mask.size(); i++){
-            for(size_t col = 0; col < numCols; col++){
-                x_mask_mat.mShares[0](i, col) = result.mShares[0](x_mask[i], col);
-                x_mask_mat.mShares[1](i, col) = result.mShares[1](x_mask[i], col);
-                y_mask_mat.mShares[0](i, col) = result.mShares[0](y_mask[i], col);
-                y_mask_mat.mShares[1](i, col) = result.mShares[1](y_mask[i], col);
-            }
+            // for(size_t col = 0; col < numCols; col++){
+            //     x_mask_mat.mShares[0](i, col) = result.mShares[0](x_mask[i], col);
+            //     x_mask_mat.mShares[1](i, col) = result.mShares[1](x_mask[i], col);
+            //     y_mask_mat.mShares[0](i, col) = result.mShares[0](y_mask[i], col);
+            //     y_mask_mat.mShares[1](i, col) = result.mShares[1](y_mask[i], col);
+            // }
+            std::memcpy(x_mask_mat.mShares[0].data() + i * numCols, result.mShares[0].data() + x_mask[i] * numCols, numCols * sizeof(result.mShares[0](0,0)));
+            std::memcpy(x_mask_mat.mShares[1].data() + i * numCols, result.mShares[1].data() + x_mask[i] * numCols, numCols * sizeof(result.mShares[1](0,0)));
+            std::memcpy(y_mask_mat.mShares[0].data() + i * numCols, result.mShares[0].data() + y_mask[i] * numCols, numCols * sizeof(result.mShares[0](0,0)));
+            std::memcpy(y_mask_mat.mShares[1].data() + i * numCols, result.mShares[1].data() + y_mask[i] * numCols, numCols * sizeof(result.mShares[1](0,0)));
         }
 
        
@@ -1211,12 +1227,16 @@ int odd_even_merge_ex(aby3::sbMatrix& data1, aby3::sbMatrix& data2, aby3::sbMatr
         
         // update the result - 更新所有列
         for(int i=0; i<x_mask.size(); i++){
-            for(size_t col = 0; col < numCols; col++){
-                result.mShares[0](x_mask[i], col) = min_mat.mShares[0](i, col);
-                result.mShares[1](x_mask[i], col) = min_mat.mShares[1](i, col);
-                result.mShares[0](y_mask[i], col) = max_mat.mShares[0](i, col);
-                result.mShares[1](y_mask[i], col) = max_mat.mShares[1](i, col);
-            }
+            // for(size_t col = 0; col < numCols; col++){
+            //     result.mShares[0](x_mask[i], col) = min_mat.mShares[0](i, col);
+            //     result.mShares[1](x_mask[i], col) = min_mat.mShares[1](i, col);
+            //     result.mShares[0](y_mask[i], col) = max_mat.mShares[0](i, col);
+            //     result.mShares[1](y_mask[i], col) = max_mat.mShares[1](i, col);
+            // }
+            std::memcpy(result.mShares[0].data() + x_mask[i] * numCols, min_mat.mShares[0].data() + i * numCols, numCols * sizeof(min_mat.mShares[0](0,0)));
+            std::memcpy(result.mShares[1].data() + x_mask[i] * numCols, min_mat.mShares[1].data() + i * numCols, numCols * sizeof(min_mat.mShares[1](0,0)));
+            std::memcpy(result.mShares[0].data() + y_mask[i] * numCols, max_mat.mShares[0].data() + i * numCols, numCols * sizeof(max_mat.mShares[0](0,0)));
+            std::memcpy(result.mShares[1].data() + y_mask[i] * numCols, max_mat.mShares[1].data() + i * numCols, numCols * sizeof(max_mat.mShares[1](0,0)));
         }
 
         // update the d, r.
@@ -1226,12 +1246,14 @@ int odd_even_merge_ex(aby3::sbMatrix& data1, aby3::sbMatrix& data2, aby3::sbMatr
     }
     
     res.resize(arr1_length+arr2_length, bitCount);
-    for(size_t i=0; i<arr1_length+arr2_length; i++){
-        for(size_t col = 0; col < numCols; col++){
-            res.mShares[0](i, col) = result.mShares[0](i, col);
-            res.mShares[1](i, col) = result.mShares[1](i, col);
-        }
-    }
+    // for(size_t i=0; i<arr1_length+arr2_length; i++){
+    //     for(size_t col = 0; col < numCols; col++){
+    //         res.mShares[0](i, col) = result.mShares[0](i, col);
+    //         res.mShares[1](i, col) = result.mShares[1](i, col);
+    //     }
+    // }
+    std::memcpy(res.mShares[0].data(), result.mShares[0].data(), (arr1_length+arr2_length) * numCols * sizeof(result.mShares[0](0,0)));
+    std::memcpy(res.mShares[1].data(), result.mShares[1].data(), (arr1_length+arr2_length) * numCols * sizeof(result.mShares[1](0,0)));
 
     return 0;
 }
@@ -1296,23 +1318,29 @@ int odd_even_merge_sort(aby3::sbMatrix& data, aby3::sbMatrix& res, int pIdx, aby
     
     if(n <= 1){
         res.resize(n, bitCount);
-        for(size_t i = 0; i < n; i++){
-            for(size_t col = 0; col < numCols; col++){
-                res.mShares[0](i, col) = data.mShares[0](i, col);
-                res.mShares[1](i, col) = data.mShares[1](i, col);
-            }
-        }
+        // for(size_t i = 0; i < n; i++){
+        //     for(size_t col = 0; col < numCols; col++){
+        //         res.mShares[0](i, col) = data.mShares[0](i, col);
+        //         res.mShares[1](i, col) = data.mShares[1](i, col);
+        //     }
+        // }
+        std::memcpy(res.mShares[0].data(), data.mShares[0].data(), n * numCols * sizeof(data.mShares[0](0,0)));
+        std::memcpy(res.mShares[1].data(), data.mShares[1].data(), n * numCols * sizeof(data.mShares[1](0,0)));
         return 0;
     }
     
     if(n == 2){
         sbMatrix data1(1, bitCount), data2(1, bitCount);
-        for(size_t col = 0; col < numCols; col++){
-            data1.mShares[0](0, col) = data.mShares[0](0, col);
-            data1.mShares[1](0, col) = data.mShares[1](0, col);
-            data2.mShares[0](0, col) = data.mShares[0](1, col);
-            data2.mShares[1](0, col) = data.mShares[1](1, col);
-        }
+        // for(size_t col = 0; col < numCols; col++){
+        //     data1.mShares[0](0, col) = data.mShares[0](0, col);
+        //     data1.mShares[1](0, col) = data.mShares[1](0, col);
+        //     data2.mShares[0](0, col) = data.mShares[0](1, col);
+        //     data2.mShares[1](0, col) = data.mShares[1](1, col);
+        // }
+        std::memcpy(data1.mShares[0].data(), data.mShares[0].data(), numCols * sizeof(data.mShares[0](0,0)));
+        std::memcpy(data1.mShares[1].data(), data.mShares[1].data(), numCols * sizeof(data.mShares[1](0,0)));
+        std::memcpy(data2.mShares[0].data(), data.mShares[0].data() + numCols, numCols * sizeof(data.mShares[0](0,0)));
+        std::memcpy(data2.mShares[1].data(), data.mShares[1].data() + numCols, numCols * sizeof(data.mShares[1](0,0)));
         
         odd_even_merge_ex(data1, data2, res, pIdx, enc, eval, runtime);
         
@@ -1324,20 +1352,24 @@ int odd_even_merge_sort(aby3::sbMatrix& data, aby3::sbMatrix& res, int pIdx, aby
     size_t right_size = n - mid;
     
     sbMatrix left(left_size, bitCount);
-    for(size_t i = 0; i < left_size; i++){
-        for(size_t col = 0; col < numCols; col++){
-            left.mShares[0](i, col) = data.mShares[0](i, col);
-            left.mShares[1](i, col) = data.mShares[1](i, col);
-        }
-    }
+    // for(size_t i = 0; i < left_size; i++){
+    //     for(size_t col = 0; col < numCols; col++){
+    //         left.mShares[0](i, col) = data.mShares[0](i, col);
+    //         left.mShares[1](i, col) = data.mShares[1](i, col);
+    //     }
+    // }
+    std::memcpy(left.mShares[0].data(), data.mShares[0].data(), left_size * numCols * sizeof(data.mShares[0](0,0)));
+    std::memcpy(left.mShares[1].data(), data.mShares[1].data(), left_size * numCols * sizeof(data.mShares[1](0,0)));
     
     sbMatrix right(right_size, bitCount);
-    for(size_t i = 0; i < right_size; i++){
-        for(size_t col = 0; col < numCols; col++){
-            right.mShares[0](i, col) = data.mShares[0](mid + i, col);
-            right.mShares[1](i, col) = data.mShares[1](mid + i, col);
-        }
-    }
+    // for(size_t i = 0; i < right_size; i++){
+    //     for(size_t col = 0; col < numCols; col++){
+    //         right.mShares[0](i, col) = data.mShares[0](mid + i, col);
+    //         right.mShares[1](i, col) = data.mShares[1](mid + i, col);
+    //     }
+    // }
+    std::memcpy(right.mShares[0].data(), data.mShares[0].data() + mid * numCols, right_size * numCols * sizeof(data.mShares[0](0,0)));
+    std::memcpy(right.mShares[1].data(), data.mShares[1].data() + mid * numCols, right_size * numCols * sizeof(data.mShares[1](0,0)));
     
     sbMatrix left_sorted;
     odd_even_merge_sort(left, left_sorted, pIdx, enc, eval, runtime);

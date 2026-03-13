@@ -221,12 +221,14 @@ void bool_cipher_add(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
 
     auto cir = lib.int_int_add(bitSize, bitSize, bitSize);
 
-    binEng.setCir(cir, i64Size, eval.mShareGen);
+    //binEng.setCir(cir, i64Size, eval.mShareGen);
+    binEng.setCir(cir, sharedA.rows(), eval.mShareGen);
     binEng.setInput(0, sharedA);
     binEng.setInput(1, sharedB);
 
     auto dep = binEng.asyncEvaluate(runtime).then([&](Sh3Task self) {
-        res.resize(i64Size, bitSize);
+        //res.resize(i64Size, bitSize);
+        res.resize(sharedA.rows(), bitSize);
         binEng.getOutput(0, res);
     });
     dep.get();
@@ -243,12 +245,14 @@ void bool_cipher_sub(int pIdx, sbMatrix &sharedA, sbMatrix &sharedB,
 
     auto cir = lib.int_int_subtract(bitSize, bitSize, bitSize);
 
-    binEng.setCir(cir, i64Size, eval.mShareGen);
+    //binEng.setCir(cir, i64Size, eval.mShareGen);
+    binEng.setCir(cir, sharedA.rows(), eval.mShareGen);
     binEng.setInput(0, sharedA);
     binEng.setInput(1, sharedB);
 
     auto dep = binEng.asyncEvaluate(runtime).then([&](Sh3Task self) {
-        res.resize(i64Size, bitSize);
+        //res.resize(i64Size, bitSize);
+        res.resize(sharedA.rows(), bitSize);
         binEng.getOutput(0, res);
     });
     dep.get();
@@ -686,6 +690,7 @@ void bool2arith(int pIdx, aby3::sbMatrix &boolInput, aby3::si64Matrix &res,
                 aby3::Sh3Runtime &runtime){
     size_t len = boolInput.rows();
     size_t bitSize = boolInput.bitCount();
+    size_t numCols = boolInput.i64Cols();
 
     if(bitSize == 1){
         aby3::i64Matrix plainInput(len, 1);
@@ -693,67 +698,184 @@ void bool2arith(int pIdx, aby3::sbMatrix &boolInput, aby3::si64Matrix &res,
         pi_cb_mul(pIdx, plainInput, boolInput, res, eval, enc, runtime);
     }
     else{
-        // 1) p0 and p1 generate the correlated random r.
-        aby3::sbMatrix random_mat(len, bitSize);
+        // 1) p0 and p1 generate the correlated random r (full bitSize bits per row).
+        aby3::sbMatrix random_mat(len, 64*numCols);
+        size_t totalElements = len * numCols;
         if(pIdx < 2){
-            aby3::i64Matrix random_r(len, 1);
+            //ymn:(len, 1)->(len, numCols)
+            aby3::i64Matrix random_r(len, numCols);
             if(pIdx == 0){
                 block seed = enc.mShareGen.mNextCommon.getSeed();
                 PRNG prng(seed);
-                for(size_t i=0; i<len; i++) random_r(i, 0) = (i64)prng.get<int32_t>();
-                std::memcpy(random_mat.mShares[0].data(), random_r.data(), len*sizeof(random_r(0, 0)));
-                std::fill_n(random_mat.mShares[1].data(), len, 0);
+                //for(size_t i=0; i<totalElements; i++) random_r.data()[i] = (i64)prng.get<int32_t>();
+               //for(size_t i=0; i<len; i++) random_r(i, 0) = (i64)prng.get<int32_t>();
+                for(size_t i=0; i<len; i++)
+                    for(size_t j=0; j<numCols; j++){
+                        //random_mat.mShares[0](i, j) = random_r(i, 0);
+                        random_r(i, j) = (i64)prng.get<int32_t>();
+                    }
+
+            // //DEBUG: print random_r
+            //     if(numCols>1){
+            //         std::cout << "P0 random_r: " << std::endl;
+            //         for(size_t i=0; i<len; i++){
+            //             for(size_t j=0; j<numCols; j++){
+            //                 std::cout << random_r(i, j) << " ";
+            //             }
+            //             std::cout << std::endl;
+            //         }
+            //     }
+                
+            
+                //std::memcpy(random_mat.mShares[0].data(), random_r.data(), totalElements * sizeof(random_r(0, 0)));
+                for(size_t i=0; i<len; i++)
+                    for(size_t j=0; j<numCols; j++){
+                        random_mat.mShares[0](i, j) = random_r(i, j);
+                    }
+                //std::fill_n(random_mat.mShares[1].data(), totalElements, 0);
+                for(size_t i=0; i<len; i++)
+                    for(size_t j=0; j<numCols; j++){
+                        random_mat.mShares[1](i, j) = 0;
+                    }
             }
             else{
                 block seed = enc.mShareGen.mPrevCommon.getSeed();
                 PRNG prng(seed);
-                for(size_t i=0; i<len; i++) random_r(i, 0) = (i64)prng.get<int32_t>();
-                std::memcpy(random_mat.mShares[1].data(), random_r.data(), len*sizeof(random_r(0, 0)));
-                std::fill_n(random_mat.mShares[0].data(), len, 0);
+                //for(size_t i=0; i<totalElements; i++) random_r.data()[i] = prng.get<i64>();
+                //for(size_t i=0; i<len; i++) random_r(i, 0) = (i64)prng.get<int32_t>();
+                for(size_t i=0; i<len; i++)
+                    for(size_t j=0; j<numCols; j++){
+                        //random_mat.mShares[1](i, j) = random_r(i, 0);  // P1 的 share 在 mShares[1]
+                        random_r(i, j) = (i64)prng.get<int32_t>();
+                    }
+
+                // //DEBUG: print random_r
+                // if(numCols>1){
+                //     std::cout << "P1 random_r: " << std::endl;
+                //     for(size_t i=0; i<len; i++){
+                //         for(size_t j=0; j<numCols; j++){
+                //             std::cout << random_r(i, j) << " ";
+                //         }
+                //         std::cout << std::endl;
+                //     }
+                // }
+                    
+                
+                //std::memcpy(random_mat.mShares[1].data(), random_r.data(), totalElements * sizeof(random_r(0, 0)));
+                for(size_t i=0; i<len; i++)
+                    for(size_t j=0; j<numCols; j++){
+                        random_mat.mShares[1](i, j) = random_r(i, j);
+                    }
+                //std::fill_n(random_mat.mShares[0].data(), totalElements, 0);
+                for(size_t i=0; i<len; i++)
+                    for(size_t j=0; j<numCols; j++){
+                        random_mat.mShares[0](i, j) = 0;
+                    }
             }
         }
         else{
-            std::fill_n(random_mat.mShares[0].data(), len, 0);
-            std::fill_n(random_mat.mShares[1].data(), len, 0);
+            //std::fill_n(random_mat.mShares[0].data(), totalElements, 0);
+            //std::fill_n(random_mat.mShares[1].data(), totalElements, 0);
+            for(size_t i=0; i<len; i++)
+                    for(size_t j=0; j<numCols; j++){
+                        random_mat.mShares[0](i, j) = 0;
+                    }
+            for(size_t i=0; i<len; i++)
+                    for(size_t j=0; j<numCols; j++){
+                        random_mat.mShares[1](i, j) = 0;
+                    }
         }
 
-        // 2) compute c = x ADD r.
-        aby3::sbMatrix cipher_mat(len, bitSize);
+        //DEBUG: print random_mat
+        // if(numCols>1){
+        //     i64Matrix random_mat_plain(len, numCols);
+        //     enc.revealAll(runtime, random_mat, random_mat_plain).get();
+        //     if(pIdx == 0){
+        //         std::cout << "P0 random_mat_plain: " << std::endl;
+        //         for(size_t i=0; i<len; i++){
+        //             for(size_t j=0; j<numCols; j++){
+        //                 std::cout << random_mat_plain(i, j) << " ";
+        //             }
+        //             std::cout << std::endl;
+        //         }
+        //     }
+        // }
+
+
+        // 2) compute c = x XOR r.
+        aby3::sbMatrix cipher_mat(len, 64*numCols);
         bool_cipher_add(pIdx, boolInput, random_mat, cipher_mat, enc, eval, runtime);
 
-        // 3) reveal c to P2.
-        aby3::si64Matrix arithRes(len, 1);
+        // if(numCols>1){
+        //     i64Matrix cipher_mat_plain(len, numCols);
+        //     enc.revealAll(runtime, cipher_mat, cipher_mat_plain).get();
+        //     if(pIdx == 0){
+        //         std::cout << "P0 cipher_mat_plain: " << std::endl;
+        //         for(size_t i=0; i<len; i++){
+        //             for(size_t j=0; j<numCols; j++){
+        //                 std::cout << cipher_mat_plain(i, j) << " ";
+        //             }
+        //             std::cout << std::endl;
+        //         }
+        //     }
+        // }
+
+        // 3) reveal c to P2, then construct arithmetic shares of x = c - r.
+        aby3::si64Matrix arithRes(len, numCols);
         if(pIdx == 0){
-            for(size_t i=0; i<len; i++) arithRes.mShares[0](i, 0) = -1 * random_mat.mShares[0](i, 0);
+            for(size_t i=0; i<len; i++)
+                for(size_t j=0; j<numCols; j++)
+                    arithRes.mShares[0](i, j) = -1 * random_mat.mShares[0](i, j);
             large_data_receiving(pIdx, arithRes.mShares[1], runtime, true);
         }
         if(pIdx == 1){
-            aby3::i64Matrix share1(len, 1);
-            std::memcpy(share1.data(), cipher_mat.mShares[1].data(), len*sizeof(cipher_mat.mShares[0](0, 0)));
+            aby3::i64Matrix share1(len, numCols);
+            //std::memcpy(share1.data(), cipher_mat.mShares[1].data(), totalElements * sizeof(cipher_mat.mShares[0](0, 0)));
+            for(size_t i=0; i<len; i++)
+                for(size_t j=0; j<numCols; j++){
+                    share1(i, j) = cipher_mat.mShares[1](i, j);
+                }
             large_data_sending(pIdx, share1, runtime, true);
-            for(size_t i=0; i<len; i++){
-                arithRes.mShares[1](i, 0) = -1 * random_mat.mShares[1](i, 0);
-            }
+            for(size_t i=0; i<len; i++)
+                for(size_t j=0; j<numCols; j++)
+                    arithRes.mShares[1](i, j) = -1 * random_mat.mShares[1](i, j);
             large_data_receiving(pIdx, arithRes.mShares[0], runtime, false);
         }
         if(pIdx == 2){
-            aby3::i64Matrix share1(len, 1);
+            aby3::i64Matrix share1(len, numCols);
             large_data_receiving(pIdx, share1, runtime, true);
-            aby3::i64Matrix plain_c(len, 1);
+            aby3::i64Matrix plain_c(len, numCols);
+            for(size_t i=0; i<len; i++)
+                for(size_t j=0; j<numCols; j++)
+                    plain_c(i, j) = cipher_mat.mShares[0](i, j) ^ cipher_mat.mShares[1](i, j) ^ share1(i, j);
             for(size_t i=0; i<len; i++){
-                plain_c(i, 0) = (cipher_mat.mShares[0](i, 0) ^ cipher_mat.mShares[1](i, 0) ^ share1(i, 0));
-            }
-            // construct the new shares of the result.
-            for(size_t i=0; i<len; i++){
-                share1(i, 0) = rand();
-                arithRes.mShares[0](i, 0) = plain_c(i, 0) - share1(i, 0);
-                arithRes.mShares[1](i, 0) = share1(i, 0);
+                for(size_t j=0; j<numCols; j++){
+                    //i64 plain_c_ij = cipher_mat.mShares[0](i, j) ^ cipher_mat.mShares[1](i, j) ^ share1(i, j);
+                    share1(i, j)= rand();
+                    arithRes.mShares[0](i, j) = plain_c(i, j) - share1(i, j);
+                    arithRes.mShares[1](i, j) = share1(i, j);
+                }
             }
             large_data_sending(pIdx, arithRes.mShares[0], runtime, true);
             large_data_sending(pIdx, arithRes.mShares[1], runtime, false);
         }
 
+
         res = arithRes;
+
+        // if(numCols>1){
+        //     i64Matrix arithRes_plain(len, numCols);
+        //     enc.revealAll(runtime, res, arithRes_plain).get();
+        //     if(pIdx == 0){
+        //         std::cout << "P0 arithRes_plain: " << std::endl;
+        //         for(size_t i=0; i<len; i++){
+        //             for(size_t j=0; j<numCols; j++){
+        //                 std::cout << arithRes_plain(i, j) << " ";
+        //             }
+        //             std::cout << std::endl;
+        //         }
+        //     }
+        // }
     }
 
     return;

@@ -361,6 +361,33 @@ void genPerm(int pIdx, si64Matrix &k, si64Matrix &perm, Sh3Encryptor& enc, Sh3Ev
     return;
 }
 
+void genPerm_bool(int pIdx, sbMatrix &k, si64Matrix &perm, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+    int n = k.rows();
+    int bitcount = k.bitCount();
+
+    si64Matrix k_0(n,1);
+    getBitKey(pIdx, k, 0, k_0, enc, eval, runtime);
+    
+    si64Matrix pre_perm(n,1);
+    genBitPerm(pIdx, k_0, pre_perm, enc, eval, runtime);
+
+    
+    for(int d=1;d<bitcount;d++){
+        si64Matrix k_j(n,1),k_j_prime(n,1);
+        getBitKey(pIdx, k, d, k_j, enc, eval, runtime);
+        applyPerm(pIdx, pre_perm, k_j,k_j_prime, enc, eval, runtime);
+
+
+        si64Matrix next_perm(n,1);
+        genBitPerm(pIdx, k_j_prime, next_perm, enc, eval, runtime);
+        composePerm(pIdx, pre_perm, next_perm, perm, enc, eval, runtime);
+
+        pre_perm=perm;
+    }
+    
+    return;
+}
+
 void concat_k_v(int pIdx, sbMatrix& k, sbMatrix& v, sbMatrix& res){
 
     //assume k、v less than 32bit

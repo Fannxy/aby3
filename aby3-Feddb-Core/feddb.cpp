@@ -239,10 +239,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
     //memcpy
     std::memcpy(t.mShares[0].data() + v_len, idx.mShares[0].data(), idx_len * sizeof(idx.mShares[0](0, 0)));
     std::memcpy(t.mShares[1].data() + v_len, idx.mShares[1].data(), idx_len * sizeof(idx.mShares[1](0, 0)));
-    // for(size_t i=v_len; i<t_len; i++){
-    //     t.mShares[0](i, 0) = idx.mShares[0](i-v_len, 0);
-    //     t.mShares[1](i, 0) = idx.mShares[1](i-v_len, 0);
-    // }
+
 
 
     //step one: 对t进行genperm得到sigma
@@ -255,14 +252,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
     si64Matrix u(t_len, v.cols());
     std::memcpy(u.mShares[0].data(), prefix_inv.mShares[0].data(), v_len * sizeof(prefix_inv.mShares[0](0, 0)));
     std::memcpy(u.mShares[1].data(), prefix_inv.mShares[1].data(), v_len * sizeof(prefix_inv.mShares[1](0, 0)));
-    // for(size_t i=0; i<v_len; i++){
-    //     u.mShares[0](i, 0) = prefix_inv.mShares[0](i, 0);
-    //     u.mShares[1](i, 0) = prefix_inv.mShares[1](i, 0);
-    // }
-    // for(size_t i=v_len; i<t_len; i++){
-    //     u.mShares[0](i, 0) = 0;
-    //     u.mShares[1](i, 0) = 0;
-    // }
+
     std::fill_n(u.mShares[0].data() + v_len, idx_len, 0);
     std::fill_n(u.mShares[1].data() + v_len, idx_len, 0);
 
@@ -388,10 +378,7 @@ void oblivious_idx_select(int pIdx, si64Matrix &v, si64Matrix &idx, si64Matrix &
     result.resize(idx_len, v.cols());
     std::memcpy(result.mShares[0].data(), u_prime_.mShares[0].data() + v_len, idx_len * sizeof(u_prime_.mShares[0](0, 0)));
     std::memcpy(result.mShares[1].data(), u_prime_.mShares[1].data() + v_len, idx_len * sizeof(u_prime_.mShares[1](0, 0)));
-    // for (size_t i = 0; i < idx_len; i++) {
-    //     result.mShares[0](i, 0) = u_prime_.mShares[0](i+v_len, 0);
-    //     result.mShares[1](i, 0) = u_prime_.mShares[1](i+v_len, 0);
-    // }
+
 
     return; 
 }
@@ -441,15 +428,8 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
 
             si64Matrix new_leftval(1,1),new_rightval(1,1);
 
-            // i64Matrix one(1,1);
-            // one(0,0)=1;
+
             si64Matrix not_eqFlag(1,1),eqFlag(1,1);
-            // if (pIdx == 0) {
-            //     enc.localIntMatrix(runtime, one, oneShared).get();
-            // } else {
-            //     enc.remoteIntMatrix(runtime, oneShared).get();
-            // }
-            //set_const_share(pIdx, 1, oneShared, enc, eval, runtime);
 
             eqFlag.mShares[0](0,0)=equalFlag.mShares[0](i+1,0);
             eqFlag.mShares[1](0,0)=equalFlag.mShares[1](i+1,0);
@@ -488,11 +468,7 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
         sbMatrix zeroFlag_sb(rows,1);
         si64Matrix zeroShared(rows,1);
         set_const_share(pIdx, 0, zeroShared, enc, eval, runtime);
-        // for(int i=0;i<rows;i++){
-        //     zero(i,0)=0;
-        // }
-        //arith2bool(pIdx, valcol, valcol_sb, enc, eval, runtime);
-        //bool_cipher_eq(pIdx, valcol_sb, zero, zeroFlag_sb, enc, eval, runtime);
+
         cipher_eq(pIdx, valcol, zeroShared, zeroFlag_sb, eval, runtime);
         
 
@@ -540,12 +516,7 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
         }
         //-----
 
-        // //全部都留下
-        // finalRes.resize(data_key.size()+1);
-        // for(size_t i=0; i<data_key.size(); i++){
-        //     finalRes[i] = keycols[i];
-        // }
-        // finalRes[data_key.size()] = valcol;
+
         return;
 
     }
@@ -1059,6 +1030,432 @@ void group_min(int pIdx, std::vector<si64Matrix> &key, si64Matrix &val,
 }
 
 //subfunc for join
+//optimized:sbMatrix + permutation sort
+void augment_table(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64Matrix> &T_1_other, 
+    std::vector<si64Matrix> &T_2_key, std::vector<si64Matrix> &T_2_other,
+    std::vector<si64Matrix> &T_1_auged, std::vector<si64Matrix> &T_2_auged,
+    Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+
+
+    // 时间测量变量
+    auto total_start = std::chrono::high_resolution_clock::now();
+    std::vector<std::pair<std::string, double>> timing_results;
+
+    int key_num = T_1_key.size();
+    int other_1_num = T_1_other.size();
+    int other_2_num = T_2_other.size();
+    int max_other_num = std::max(other_1_num, other_2_num);
+    
+    size_t len1 = T_1_key[0].rows();
+    size_t len2 = T_2_key[0].rows();
+
+    //step 1:concatenate T_1 and T_2 & sort
+    auto t1 = std::chrono::high_resolution_clock::now();
+        //step 1.1: tid tag
+    si64Matrix tid_0(len1, 1),tid_1(len2, 1);
+    set_const_share(pIdx, 0, tid_0, enc, eval, runtime);
+    set_const_share(pIdx, 1, tid_1, enc, eval, runtime);
+
+        //step 1.2: entry_key concat
+    int entry_key_cols = key_num+max_other_num+1;
+    si64Matrix entry_key_si(len1+len2, entry_key_cols);
+    //key列
+    for(int j=entry_key_cols-1; j>=entry_key_cols-key_num; j--){
+        entry_key_si.mShares[0].col(j).head(len1) = T_1_key[entry_key_cols-1-j].mShares[0].col(0);
+        entry_key_si.mShares[1].col(j).head(len1) = T_1_key[entry_key_cols-1-j].mShares[1].col(0);
+
+        entry_key_si.mShares[0].col(j).segment(len1, len2) = T_2_key[entry_key_cols-1-j].mShares[0].col(0);
+        entry_key_si.mShares[1].col(j).segment(len1, len2) = T_2_key[entry_key_cols-1-j].mShares[1].col(0);
+    }
+    //tid列
+    entry_key_si.mShares[0].col(entry_key_cols-key_num-1).head(len1) = tid_0.mShares[0].col(0);
+    entry_key_si.mShares[1].col(entry_key_cols-key_num-1).head(len1) = tid_0.mShares[1].col(0);
+    entry_key_si.mShares[0].col(entry_key_cols-key_num-1).segment(len1, len2) = tid_1.mShares[0].col(0);
+    entry_key_si.mShares[1].col(entry_key_cols-key_num-1).segment(len1, len2) = tid_1.mShares[1].col(0);
+    //other列（max_other_num列）
+    for(int j=entry_key_cols-key_num-2; j>=0; j--){
+        if(entry_key_cols-key_num-2-j >= other_1_num){
+            entry_key_si.mShares[0].col(j).head(len1).setZero();
+            entry_key_si.mShares[1].col(j).head(len1).setZero();
+        }else{
+            entry_key_si.mShares[0].col(j).head(len1) = T_1_other[entry_key_cols-key_num-2-j].mShares[0].col(0);
+            entry_key_si.mShares[1].col(j).head(len1) = T_1_other[entry_key_cols-key_num-2-j].mShares[1].col(0);
+        }
+
+        if(entry_key_cols-key_num-2-j >= other_2_num){
+            entry_key_si.mShares[0].col(j).segment(len1, len2).setZero();
+            entry_key_si.mShares[1].col(j).segment(len1, len2).setZero();
+        }else{
+            entry_key_si.mShares[0].col(j).segment(len1, len2) = T_2_other[entry_key_cols-key_num-2-j].mShares[0].col(0);
+            entry_key_si.mShares[1].col(j).segment(len1, len2) = T_2_other[entry_key_cols-key_num-2-j].mShares[1].col(0);
+        }
+    }
+
+    
+        //step 1.3: sort
+    si64Matrix perm(len1+len2, 1);
+    genPerm(pIdx, entry_key_si, perm, enc, eval, runtime);
+    si64Matrix entry_key_sorted_si(len1+len2, entry_key_cols);
+    applyPerm(pIdx, perm, entry_key_si, entry_key_sorted_si, enc, eval, runtime);
+
+    int entry_key_bitcount = 64*key_num+64*max_other_num+64;
+    sbMatrix entry_key_sorted(len1+len2, entry_key_bitcount);
+    arith2bool(pIdx, entry_key_sorted_si, entry_key_sorted, enc, eval, runtime);
+
+    sbMatrix j_sb(len1+len2, 64*key_num);
+    sbMatrix tid_sb(len1+len2, 64);
+    sbMatrix d_sb(len1+len2, 64*max_other_num);
+
+    for(size_t i=0; i< len1+len2; i++){
+        //d
+        for(size_t j=0; j<max_other_num; j++){
+            d_sb.mShares[0](i, j) = entry_key_sorted.mShares[0](i, j);
+            d_sb.mShares[1](i, j) = entry_key_sorted.mShares[1](i, j);
+        }
+        //tid
+        tid_sb.mShares[0](i, 0) = entry_key_sorted.mShares[0](i, max_other_num);
+        tid_sb.mShares[1](i, 0) = entry_key_sorted.mShares[1](i, max_other_num);
+        //j
+        for(size_t j=0; j<key_num; j++){
+            j_sb.mShares[0](i, j) = entry_key_sorted.mShares[0](i, j+max_other_num+1);
+            j_sb.mShares[1](i, j) = entry_key_sorted.mShares[1](i, j+max_other_num+1);
+        }
+
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    double step1_sort_result_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"augment_step1_perm_sort_result", step1_sort_result_time});
+
+
+    //step 2: full-dimension
+        //step 2.1: downward scan
+    t1 = std::chrono::high_resolution_clock::now();
+    sbMatrix alpha_1(len1+len2, 64), alpha_2(len1+len2, 64);
+        //same_attr & not_same_attr:
+    sbMatrix false_matrix(1,1);
+    bool_init_false(pIdx, false_matrix);
+    sbMatrix same_attr_partial(len1+len2-1, 1);
+    compare_consecutive_rows_bool(pIdx, j_sb, same_attr_partial, enc, eval, runtime);
+    sbMatrix same_attr(len1+len2, 1);
+    same_attr.mShares[0](0, 0) = false_matrix.mShares[0](0, 0);
+    same_attr.mShares[1](0, 0) = false_matrix.mShares[1](0, 0);
+    std::memcpy(same_attr.mShares[0].data() + 1, same_attr_partial.mShares[0].data(), (len1+len2-1) * sizeof(same_attr_partial.mShares[0](0, 0)));
+    std::memcpy(same_attr.mShares[1].data() + 1, same_attr_partial.mShares[1].data(), (len1+len2-1) * sizeof(same_attr_partial.mShares[1](0, 0)));
+        //1bit-> 64bits
+    same_attr.resize(len1+len2, 64);
+    for(size_t i=0; i<len1+len2; i++){
+        same_attr.mShares[0](i, 0) = same_attr.mShares[0](i, 0) == 1 ? -1 : -0;
+        same_attr.mShares[1](i, 0) = same_attr.mShares[1](i, 0) == 1 ? -1 : -0;
+    }
+        //not_same_attr:
+    sbMatrix not_same_attr(len1+len2, 64);
+    bool_cipher_not(pIdx, same_attr, not_same_attr);
+
+        //is_table_1 & is_table_2:
+    sbMatrix zero64_vector(len1+len2, 64);
+    bool_init_false(pIdx, zero64_vector);
+    sbMatrix is_table_1(len1+len2, 1);
+    bool_cipher_eq(pIdx, tid_sb, zero64_vector, is_table_1, enc, eval, runtime);
+    is_table_1.resize(len1+len2, 64);
+    for(size_t i=0; i<len1+len2; i++){
+        is_table_1.mShares[0](i, 0) = is_table_1.mShares[0](i, 0) == 1 ? -1 : -0;
+        is_table_1.mShares[1](i, 0) = is_table_1.mShares[1](i, 0) == 1 ? -1 : -0;
+    }
+    sbMatrix is_table_2(len1+len2, 64);
+    bool_cipher_not(pIdx, is_table_1, is_table_2);
+
+        //condition
+    sbMatrix is_table_vector(4*(len1+len2), 64), same_attr_vector(4*(len1+len2), 64);
+    std::memcpy(is_table_vector.mShares[0].data(), is_table_1.mShares[0].data(), (len1+len2) * sizeof(is_table_1.mShares[0](0, 0)));
+    std::memcpy(is_table_vector.mShares[1].data(), is_table_1.mShares[1].data(), (len1+len2) * sizeof(is_table_1.mShares[1](0, 0)));
+    std::memcpy(same_attr_vector.mShares[0].data(), not_same_attr.mShares[0].data(), (len1+len2) * sizeof(not_same_attr.mShares[0](0, 0)));
+    std::memcpy(same_attr_vector.mShares[1].data(), not_same_attr.mShares[1].data(), (len1+len2) * sizeof(not_same_attr.mShares[1](0, 0)));
+    std::memcpy(is_table_vector.mShares[0].data() + (len1+len2), is_table_1.mShares[0].data(), (len1+len2) * sizeof(is_table_1.mShares[0](0, 0)));
+    std::memcpy(is_table_vector.mShares[1].data() + (len1+len2), is_table_1.mShares[1].data(), (len1+len2) * sizeof(is_table_1.mShares[1](0, 0)));
+    std::memcpy(same_attr_vector.mShares[0].data() + (len1+len2), same_attr.mShares[0].data(), (len1+len2) * sizeof(same_attr.mShares[0](0, 0)));
+    std::memcpy(same_attr_vector.mShares[1].data() + (len1+len2), same_attr.mShares[1].data(), (len1+len2) * sizeof(same_attr.mShares[1](0, 0)));
+    std::memcpy(is_table_vector.mShares[0].data() + 2*(len1+len2), is_table_2.mShares[0].data(), (len1+len2) * sizeof(is_table_2.mShares[0](0, 0)));
+    std::memcpy(is_table_vector.mShares[1].data() + 2*(len1+len2), is_table_2.mShares[1].data(), (len1+len2) * sizeof(is_table_2.mShares[1](0, 0)));
+    std::memcpy(same_attr_vector.mShares[0].data() + 2*(len1+len2), not_same_attr.mShares[0].data(), (len1+len2) * sizeof(not_same_attr.mShares[0](0, 0)));
+    std::memcpy(same_attr_vector.mShares[1].data() + 2*(len1+len2), not_same_attr.mShares[1].data(), (len1+len2) * sizeof(not_same_attr.mShares[1](0, 0)));
+    std::memcpy(is_table_vector.mShares[0].data() + 3*(len1+len2), is_table_2.mShares[0].data(), (len1+len2) * sizeof(is_table_2.mShares[0](0, 0)));
+    std::memcpy(is_table_vector.mShares[1].data() + 3*(len1+len2), is_table_2.mShares[1].data(), (len1+len2) * sizeof(is_table_2.mShares[1](0, 0)));
+    std::memcpy(same_attr_vector.mShares[0].data() + 3*(len1+len2), same_attr.mShares[0].data(), (len1+len2) * sizeof(same_attr.mShares[0](0, 0)));
+    std::memcpy(same_attr_vector.mShares[1].data() + 3*(len1+len2), same_attr.mShares[1].data(), (len1+len2) * sizeof(same_attr.mShares[1](0, 0)));
+    sbMatrix condition(4*(len1+len2), 64);
+    bool_cipher_and(pIdx, is_table_vector, same_attr_vector, condition, enc, eval, runtime);
+
+        //for loop: update alpha1 & alpha2
+    for(size_t i=0; i<len1+len2; i++){
+        sbMatrix zero64(1, 64);
+        sbMatrix one64(1, 64);
+        bool_init_false(pIdx, zero64);
+        bool_init_true(pIdx, one64);
+            // alpha1
+        sbMatrix current_alpha_1(1, 64);
+        if(i == 0) {
+            current_alpha_1 = zero64;
+        } else {
+            current_alpha_1.mShares[0](0, 0) = alpha_1.mShares[0](i-1, 0);
+            current_alpha_1.mShares[1](0, 0) = alpha_1.mShares[1](i-1, 0);
+        }
+
+        sbMatrix alpha_1_plus(1, 64);
+        bool_cipher_add(pIdx, current_alpha_1, one64, alpha_1_plus, enc, eval, runtime);
+        
+        sbMatrix cond_i_vector(4, 64);
+        for(size_t j=0; j<4; j++){
+            cond_i_vector.mShares[0](j, 0) = condition.mShares[0](i + j*(len1+len2), 0);
+            cond_i_vector.mShares[1](j, 0) = condition.mShares[1](i + j*(len1+len2), 0);
+        }
+        sbMatrix alpha_1_value(4, 64);
+        alpha_1_value.mShares[0](0, 0) = one64.mShares[0](0, 0);
+        alpha_1_value.mShares[1](0, 0) = one64.mShares[1](0, 0);
+        alpha_1_value.mShares[0](1, 0) = alpha_1_plus.mShares[0](0, 0);
+        alpha_1_value.mShares[1](1, 0) = alpha_1_plus.mShares[1](0, 0);
+        alpha_1_value.mShares[0](2, 0) = zero64.mShares[0](0, 0);
+        alpha_1_value.mShares[1](2, 0) = zero64.mShares[1](0, 0);
+        alpha_1_value.mShares[0](3, 0) = current_alpha_1.mShares[0](0, 0);
+        alpha_1_value.mShares[1](3, 0) = current_alpha_1.mShares[1](0, 0);
+        sbMatrix term_1(4, 64);
+        bool_cipher_and(pIdx, cond_i_vector, alpha_1_value, term_1, enc, eval, runtime);
+
+        alpha_1.mShares[0](i, 0) = term_1.mShares[0](0, 0) ^ term_1.mShares[0](1, 0)^ term_1.mShares[0](2, 0)^ term_1.mShares[0](3, 0);
+        alpha_1.mShares[1](i, 0) = term_1.mShares[1](0, 0) ^ term_1.mShares[1](1, 0)^ term_1.mShares[1](2, 0)^ term_1.mShares[1](3, 0);
+
+            // alpha2
+        sbMatrix current_alpha_2(1, 64);
+        if(i == 0) {
+            current_alpha_2 = zero64;
+        } else {
+            current_alpha_2.mShares[0](0, 0) = alpha_2.mShares[0](i-1, 0);
+            current_alpha_2.mShares[1](0, 0) = alpha_2.mShares[1](i-1, 0);
+        }
+
+        sbMatrix alpha_2_plus(1, 64);
+        bool_cipher_add(pIdx, current_alpha_2, one64, alpha_2_plus, enc, eval, runtime);
+
+        sbMatrix alpha_2_value(4, 64);
+        alpha_2_value.mShares[0](0, 0) = zero64.mShares[0](0, 0);
+        alpha_2_value.mShares[1](0, 0) = zero64.mShares[1](0, 0);
+        alpha_2_value.mShares[0](1, 0) = zero64.mShares[0](0, 0);
+        alpha_2_value.mShares[1](1, 0) = zero64.mShares[1](0, 0);
+        alpha_2_value.mShares[0](2, 0) = one64.mShares[0](0, 0);
+        alpha_2_value.mShares[1](2, 0) = one64.mShares[1](0, 0);
+        alpha_2_value.mShares[0](3, 0) = alpha_2_plus.mShares[0](0, 0);
+        alpha_2_value.mShares[1](3, 0) = alpha_2_plus.mShares[1](0, 0);
+        sbMatrix term_2(4, 64);
+        bool_cipher_and(pIdx, cond_i_vector, alpha_2_value, term_2, enc, eval, runtime);    
+        alpha_2.mShares[0](i, 0) = term_2.mShares[0](0, 0) ^ term_2.mShares[0](1, 0)^ term_2.mShares[0](2, 0)^ term_2.mShares[0](3, 0);
+        alpha_2.mShares[1](i, 0) = term_2.mShares[1](0, 0) ^ term_2.mShares[1](1, 0)^ term_2.mShares[1](2, 0)^ term_2.mShares[1](3, 0);
+    }
+    t2 = std::chrono::high_resolution_clock::now();
+    double step2_downward_scan_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"augment_step2.1_downward_scan", step2_downward_scan_time});
+
+        //step 2.2: upward scan
+    t1 = std::chrono::high_resolution_clock::now(); 
+        //same_inv_attr & not_same_inv_attr:
+    sbMatrix same_inv_attr(len1+len2, 1);
+    std::memcpy(same_inv_attr.mShares[0].data() , same_attr_partial.mShares[0].data(), (len1+len2-1) * sizeof(same_attr_partial.mShares[0](0, 0)));
+    std::memcpy(same_inv_attr.mShares[1].data() , same_attr_partial.mShares[1].data(), (len1+len2-1) * sizeof(same_attr_partial.mShares[1](0, 0)));
+    same_inv_attr.mShares[0](len1+len2-1, 0) = false_matrix.mShares[0](0, 0);
+    same_inv_attr.mShares[1](len1+len2-1, 0) = false_matrix.mShares[1](0, 0);
+    same_inv_attr.resize(len1+len2, 64);
+    for(size_t i=0; i<len1+len2; i++){
+        same_inv_attr.mShares[0](i, 0) = same_inv_attr.mShares[0](i, 0) == 1 ? -1 : -0;
+        same_inv_attr.mShares[1](i, 0) = same_inv_attr.mShares[1](i, 0) == 1 ? -1 : -0;
+    }
+    sbMatrix not_same_inv_attr(len1+len2, 64);
+    bool_cipher_not(pIdx, same_inv_attr, not_same_inv_attr);
+
+        //condition
+    sbMatrix same_inv_attr_vector(4*(len1+len2), 64);
+    std::memcpy(same_inv_attr_vector.mShares[0].data(), not_same_inv_attr.mShares[0].data(), (len1+len2) * sizeof(not_same_inv_attr.mShares[0](0, 0)));
+    std::memcpy(same_inv_attr_vector.mShares[1].data(), not_same_inv_attr.mShares[1].data(), (len1+len2) * sizeof(not_same_inv_attr.mShares[1](0, 0)));
+    std::memcpy(same_inv_attr_vector.mShares[0].data() + (len1+len2), same_inv_attr.mShares[0].data(), (len1+len2) * sizeof(same_inv_attr.mShares[0](0, 0)));
+    std::memcpy(same_inv_attr_vector.mShares[1].data() + (len1+len2), same_inv_attr.mShares[1].data(), (len1+len2) * sizeof(same_inv_attr.mShares[1](0, 0)));
+    std::memcpy(same_inv_attr_vector.mShares[0].data() + 2*(len1+len2), not_same_inv_attr.mShares[0].data(), (len1+len2) * sizeof(not_same_inv_attr.mShares[0](0, 0)));
+    std::memcpy(same_inv_attr_vector.mShares[1].data() + 2*(len1+len2), not_same_inv_attr.mShares[1].data(), (len1+len2) * sizeof(not_same_inv_attr.mShares[1](0, 0)));
+    std::memcpy(same_inv_attr_vector.mShares[0].data() + 3*(len1+len2), same_inv_attr.mShares[0].data(), (len1+len2) * sizeof(same_inv_attr.mShares[0](0, 0)));
+    std::memcpy(same_inv_attr_vector.mShares[1].data() + 3*(len1+len2), same_inv_attr.mShares[1].data(), (len1+len2) * sizeof(same_inv_attr.mShares[1](0, 0)));
+
+    bool_cipher_and(pIdx, is_table_vector, same_inv_attr_vector, condition, enc, eval, runtime);
+
+        //for loop: update alpha1 & alpha2
+    for(int i=len1+len2-1; i>=0; i--){
+        // alpha1
+        sbMatrix pre_alpha_1(1, 64);
+        if(i == len1+len2-1) {
+            pre_alpha_1.mShares[0](0, 0) = alpha_1.mShares[0](len1+len2-1, 0);
+            pre_alpha_1.mShares[1](0, 0) = alpha_1.mShares[1](len1+len2-1, 0);
+        } else {
+            pre_alpha_1.mShares[0](0, 0) = alpha_1.mShares[0](i+1, 0);
+            pre_alpha_1.mShares[1](0, 0) = alpha_1.mShares[1](i+1, 0);
+        }
+
+        sbMatrix current_alpha_1(1, 64);
+        current_alpha_1.mShares[0](0, 0) = alpha_1.mShares[0](i, 0);
+        current_alpha_1.mShares[1](0, 0) = alpha_1.mShares[1](i, 0);
+
+        sbMatrix cond_i_vector(4, 64);
+        for(size_t j=0; j<4; j++){
+            cond_i_vector.mShares[0](j, 0) = condition.mShares[0](i + j*(len1+len2), 0);
+            cond_i_vector.mShares[1](j, 0) = condition.mShares[1](i + j*(len1+len2), 0);
+        }
+        sbMatrix alpha_1_value(4, 64);
+        alpha_1_value.mShares[0](0, 0) = current_alpha_1.mShares[0](0, 0);
+        alpha_1_value.mShares[1](0, 0) = current_alpha_1.mShares[1](0, 0);
+        alpha_1_value.mShares[0](1, 0) = pre_alpha_1.mShares[0](0, 0);
+        alpha_1_value.mShares[1](1, 0) = pre_alpha_1.mShares[1](0, 0);
+        alpha_1_value.mShares[0](2, 0) = current_alpha_1.mShares[0](0, 0);
+        alpha_1_value.mShares[1](2, 0) = current_alpha_1.mShares[1](0, 0);
+        alpha_1_value.mShares[0](3, 0) = current_alpha_1.mShares[0](0, 0);
+        alpha_1_value.mShares[1](3, 0) = current_alpha_1.mShares[1](0, 0);
+        
+        sbMatrix term_1(4, 64);
+        bool_cipher_and(pIdx, cond_i_vector, alpha_1_value, term_1, enc, eval, runtime);
+
+        alpha_1.mShares[0](i, 0) = term_1.mShares[0](0, 0) ^ term_1.mShares[0](1, 0)^ term_1.mShares[0](2, 0)^ term_1.mShares[0](3, 0);
+        alpha_1.mShares[1](i, 0) = term_1.mShares[1](0, 0) ^ term_1.mShares[1](1, 0)^ term_1.mShares[1](2, 0)^ term_1.mShares[1](3, 0);
+
+        // alpha2
+        sbMatrix pre_alpha_2(1, 64);
+        if(i == len1+len2-1) {
+            pre_alpha_2.mShares[0](0, 0) = alpha_2.mShares[0](len1+len2-1, 0);
+            pre_alpha_2.mShares[1](0, 0) = alpha_2.mShares[1](len1+len2-1, 0);
+        } else {
+            pre_alpha_2.mShares[0](0, 0) = alpha_2.mShares[0](i+1, 0);
+            pre_alpha_2.mShares[1](0, 0) = alpha_2.mShares[1](i+1, 0);
+        }
+
+        sbMatrix current_alpha_2(1, 64);
+        current_alpha_2.mShares[0](0, 0) = alpha_2.mShares[0](i, 0);
+        current_alpha_2.mShares[1](0, 0) = alpha_2.mShares[1](i, 0);
+
+        sbMatrix alpha_2_value(4, 64);
+        alpha_2_value.mShares[0](0, 0) = current_alpha_2.mShares[0](0, 0);
+        alpha_2_value.mShares[1](0, 0) = current_alpha_2.mShares[1](0, 0);
+        alpha_2_value.mShares[0](1, 0) = pre_alpha_2.mShares[0](0, 0);
+        alpha_2_value.mShares[1](1, 0) = pre_alpha_2.mShares[1](0, 0);
+        alpha_2_value.mShares[0](2, 0) = current_alpha_2.mShares[0](0, 0);
+        alpha_2_value.mShares[1](2, 0) = current_alpha_2.mShares[1](0, 0);
+        alpha_2_value.mShares[0](3, 0) = pre_alpha_2.mShares[0](0, 0);
+        alpha_2_value.mShares[1](3, 0) = pre_alpha_2.mShares[1](0, 0);
+        sbMatrix term_2(4, 64);
+        bool_cipher_and(pIdx, cond_i_vector, alpha_2_value, term_2, enc, eval, runtime);
+
+        alpha_2.mShares[0](i, 0) = term_2.mShares[0](0, 0) ^ term_2.mShares[0](1, 0)^ term_2.mShares[0](2, 0)^ term_2.mShares[0](3, 0);
+        alpha_2.mShares[1](i, 0) = term_2.mShares[1](0, 0) ^ term_2.mShares[1](1, 0)^ term_2.mShares[1](2, 0)^ term_2.mShares[1](3, 0);
+    }
+    t2 = std::chrono::high_resolution_clock::now();
+    double step2_upward_scan_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"augment_step2.2_upward_scan", step2_upward_scan_time});
+
+
+    //step 3: sort by: tid
+    t1 = std::chrono::high_resolution_clock::now();
+    sbMatrix entry_key(len1+len2, entry_key_bitcount+64+64);
+    entry_key_sorted.resize(len1+len2,entry_key_bitcount+64+64);
+    for(int i=0; i<len1+len2; i++){
+        //alpha2
+        entry_key.mShares[0](i, 0) = alpha_2.mShares[0](i, 0);
+        entry_key.mShares[1](i, 0) = alpha_2.mShares[1](i, 0);
+        //alpha1
+        entry_key.mShares[0](i, 1) = alpha_1.mShares[0](i, 0);
+        entry_key.mShares[1](i, 1) = alpha_1.mShares[1](i, 0);
+        //d
+        for(size_t j=0; j<max_other_num; j++){
+            entry_key.mShares[0](i, j+2) = d_sb.mShares[0](i, j);
+            entry_key.mShares[1](i, j+2) = d_sb.mShares[1](i, j);
+        }
+        //j
+        for(size_t j=0; j<key_num; j++){
+            entry_key.mShares[0](i, j+max_other_num+2) = j_sb.mShares[0](i, j);
+            entry_key.mShares[1](i, j+max_other_num+2) = j_sb.mShares[1](i, j);
+        }
+        //tid
+        entry_key.mShares[0](i, max_other_num+2+key_num) = tid_sb.mShares[0](i, 0);
+        entry_key.mShares[1](i, max_other_num+2+key_num) = tid_sb.mShares[1](i, 0);
+
+    }
+
+    genPerm_bool(pIdx, entry_key, perm, enc, eval, runtime);
+    entry_key_si.resize(len1+len2, 3 + max_other_num + key_num);
+    bool2arith(pIdx, entry_key, entry_key_si, enc, eval, runtime);
+
+    entry_key_sorted_si.resize(len1+len2, 3 + max_other_num + key_num);
+    applyPerm(pIdx, perm, entry_key_si, entry_key_sorted_si, enc, eval, runtime);
+
+    t2 = std::chrono::high_resolution_clock::now();
+    double step3_sort_result_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"augment_step3_sort_result", step3_sort_result_time});
+
+
+
+    //step 4: split T_1 and T_2
+    //拆分直接得到std::vector<si64Matrix> &T_1_auged, std::vector<si64Matrix> &T_2_auged
+    T_1_auged.resize(4);
+    T_2_auged.resize(4);
+    T_1_auged[0].resize(len1, key_num);
+    T_1_auged[1].resize(len1, max_other_num);
+    T_2_auged[0].resize(len2, key_num);
+    T_2_auged[1].resize(len2, max_other_num);
+    for(size_t i=2; i<4; i++){
+        T_1_auged[i].resize(len1, 1);
+        T_2_auged[i].resize(len2, 1);
+    }
+
+    T_1_auged[0].mShares[0].block(0, 0, len1, key_num) = entry_key_sorted_si.mShares[0].block(0, max_other_num+2, len1, key_num);
+    T_1_auged[0].mShares[1].block(0, 0, len1, key_num) = entry_key_sorted_si.mShares[1].block(0, max_other_num+2, len1, key_num);
+    T_1_auged[1].mShares[0].block(0, 0, len1, max_other_num) = entry_key_sorted_si.mShares[0].block(0, 2, len1, max_other_num);
+    T_1_auged[1].mShares[1].block(0, 0, len1, max_other_num) = entry_key_sorted_si.mShares[1].block(0, 2, len1, max_other_num);
+    T_1_auged[2].mShares[0].block(0, 0, len1, 1) = entry_key_sorted_si.mShares[0].block(0, 1, len1, 1);
+    T_1_auged[2].mShares[1].block(0, 0, len1, 1) = entry_key_sorted_si.mShares[1].block(0, 1, len1, 1);
+    T_1_auged[3].mShares[0].block(0, 0, len1, 1) = entry_key_sorted_si.mShares[0].block(0, 0, len1, 1);
+    T_1_auged[3].mShares[1].block(0, 0, len1, 1) = entry_key_sorted_si.mShares[1].block(0, 0, len1, 1);
+
+    T_2_auged[0].mShares[0].block(0, 0, len2, key_num) = entry_key_sorted_si.mShares[0].block(len1, max_other_num+2, len2, key_num);
+    T_2_auged[0].mShares[1].block(0, 0, len2, key_num) = entry_key_sorted_si.mShares[1].block(len1, max_other_num+2, len2, key_num);
+    T_2_auged[1].mShares[0].block(0, 0, len2, max_other_num) = entry_key_sorted_si.mShares[0].block(len1, 2, len2, max_other_num);
+    T_2_auged[1].mShares[1].block(0, 0, len2, max_other_num) = entry_key_sorted_si.mShares[1].block(len1, 2, len2, max_other_num);
+    T_2_auged[2].mShares[0].block(0, 0, len2, 1) = entry_key_sorted_si.mShares[0].block(len1, 1, len2, 1);
+    T_2_auged[2].mShares[1].block(0, 0, len2, 1) = entry_key_sorted_si.mShares[1].block(len1, 1, len2, 1);
+    T_2_auged[3].mShares[0].block(0, 0, len2, 1) = entry_key_sorted_si.mShares[0].block(len1, 0, len2, 1);
+    T_2_auged[3].mShares[1].block(0, 0, len2, 1) = entry_key_sorted_si.mShares[1].block(len1, 0, len2, 1);
+
+    t2 = std::chrono::high_resolution_clock::now();
+    double step4_split_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"augment_step4_split", step4_split_time});
+
+
+    // 计算总时间
+    auto total_end = std::chrono::high_resolution_clock::now();
+    double total_time = std::chrono::duration<double, std::milli>(total_end - total_start).count();
+    timing_results.push_back({"augment_total", total_time});
+
+    // 将时间测量结果写入文件（仅 role 0 写入）
+    if (pIdx == 0) {
+        std::string filename = "./join_timing_results_role0.txt";
+        std::ofstream outFile(filename, std::ios::app);
+        if (outFile.is_open()) {
+            outFile << "--- augment_table Internal Timing (Role " << pIdx << ") ---" << std::endl;
+            outFile << std::fixed << std::setprecision(3);
+            for(const auto& result : timing_results) {
+                outFile << "  " << result.first << ": " << result.second << " ms" << std::endl;
+            }
+            outFile << "----------------------------------------" << std::endl;
+            outFile << std::endl;
+            outFile.close();
+        }
+    }
+
+
+    return;
+}
+
+
+/*
 void augment_table(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64Matrix> &T_1_other, 
     std::vector<si64Matrix> &T_2_key, std::vector<si64Matrix> &T_2_other,
     std::vector<sbMatrix> &T_1_auged, std::vector<sbMatrix> &T_2_auged,
@@ -1076,97 +1473,195 @@ void augment_table(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64M
     size_t len1 = T_1_key[0].rows();
     size_t len2 = T_2_key[0].rows();
 
-    //step 1:T_c: concatenate T_1 and T_2
-    auto t1 = std::chrono::high_resolution_clock::now();
-    //T_c[0]: key(j) ; T_c[1]: other(d)
-    std::vector<si64Matrix> T_c(2);
-    T_c[0].resize(len1+len2, key_num);
-    T_c[1].resize(len1+len2, max_other_num);
-    //optimize: 按列写入的，所以不能使用memcpy
-    for(size_t i=0; i<len1; i++){
-        for(size_t j=0; j<key_num; j++){
-            T_c[0].mShares[0](i, j) = T_1_key[j].mShares[0](i, 0);
-            T_c[0].mShares[1](i, j) = T_1_key[j].mShares[1](i, 0);
-        }
-        for(size_t j=0; j<other_1_num; j++){
-            T_c[1].mShares[0](i, j) = T_1_other[j].mShares[0](i, 0);
-            T_c[1].mShares[1](i, j) = T_1_other[j].mShares[1](i, 0);
-        }
-        if(max_other_num > other_1_num){
-            for(size_t j=other_1_num; j<max_other_num; j++){
-                T_c[1].mShares[0](i, j) = 0;
-                T_c[1].mShares[1](i, j) = 0;
-            }
-        }
-    }
-    for(size_t i=len1; i<len1+len2; i++){
-        for(size_t j=0; j<key_num; j++){
-            T_c[0].mShares[0](i, j) = T_2_key[j].mShares[0](i-len1, 0);
-            T_c[0].mShares[1](i, j) = T_2_key[j].mShares[1](i-len1, 0);
-        }
-        for(size_t j=0; j<other_2_num; j++){
-            T_c[1].mShares[0](i, j) = T_2_other[j].mShares[0](i-len1, 0);
-            T_c[1].mShares[1](i, j) = T_2_other[j].mShares[1](i-len1, 0);
-        }
-        if(max_other_num > other_2_num){
-            for(size_t j=other_2_num; j<max_other_num; j++){
-                T_c[1].mShares[0](i, j) = 0;
-                T_c[1].mShares[1](i, j) = 0;
-            }
-        }
-    }
-    
-    //T_c_bool: convert T_c to bool
-    std::vector<sbMatrix> T_c_bool(3);
-    T_c_bool[0].resize(len1+len2, key_num*64);
-    T_c_bool[1].resize(len1+len2, max_other_num*64);
-    //TODO VECTOR：由于两个的列数不一样，所以先不合并吧
-    arith2bool(pIdx, T_c[0], T_c_bool[0], enc, eval, runtime);
-    arith2bool(pIdx, T_c[1], T_c_bool[1], enc, eval, runtime);
+    //------odd-even merge sort------
 
-    //T_c_bool[2]: tid
-    T_c_bool[2].resize(len1+len2, 1);
-    sbMatrix zero(len1, 1);
-    sbMatrix one(len2, 1);
-    bool_init_false(pIdx, zero);
-    bool_init_true(pIdx, one);
+    // //step 1:T_c: concatenate T_1 and T_2
+    // auto t1 = std::chrono::high_resolution_clock::now();
+    // //T_c[0]: key(j) ; T_c[1]: other(d)
+    // std::vector<si64Matrix> T_c(2);
+    // T_c[0].resize(len1+len2, key_num);
+    // T_c[1].resize(len1+len2, max_other_num);
+ 
+    // // for(size_t i=0; i<len1; i++){
+    // //     for(size_t j=0; j<key_num; j++){
+    // //         T_c[0].mShares[0](i, j) = T_1_key[j].mShares[0](i, 0);
+    // //         T_c[0].mShares[1](i, j) = T_1_key[j].mShares[1](i, 0);
+    // //     }
+    // //     for(size_t j=0; j<other_1_num; j++){
+    // //         T_c[1].mShares[0](i, j) = T_1_other[j].mShares[0](i, 0);
+    // //         T_c[1].mShares[1](i, j) = T_1_other[j].mShares[1](i, 0);
+    // //     }
+    // //     if(max_other_num > other_1_num){
+    // //         for(size_t j=other_1_num; j<max_other_num; j++){
+    // //             T_c[1].mShares[0](i, j) = 0;
+    // //             T_c[1].mShares[1](i, j) = 0;
+    // //         }
+    // //     }
+    // // }
+    // //optimize: 按列写入的,使用col()访问
+    // for(size_t j=0; j<key_num; j++){
+    //     // 前 len1 行：使用 head(len1)
+    //     T_c[0].mShares[0].col(j).head(len1) = T_1_key[j].mShares[0].col(0);
+    //     T_c[0].mShares[1].col(j).head(len1) = T_1_key[j].mShares[1].col(0);
+        
+    //     // 后 len2 行：使用 segment(len1, len2)
+    //     T_c[0].mShares[0].col(j).segment(len1, len2) = T_2_key[j].mShares[0].col(0);
+    //     T_c[0].mShares[1].col(j).segment(len1, len2) = T_2_key[j].mShares[1].col(0);
+    // }
+    // for(size_t j=0; j<other_1_num; j++){
+    //     T_c[1].mShares[0].col(j).head(len1) = T_1_other[j].mShares[0].col(0);
+    //     T_c[1].mShares[1].col(j).head(len1) = T_1_other[j].mShares[1].col(0);
+    // }
+    // if(max_other_num > other_1_num){
+    //     for(size_t j=other_1_num; j<max_other_num; j++){
+    //         // T_c[1].mShares[0](i, j) = 0;
+    //         // T_c[1].mShares[1](i, j) = 0;
+    //         T_c[1].mShares[0].col(j).head(len1).setZero();
+    //         T_c[1].mShares[1].col(j).head(len1).setZero();
+    //     }
+    // }
+    // for(size_t j=0; j<other_2_num; j++){
+    //     T_c[1].mShares[0].col(j).segment(len1, len2) = T_2_other[j].mShares[0].col(0);
+    //     T_c[1].mShares[1].col(j).segment(len1, len2) = T_2_other[j].mShares[1].col(0);
+    // }
+    // if(max_other_num > other_2_num){
+    //     for(size_t j=other_2_num; j<max_other_num; j++){
+    //         // T_c[1].mShares[0](i, j) = 0;
+    //         // T_c[1].mShares[1](i, j) = 0;
+    //         T_c[1].mShares[0].col(j).segment(len1, len2).setZero();
+    //         T_c[1].mShares[1].col(j).segment(len1, len2).setZero();
+    //     }
+    // }
+
+    // // for(size_t i=len1; i<len1+len2; i++){
+    // //     for(size_t j=0; j<key_num; j++){
+    // //         T_c[0].mShares[0](i, j) = T_2_key[j].mShares[0](i-len1, 0);
+    // //         T_c[0].mShares[1](i, j) = T_2_key[j].mShares[1](i-len1, 0);
+    // //     }
+    // //     for(size_t j=0; j<other_2_num; j++){
+    // //         T_c[1].mShares[0](i, j) = T_2_other[j].mShares[0](i-len1, 0);
+    // //         T_c[1].mShares[1](i, j) = T_2_other[j].mShares[1](i-len1, 0);
+    // //     }
+    // //     if(max_other_num > other_2_num){
+    // //         for(size_t j=other_2_num; j<max_other_num; j++){
+    // //             T_c[1].mShares[0](i, j) = 0;
+    // //             T_c[1].mShares[1](i, j) = 0;
+    // //         }
+    // //     }
+    // // }
+
+
     
-    std::memcpy(T_c_bool[2].mShares[0].data(), zero.mShares[0].data(), len1 * sizeof(zero.mShares[0](0, 0)));
-    std::memcpy(T_c_bool[2].mShares[1].data(), zero.mShares[1].data(), len1 * sizeof(zero.mShares[1](0, 0)));
-    std::memcpy(T_c_bool[2].mShares[0].data() + len1, one.mShares[0].data(), len2 * sizeof(one.mShares[0](0, 0)));
-    std::memcpy(T_c_bool[2].mShares[1].data() + len1, one.mShares[1].data(), len2 * sizeof(one.mShares[1](0, 0)));
-    auto t2 = std::chrono::high_resolution_clock::now();
-    double step1_arith2bool_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
-    timing_results.push_back({"augment_step1_concat_T1_T2", step1_arith2bool_time});
+    // //T_c_bool: convert T_c to bool
+    // std::vector<sbMatrix> T_c_bool(3);
+    // T_c_bool[0].resize(len1+len2, key_num*64);
+    // T_c_bool[1].resize(len1+len2, max_other_num*64);
+    // //TODO VECTOR：由于两个的列数不一样，所以先不合并吧
+    // arith2bool(pIdx, T_c[0], T_c_bool[0], enc, eval, runtime);
+    // arith2bool(pIdx, T_c[1], T_c_bool[1], enc, eval, runtime);
+
+    // //T_c_bool[2]: tid
+    // T_c_bool[2].resize(len1+len2, 1);
+    // sbMatrix zero(len1, 1);
+    // sbMatrix one(len2, 1);
+    // bool_init_false(pIdx, zero);
+    // bool_init_true(pIdx, one);
+    
+    // std::memcpy(T_c_bool[2].mShares[0].data(), zero.mShares[0].data(), len1 * sizeof(zero.mShares[0](0, 0)));
+    // std::memcpy(T_c_bool[2].mShares[1].data(), zero.mShares[1].data(), len1 * sizeof(zero.mShares[1](0, 0)));
+    // std::memcpy(T_c_bool[2].mShares[0].data() + len1, one.mShares[0].data(), len2 * sizeof(one.mShares[0](0, 0)));
+    // std::memcpy(T_c_bool[2].mShares[1].data() + len1, one.mShares[1].data(), len2 * sizeof(one.mShares[1](0, 0)));
+    // auto t2 = std::chrono::high_resolution_clock::now();
+    // double step1_arith2bool_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    // timing_results.push_back({"augment_step1_concat_T1_T2", step1_arith2bool_time});
 
 
      
-    //step 2: sort T_c: j, tid(转成了bool进行拼接排序)
-    t1 = std::chrono::high_resolution_clock::now();
-    int entry_key_bitcount = 64*key_num+64*max_other_num+64;
-    int entry_key_cols = key_num+max_other_num+1;
-    sbMatrix entry_key(len1+len2, entry_key_bitcount);
-    for(int i=0; i<len1+len2; i++){
-        //因为是大端序，所以要逆序
-        //j
-        for(int j=entry_key_cols-1; j>=entry_key_cols-key_num; j--){
-            entry_key.mShares[0](i, j) = T_c_bool[0].mShares[0](i, entry_key_cols-j-1);
-            entry_key.mShares[1](i, j) = T_c_bool[0].mShares[1](i, entry_key_cols-j-1);
-        }
-        //tid
-        entry_key.mShares[0](i, entry_key_cols-key_num-1) = T_c_bool[2].mShares[0](i, 0);
-        entry_key.mShares[1](i, entry_key_cols-key_num-1) = T_c_bool[2].mShares[1](i, 0);
-        //d
-        for(int j=entry_key_cols-key_num-2; j>=0; j--){
-            entry_key.mShares[0](i, j) = T_c_bool[1].mShares[0](i, entry_key_cols-key_num-2-j);
-            entry_key.mShares[1](i, j) = T_c_bool[1].mShares[1](i, entry_key_cols-key_num-2-j);
-        }
+    // //step 2: sort T_c: j, tid(转成了bool进行拼接排序)
+    // t1 = std::chrono::high_resolution_clock::now();
+    // int entry_key_bitcount = 64*key_num+64*max_other_num+64;
+    // int entry_key_cols = key_num+max_other_num+1;
+    // sbMatrix entry_key(len1+len2, entry_key_bitcount);
+    // for(int j=entry_key_cols-1; j>=entry_key_cols-key_num; j--){
+    //     entry_key.mShares[0].col(j) = T_c_bool[0].mShares[0].col(entry_key_cols-j-1);
+    // }
+    // // for(int i=0; i<len1+len2; i++){
+    // //     //因为是大端序，所以要逆序
+    // //     //j
+    // //     for(int j=entry_key_cols-1; j>=entry_key_cols-key_num; j--){
+    // //         entry_key.mShares[0](i, j) = T_c_bool[0].mShares[0](i, entry_key_cols-j-1);
+    // //         entry_key.mShares[1](i, j) = T_c_bool[0].mShares[1](i, entry_key_cols-j-1);
+    // //     }
+    // //     //tid
+    // //     entry_key.mShares[0](i, entry_key_cols-key_num-1) = T_c_bool[2].mShares[0](i, 0);
+    // //     entry_key.mShares[1](i, entry_key_cols-key_num-1) = T_c_bool[2].mShares[1](i, 0);
+    // //     //d
+    // //     for(int j=entry_key_cols-key_num-2; j>=0; j--){
+    // //         entry_key.mShares[0](i, j) = T_c_bool[1].mShares[0](i, entry_key_cols-key_num-2-j);
+    // //         entry_key.mShares[1](i, j) = T_c_bool[1].mShares[1](i, entry_key_cols-key_num-2-j);
+    // //     }
    
+    // // }
+
+
+    // sbMatrix entry_key_sorted(len1+len2, entry_key_bitcount);
+    // odd_even_merge_sort(entry_key, entry_key_sorted, pIdx, enc, eval, runtime);
+    //------odd-even merge sort end------
+
+    //optimize: permutation sort
+    auto t1 = std::chrono::high_resolution_clock::now();
+    //step 1: tid tag
+    si64Matrix tid_0(len1, 1),tid_1(len2, 1);
+    set_const_share(pIdx, 0, tid_0, enc, eval, runtime);
+    set_const_share(pIdx, 1, tid_1, enc, eval, runtime);
+
+    //step 2: entry_key concat
+    int entry_key_cols = key_num+max_other_num+1;
+    si64Matrix entry_key_si(len1+len2, entry_key_cols);
+    //key列
+    for(int j=entry_key_cols-1; j>=entry_key_cols-key_num; j--){
+        entry_key_si.mShares[0].col(j).head(len1) = T_1_key[entry_key_cols-1-j].mShares[0].col(0);
+        entry_key_si.mShares[1].col(j).head(len1) = T_1_key[entry_key_cols-1-j].mShares[1].col(0);
+
+        entry_key_si.mShares[0].col(j).segment(len1, len2) = T_2_key[entry_key_cols-1-j].mShares[0].col(0);
+        entry_key_si.mShares[1].col(j).segment(len1, len2) = T_2_key[entry_key_cols-1-j].mShares[1].col(0);
+    }
+    //tid列
+    entry_key_si.mShares[0].col(entry_key_cols-key_num-1).head(len1) = tid_0.mShares[0].col(0);
+    entry_key_si.mShares[1].col(entry_key_cols-key_num-1).head(len1) = tid_0.mShares[1].col(0);
+    entry_key_si.mShares[0].col(entry_key_cols-key_num-1).segment(len1, len2) = tid_1.mShares[0].col(0);
+    entry_key_si.mShares[1].col(entry_key_cols-key_num-1).segment(len1, len2) = tid_1.mShares[1].col(0);
+    //other列（max_other_num列）
+    for(int j=entry_key_cols-key_num-2; j>=0; j--){
+        if(entry_key_cols-key_num-2-j >= other_1_num){
+            entry_key_si.mShares[0].col(j).head(len1).setZero();
+            entry_key_si.mShares[1].col(j).head(len1).setZero();
+        }else{
+            entry_key_si.mShares[0].col(j).head(len1) = T_1_other[entry_key_cols-key_num-2-j].mShares[0].col(0);
+            entry_key_si.mShares[1].col(j).head(len1) = T_1_other[entry_key_cols-key_num-2-j].mShares[1].col(0);
+        }
+
+        if(entry_key_cols-key_num-2-j >= other_2_num){
+            entry_key_si.mShares[0].col(j).segment(len1, len2).setZero();
+            entry_key_si.mShares[1].col(j).segment(len1, len2).setZero();
+        }else{
+            entry_key_si.mShares[0].col(j).segment(len1, len2) = T_2_other[entry_key_cols-key_num-2-j].mShares[0].col(0);
+            entry_key_si.mShares[1].col(j).segment(len1, len2) = T_2_other[entry_key_cols-key_num-2-j].mShares[1].col(0);
+        }
     }
 
+    //step 3: sort
+    si64Matrix perm(len1+len2, 1);
+    genPerm(pIdx, entry_key_si, perm, enc, eval, runtime);
+    si64Matrix entry_key_sorted_si(len1+len2, entry_key_cols);
+    applyPerm(pIdx, perm, entry_key_si, entry_key_sorted_si, enc, eval, runtime);
 
+    int entry_key_bitcount = 64*key_num+64*max_other_num+64;
     sbMatrix entry_key_sorted(len1+len2, entry_key_bitcount);
-    odd_even_merge_sort(entry_key, entry_key_sorted, pIdx, enc, eval, runtime);
+    arith2bool(pIdx, entry_key_sorted_si, entry_key_sorted, enc, eval, runtime);
+
+    //------permutation sort end------
+    std::cout<<"permutation sort end"<<std::endl;
 
 
     sbMatrix j_sb(len1+len2, 64*key_num);
@@ -1188,10 +1683,10 @@ void augment_table(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64M
             d_sb.mShares[1](i, entry_key_cols-key_num-2-j) = entry_key_sorted.mShares[1](i, j);
         }
     }
-    t2 = std::chrono::high_resolution_clock::now();
+    auto t2 = std::chrono::high_resolution_clock::now();
     double step2_decompose_sort_result_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
-    timing_results.push_back({"augment_step2_sort_result", step2_decompose_sort_result_time});
-
+    //timing_results.push_back({"augment_step2_sort_result", step2_decompose_sort_result_time});
+    timing_results.push_back({"augment_step2_perm_sort_result", step2_decompose_sort_result_time});
 
     //step 3: full-dimension
     t1 = std::chrono::high_resolution_clock::now();
@@ -1214,12 +1709,20 @@ void augment_table(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64M
     bool_cipher_sub(pIdx, one_bit, same_attr, not_same_attr, enc, eval, runtime);
 
     //is_table
-    sbMatrix zero64_vector(len1+len2, 64), one64_vector(len1+len2, 64);
+    // sbMatrix zero64_vector(len1+len2, 64), one64_vector(len1+len2, 64);
+    // bool_init_false(pIdx, zero64_vector);
+    // bool_init_true(pIdx, one64_vector);
+    // sbMatrix is_table_1(len1+len2, 1), is_table_2(len1+len2, 1);
+    // //TODO VECTOR
+    // bool_cipher_eq(pIdx, tid_sb, zero64_vector, is_table_1, enc, eval, runtime);
+    // bool_cipher_eq(pIdx, tid_sb, one64_vector, is_table_2, enc, eval, runtime);
+    sbMatrix zero64_vector(len1+len2, 64);
     bool_init_false(pIdx, zero64_vector);
-    bool_init_true(pIdx, one64_vector);
     sbMatrix is_table_1(len1+len2, 1), is_table_2(len1+len2, 1);
     bool_cipher_eq(pIdx, tid_sb, zero64_vector, is_table_1, enc, eval, runtime);
-    bool_cipher_eq(pIdx, tid_sb, one64_vector, is_table_2, enc, eval, runtime);
+    //要么是1要么是2
+    bool_cipher_sub(pIdx, one_bit, is_table_1, is_table_2, enc, eval, runtime);
+
 
     //condition:
     sbMatrix is_table_vector(4*(len1+len2), 1), same_attr_vector(4*(len1+len2), 1);
@@ -1551,7 +2054,7 @@ void augment_table(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64M
     //step 4: sort by: tid
     t1 = std::chrono::high_resolution_clock::now();
     //还要加上alpha1,2
-    entry_key.resize(len1+len2, entry_key_bitcount+64+64);
+    sbMatrix entry_key(len1+len2, entry_key_bitcount+64+64);
     entry_key_sorted.resize(len1+len2,entry_key_bitcount+64+64);
     for(int i=0; i<len1+len2; i++){
         //因为是大端序，所以要逆序
@@ -1824,8 +2327,224 @@ void augment_table(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64M
 
     return ;
 }
+*/
 
 
+//optimized:prefixsum(si) + selector
+void oblivious_expand(int pIdx, std::vector<si64Matrix> &T, std::vector<sbMatrix> &A, i64 tid,
+    i64Matrix &s_plain,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
+
+    auto total_start = std::chrono::high_resolution_clock::now();
+    std::vector<std::pair<std::string, double>> timing_results;
+    
+    int n = T[0].rows();
+    int key_num = T[0].cols();
+    int max_other_num = T[1].cols();
+
+    //step 1: 计算f(x)和s
+    auto t1 = std::chrono::high_resolution_clock::now();
+    //alpha的值64bit
+    si64Matrix g(n, 1);
+    if(tid == 0){
+        g = T[3];
+    } else {
+        g = T[2];
+    }
+
+    si64Matrix zero(n, 1);
+    sbMatrix flag(n,1), not_flag(n,1);
+    set_const_share(pIdx, 0, zero, enc, eval, runtime);
+    cipher_eq(pIdx, g, zero, flag, eval, runtime);
+    bool_cipher_not(pIdx, flag, not_flag);
+    // bool_cipher_not 对 i64 做 ~ 会把 0->-1、1->-2，asyncMul 要求 share 为 0/1，需取 LSB
+    for(size_t i=0; i<n; i++){
+        not_flag.mShares[0](i, 0) &= 1;
+        not_flag.mShares[1](i, 0) &= 1;
+    }
+
+    si64Matrix g_sum(n, 1), s(1, 1), fx(n, 1);  
+    //prefixsum(pIdx, g, g_sum);
+    i64 sum_0=0,sum_1=0;
+    g_sum.mShares[0](0, 0) = sum_0;
+    g_sum.mShares[1](0, 0) = sum_1;
+    for(size_t i=1; i<n; i++){
+        sum_0 += g.mShares[0](i-1, 0);
+        sum_1 += g.mShares[1](i-1, 0);
+        g_sum.mShares[0](i, 0) = sum_0;
+        g_sum.mShares[1](i, 0) = sum_1;
+    }
+
+    //s=g_sum(n-1)
+    s.mShares[0](0, 0) = g_sum.mShares[0](n-1, 0) + g.mShares[0](n-1, 0);
+    s.mShares[1](0, 0) = g_sum.mShares[1](n-1, 0) + g.mShares[1](n-1, 0);
+    s_plain.resize(1, 1);
+    enc.revealAll(runtime, s, s_plain).get();
+    int m = s_plain(0,0);
+      
+
+    //fx=(not flag) × g_sum；cipher_mul 要求 sbMatrix 的 bitCount==1
+    cipher_mul(pIdx, g_sum, not_flag, fx, eval, enc, runtime);
+
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+    double step1_compute_fx_s_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"oblivious_expand_step1_compute_fx_s", step1_compute_fx_s_time});
+
+
+    //step 2 obli_distribute
+    t1 = std::chrono::high_resolution_clock::now();
+    sbMatrix A_vector(m, 64*key_num+64*max_other_num+64+64);
+    sbMatrix flag_sorted_auged(m, 1);
+    oblivious_distribute(pIdx, T, flag, fx, s_plain, A_vector, flag_sorted_auged, enc, eval, runtime);
+    int A_vector_i64cols = A_vector.i64Cols();
+    t2 = std::chrono::high_resolution_clock::now();
+    double step2_obli_distribute_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"oblivious_expand_step2_obli_distribute", step2_obli_distribute_time});
+
+
+    //step 3 fill down
+    t1 = std::chrono::high_resolution_clock::now();
+    // sbMatrix 第二参数是 bitCount，需 64*A_vector_i64cols 才能容纳 A_vector_i64cols 个 i64
+    int A_vector_bitcount = 64 * A_vector_i64cols;
+    sbMatrix px_vector(1, A_vector_bitcount);
+    sbMatrix px(1, 64);
+    bool_init_i64(pIdx, std::numeric_limits<i64>::max(), px, enc, eval, runtime);
+    bool_cols_expand(px, px_vector);
+
+    sbMatrix one_share(m, 1);
+    bool_init_i64(pIdx, 1, one_share, enc, eval, runtime);
+    sbMatrix cond(m, 1);
+    bool_cipher_eq(pIdx, flag_sorted_auged, one_share, cond, enc, eval, runtime);
+
+    sbMatrix cond_i(1, 1);
+    sbMatrix A_k_i(1, A_vector_bitcount), A_k_i_new(1, A_vector_bitcount);
+
+    for(size_t i=0; i<m; i++){
+        cond_i.mShares[0](0, 0) = cond.mShares[0](i, 0);
+        cond_i.mShares[1](0, 0) = cond.mShares[1](i, 0);
+
+        std::memcpy(A_k_i.mShares[0].data(), A_vector.mShares[0].data() + i*A_vector_i64cols, A_vector_i64cols*sizeof(A_vector.mShares[0](0, 0)));
+        std::memcpy(A_k_i.mShares[1].data(), A_vector.mShares[1].data() + i*A_vector_i64cols, A_vector_i64cols*sizeof(A_vector.mShares[1](0, 0)));
+        bool_cipher_selector(pIdx, cond_i, px_vector, A_k_i, A_k_i_new, enc, eval, runtime);
+
+        std::memcpy(A_vector.mShares[0].data() + i*A_vector_i64cols, A_k_i_new.mShares[0].data(), A_vector_i64cols*sizeof(A_k_i_new.mShares[0](0, 0)));
+        std::memcpy(A_vector.mShares[1].data() + i*A_vector_i64cols, A_k_i_new.mShares[1].data(), A_vector_i64cols*sizeof(A_k_i_new.mShares[1](0, 0)));
+        std::memcpy(px_vector.mShares[0].data(), A_k_i_new.mShares[0].data(), A_vector_i64cols*sizeof(A_k_i_new.mShares[0](0, 0)));
+        std::memcpy(px_vector.mShares[1].data(), A_k_i_new.mShares[1].data(), A_vector_i64cols*sizeof(A_k_i_new.mShares[1](0, 0)));
+
+    }
+
+    //就这样得到A——vector不行吗，为啥要拆？不然不知道每一部分有多少啊
+    //将A_vector拆分成A[k]
+    A.resize(4);
+    A[0].resize(m, 64*key_num);
+    A[1].resize(m, 64*max_other_num);
+    A[2].resize(m, 64);
+    A[3].resize(m, 64);
+
+    for(size_t i=0; i<m; i++){
+        A[3].mShares[0](i, 0) = A_vector.mShares[0](i, 0);
+        A[3].mShares[1](i, 0) = A_vector.mShares[1](i, 0);
+        A[2].mShares[0](i, 0) = A_vector.mShares[0](i, 1);
+        A[2].mShares[1](i, 0) = A_vector.mShares[1](i, 1);
+        std::memcpy(A[1].mShares[0].data() + i*max_other_num, A_vector.mShares[0].data() + i*A_vector_i64cols + 2, max_other_num*sizeof(A_vector.mShares[0](i, 0)));
+        std::memcpy(A[1].mShares[1].data() + i*max_other_num, A_vector.mShares[1].data() + i*A_vector_i64cols + 2, max_other_num*sizeof(A_vector.mShares[1](i, 0)));
+        std::memcpy(A[0].mShares[0].data() + i*key_num, A_vector.mShares[0].data() + i*A_vector_i64cols + 2 + max_other_num, key_num*sizeof(A_vector.mShares[0](i, 0)));
+        std::memcpy(A[0].mShares[1].data() + i*key_num, A_vector.mShares[1].data() + i*A_vector_i64cols + 2 + max_other_num, key_num*sizeof(A_vector.mShares[1](i, 0)));
+    }
+    t2 = std::chrono::high_resolution_clock::now();
+    double step3_fill_down_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"oblivious_expand_step3_fill_down", step3_fill_down_time});
+
+    // 计算总时间
+    auto total_end = std::chrono::high_resolution_clock::now();
+    double total_time = std::chrono::duration<double, std::milli>(total_end - total_start).count();
+    timing_results.push_back({"oblivious_expand_total", total_time});
+
+    // 将时间测量结果写入文件（仅 role 0 写入）
+    if (pIdx == 0) {
+        std::string filename = "./join_timing_results_role0.txt";
+        std::ofstream outFile(filename, std::ios::app);
+        if (outFile.is_open()) {
+            outFile << "--- oblivious_expand Internal Timing (Role " << pIdx << ") ---" << std::endl;
+            outFile << std::fixed << std::setprecision(3);
+            for(const auto& result : timing_results) {
+                outFile << "  " << result.first << ": " << result.second << " ms" << std::endl;
+            }
+            outFile << "----------------------------------------" << std::endl;
+            outFile << std::endl;
+            outFile.close();
+        }
+    }
+
+    //     //DEBUG
+    // for(int l=0; l< key_num  ; l++){
+    //     i64Matrix j_plain(m, 1);
+    //     sbMatrix j_l(m, 64);
+    //     for(int i=0; i<m; i++){
+    //         j_l.mShares[0](i, 0) = A[0].mShares[0](i, l);
+    //         j_l.mShares[1](i, 0) = A[0].mShares[1](i, l);
+    //     }
+    //     enc.revealAll(runtime, j_l, j_plain).get();
+    //     if(pIdx ==0){
+    //         std::cout<< "j_"<<l<<": "<<std::endl;
+    //         for(size_t i=0; i<m; i++){
+    //             std::cout <<j_plain(i, 0) << " ";
+    //         }
+    //         std::cout<<std::endl;
+    //     }
+    // }
+    // for(int l=0; l< max_other_num  ; l++){
+    //     i64Matrix d_plain(m, 1);
+    //     sbMatrix d_l(m, 64);
+    //     for(int i=0; i<m; i++){
+    //         d_l.mShares[0](i, 0) = A[1].mShares[0](i, l);
+    //         d_l.mShares[1](i, 0) = A[1].mShares[1](i, l);
+    //     }
+    //     enc.revealAll(runtime, d_l, d_plain).get();
+    //     if(pIdx ==0){
+    //         std::cout<< "d_"<<l<<": "<<std::endl;
+    //         for(size_t i=0; i<m; i++){
+    //             std::cout <<d_plain(i, 0) << " ";
+    //         }
+    //         std::cout<<std::endl;
+    //     }
+    // }
+    // i64Matrix alpha_1_plain(m, 1);
+    // sbMatrix alpha_1_f(m, 64);
+    // for(int i=0; i<m; i++){
+    //     alpha_1_f.mShares[0](i, 0) = A[2].mShares[0](i, 0);
+    //     alpha_1_f.mShares[1](i, 0) = A[2].mShares[1](i, 0);
+    // }
+    // enc.revealAll(runtime, alpha_1_f, alpha_1_plain).get();
+    // if(pIdx ==0){
+    //     std::cout<< "alpha_1_f: "<<std::endl;
+    //     for(size_t i=0; i<m; i++){
+    //         std::cout <<alpha_1_plain(i, 0) << " ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+    // i64Matrix alpha_2_plain(m, 1);
+    // sbMatrix alpha_2_f(m, 64);
+    // for(int i=0; i<m; i++){
+    //     alpha_2_f.mShares[0](i, 0) = A[3].mShares[0](i, 0);
+    //     alpha_2_f.mShares[1](i, 0) = A[3].mShares[1](i, 0);
+    // }
+    // enc.revealAll(runtime, alpha_2_f, alpha_2_plain).get();
+    // if(pIdx ==0){
+    //     std::cout<< "alpha_2_f: "<<std::endl;
+    //     for(size_t i=0; i<m; i++){
+    //         std::cout <<alpha_2_plain(i, 0) << " ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+    // //-----correct: after fill down
+
+    return ;
+}
+
+/*
 void oblivious_expand(int pIdx, std::vector<sbMatrix> &T, std::vector<sbMatrix> &A, i64 tid,
     i64Matrix &s_plain,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime){
@@ -1855,26 +2574,29 @@ void oblivious_expand(int pIdx, std::vector<sbMatrix> &T, std::vector<sbMatrix> 
 
     //flag标记了是否g(x)=0，不用把j,d设为空值，这样后续排序不对
 
-    //f(x)
-    sbMatrix fx(n, 64);
-    sbMatrix s(1, 64);
-    bool_init_false(pIdx, s);
-    for(size_t i=0; i<n; i++){
-        sbMatrix f_i(1, 64), g_i(1, 64), zero_i(1, 64);
-        sbMatrix flag_i(1, 1);
-        bool_init_false(pIdx, zero_i);
-        flag_i.mShares[0](0, 0) = flag.mShares[0](i, 0);
-        flag_i.mShares[1](0, 0) = flag.mShares[1](i, 0);
+    // //f(x)
+    // sbMatrix fx(n, 64);
+    // sbMatrix s(1, 64);
+    // bool_init_false(pIdx, s);
+    // for(size_t i=0; i<n; i++){
+    //     sbMatrix f_i(1, 64), g_i(1, 64), zero_i(1, 64);
+    //     sbMatrix flag_i(1, 1);
+    //     bool_init_false(pIdx, zero_i);
+    //     flag_i.mShares[0](0, 0) = flag.mShares[0](i, 0);
+    //     flag_i.mShares[1](0, 0) = flag.mShares[1](i, 0);
        
-        bool_cipher_selector(pIdx, flag_i, zero_i, s, f_i, enc, eval, runtime);
+    //     bool_cipher_selector(pIdx, flag_i, zero_i, s, f_i, enc, eval, runtime);
 
-        fx.mShares[0](i, 0) = f_i.mShares[0](0, 0);
-        fx.mShares[1](i, 0) = f_i.mShares[1](0, 0);
-        g_i.mShares[0](0, 0) = g.mShares[0](i, 0);
-        g_i.mShares[1](0, 0) = g.mShares[1](i, 0);
+    //     fx.mShares[0](i, 0) = f_i.mShares[0](0, 0);
+    //     fx.mShares[1](i, 0) = f_i.mShares[1](0, 0);
+    //     g_i.mShares[0](0, 0) = g.mShares[0](i, 0);
+    //     g_i.mShares[1](0, 0) = g.mShares[1](i, 0);
         
-        bool_cipher_add(pIdx, s, g_i, s, enc, eval, runtime);
-    }
+    //     bool_cipher_add(pIdx, s, g_i, s, enc, eval, runtime);
+    // }
+
+    //optimized:先求前缀和载selector
+    
 
     s_plain.resize(1, 1);
     enc.revealAll(runtime, s, s_plain).get();
@@ -2067,8 +2789,236 @@ void oblivious_expand(int pIdx, std::vector<sbMatrix> &T, std::vector<sbMatrix> 
 
     return ;
 }
+*/
 
+//optimized:permsort(si) 
+void oblivious_distribute(int pIdx, std::vector<si64Matrix> &T_prime, sbMatrix &flag, si64Matrix &fx, i64Matrix &s_plain, 
+    sbMatrix &A_vector, sbMatrix &flag_sorted_auged,
+    Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
 
+    // 时间测量变量
+    auto total_start = std::chrono::high_resolution_clock::now();
+    std::vector<std::pair<std::string, double>> timing_results;
+    
+    int n = T_prime[0].rows();
+    i64 m = s_plain(0, 0);
+
+    int key_num = T_prime[0].cols();
+    int max_other_num = T_prime[1].cols();
+
+    //step 1: sort T_prime
+    auto t1 = std::chrono::high_resolution_clock::now();
+
+    //flag->si64
+    si64Matrix flag_si64(n, 1);
+    bool2arith(pIdx, flag, flag_si64, enc, eval, runtime);
+
+    //sort by:flag, fx, j, d, alpha1, alpha2 
+    int entry_key_cols = 1+1+key_num+max_other_num+1+1;
+    si64Matrix entry_key_si(n, entry_key_cols);
+    //flag列
+    entry_key_si.mShares[0].col(entry_key_cols-1) = flag_si64.mShares[0].col(0);
+    entry_key_si.mShares[1].col(entry_key_cols-1) = flag_si64.mShares[1].col(0);
+    //fx列
+    entry_key_si.mShares[0].col(entry_key_cols-2) = fx.mShares[0].col(0);
+    entry_key_si.mShares[1].col(entry_key_cols-2) = fx.mShares[1].col(0);
+    //j列
+    entry_key_si.mShares[0].block(0, 2+max_other_num, n, key_num) = T_prime[0].mShares[0].block(0, 0, n, key_num);
+    entry_key_si.mShares[1].block(0, 2+max_other_num, n, key_num) = T_prime[0].mShares[1].block(0, 0, n, key_num);
+    //d列
+    entry_key_si.mShares[0].block(0, 2, n, max_other_num) = T_prime[1].mShares[0].block(0, 0, n, max_other_num);
+    entry_key_si.mShares[1].block(0, 2, n, max_other_num) = T_prime[1].mShares[1].block(0, 0, n, max_other_num);
+    //alpha1列
+    entry_key_si.mShares[0].col(1) = T_prime[2].mShares[0].col(0);
+    entry_key_si.mShares[1].col(1) = T_prime[2].mShares[1].col(0);
+    //alpha2列
+    entry_key_si.mShares[0].col(0) = T_prime[3].mShares[0].col(0);
+    entry_key_si.mShares[1].col(0) = T_prime[3].mShares[1].col(0);
+
+    
+    si64Matrix perm(n, 1);
+    genPerm(pIdx, entry_key_si, perm, enc, eval, runtime);
+    si64Matrix entry_key_sorted_si(n, entry_key_cols);
+    applyPerm(pIdx, perm, entry_key_si, entry_key_sorted_si, enc, eval, runtime);
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+    double step1_sort_T_prime_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"oblivious_distribute_step1_sort_T_prime", step1_sort_T_prime_time});
+
+    //step 2 填充空值得到A_vector, fx_sorted_auged, flag_sorted_auged
+    si64Matrix A_vector_si(m, key_num+max_other_num+1+1), flag_sorted_auged_si(m, 1), fx_sorted_auged_si(m, 1);
+    t1 = std::chrono::high_resolution_clock::now();
+    if(m >= n){
+        si64Matrix null_share_m(m-n, key_num+max_other_num+1+1), zero_m(m-n, 1), one_share_m(m-n, 1);
+        set_const_share(pIdx, 0, zero_m, enc, eval, runtime);
+        set_const_share(pIdx, 1, one_share_m, enc, eval, runtime);
+        set_const_share(pIdx, std::numeric_limits<i64>::max(), null_share_m, enc, eval, runtime);
+
+        A_vector_si.mShares[0].block(0, 0, n, key_num+max_other_num+1+1) = entry_key_sorted_si.mShares[0].block(0, 0, n, key_num+max_other_num+1+1);
+        A_vector_si.mShares[1].block(0, 0, n, key_num+max_other_num+1+1) = entry_key_sorted_si.mShares[1].block(0, 0, n, key_num+max_other_num+1+1);
+        A_vector_si.mShares[0].block(n, 0, m-n, key_num+max_other_num+1+1) = null_share_m.mShares[0].block(0, 0, m-n, key_num+max_other_num+1+1);
+        A_vector_si.mShares[1].block(n, 0, m-n, key_num+max_other_num+1+1) = null_share_m.mShares[1].block(0, 0, m-n, key_num+max_other_num+1+1);
+
+        flag_sorted_auged_si.mShares[0].block(0, 0, n, 1) = entry_key_sorted_si.mShares[0].block(0, entry_key_cols-1, n, 1);
+        flag_sorted_auged_si.mShares[1].block(0, 0, n, 1) = entry_key_sorted_si.mShares[1].block(0, entry_key_cols-1, n, 1);
+        flag_sorted_auged_si.mShares[0].block(n, 0, m-n, 1) = one_share_m.mShares[0].block(0, 0, m-n, 1);
+        flag_sorted_auged_si.mShares[1].block(n, 0, m-n, 1) = one_share_m.mShares[1].block(0, 0, m-n, 1);
+
+        fx_sorted_auged_si.mShares[0].block(0, 0, n, 1) = entry_key_sorted_si.mShares[0].block(0, entry_key_cols-2, n, 1);
+        fx_sorted_auged_si.mShares[1].block(0, 0, n, 1) = entry_key_sorted_si.mShares[1].block(0, entry_key_cols-2, n, 1);
+        fx_sorted_auged_si.mShares[0].block(n, 0, m-n, 1) = zero_m.mShares[0].block(0, 0, m-n, 1);
+        fx_sorted_auged_si.mShares[1].block(n, 0, m-n, 1) = zero_m.mShares[1].block(0, 0, m-n, 1);
+        
+    }
+    else{
+        A_vector_si.mShares[0].block(0, 0, m, key_num+max_other_num+1+1) = entry_key_sorted_si.mShares[0].block(0, 0, m, key_num+max_other_num+1+1);
+        A_vector_si.mShares[1].block(0, 0, m, key_num+max_other_num+1+1) = entry_key_sorted_si.mShares[1].block(0, 0, m, key_num+max_other_num+1+1);
+
+        flag_sorted_auged_si.mShares[0].block(0, 0, m, 1) = entry_key_sorted_si.mShares[0].block(0, entry_key_cols-1, m, 1);
+        flag_sorted_auged_si.mShares[1].block(0, 0, m, 1) = entry_key_sorted_si.mShares[1].block(0, entry_key_cols-1, m, 1);
+
+        fx_sorted_auged_si.mShares[0].block(0, 0, m, 1) = entry_key_sorted_si.mShares[0].block(0, entry_key_cols-2, m, 1);
+        fx_sorted_auged_si.mShares[1].block(0, 0, m, 1) = entry_key_sorted_si.mShares[1].block(0, entry_key_cols-2, m, 1);
+    }
+    //arith 2 bool
+    sbMatrix  fx_sorted_auged(m, 64);
+    flag_sorted_auged.resize(m, 1);
+    A_vector.resize(m, 64*key_num+64*max_other_num+64+64);
+    //TODO
+    arith2bool(pIdx, fx_sorted_auged_si, fx_sorted_auged, enc, eval, runtime);
+    arith2bool(pIdx, flag_sorted_auged_si, flag_sorted_auged, enc, eval, runtime);
+    arith2bool(pIdx, A_vector_si, A_vector, enc, eval, runtime);
+
+    t2 = std::chrono::high_resolution_clock::now();
+    double step2_fill_null_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"oblivious_distribute_step2_fill_null", step2_fill_null_time});
+
+    //step 3: distribute loop
+    t1 = std::chrono::high_resolution_clock::now();
+    // 计算 j = 2^⌈log₂(m)⌉ - 1
+    i64 step_size;
+    i64 power = static_cast<i64>(std::ceil(std::log2(m)))-1;
+    step_size = 1ULL << power;
+
+    while(step_size >= 1){
+        
+        sbMatrix i_plus_j(m-step_size, 64);
+        i64Matrix i_plus_j_plain(m-step_size, 1);
+        for(size_t i=0; i<m-step_size; i++){
+            i_plus_j_plain(i, 0) = i + step_size - 1;
+        }
+        if(pIdx == 0){
+            enc.localBinMatrix(runtime, i_plus_j_plain, i_plus_j).get();
+        }else{
+            enc.remoteBinMatrix(runtime, i_plus_j).get();
+        }
+
+        sbMatrix flag_i(1, 1), fx_i(1, 64);
+        sbMatrix flag_i_plus_j(1, 1), fx_i_plus_j(1, 64), i_plus_j_cond(1, 64);
+        sbMatrix cond1(1, 1),cond1_concat(2,1);
+
+        sbMatrix A_true_value(2,64*key_num+64*max_other_num+64+64+64+64);
+        sbMatrix A_false_value(2,64*key_num+64*max_other_num+64+64+64+64);
+        sbMatrix A_new_value(2,64*key_num+64*max_other_num+64+64+64+64);
+        int A_vector_i64cols = A_vector.i64Cols();
+
+        for(i64 i = m-1-step_size; i >= 0; i--){
+            
+            fx_i.mShares[0](0, 0) = fx_sorted_auged.mShares[0](i, 0);
+            fx_i.mShares[1](0, 0) = fx_sorted_auged.mShares[1](i, 0);
+            fx_i_plus_j.mShares[0](0, 0) = fx_sorted_auged.mShares[0](i+step_size, 0);
+            fx_i_plus_j.mShares[1](0, 0) = fx_sorted_auged.mShares[1](i+step_size, 0);
+
+            i_plus_j_cond.mShares[0](0, 0) = i_plus_j.mShares[0](i, 0);
+            i_plus_j_cond.mShares[1](0, 0) = i_plus_j.mShares[1](i, 0);
+
+            bool_cipher_lt(pIdx, i_plus_j_cond, fx_i, cond1, enc, eval, runtime);
+            cond1_concat.mShares[0](0, 0) = cond1.mShares[0](0, 0);
+            cond1_concat.mShares[1](0, 0) = cond1.mShares[1](0, 0);
+            cond1_concat.mShares[0](1, 0) = cond1.mShares[0](0, 0);
+            cond1_concat.mShares[1](1, 0) = cond1.mShares[1](0, 0);
+
+            //A_vector + fx + flag
+            for(size_t l=0; l<A_vector_i64cols; l++){
+                A_true_value.mShares[0](0, l) = A_vector.mShares[0](i+step_size, l);
+                A_true_value.mShares[1](0, l) = A_vector.mShares[1](i+step_size, l);
+                A_true_value.mShares[0](1, l) = A_vector.mShares[0](i, l);
+                A_true_value.mShares[1](1, l) = A_vector.mShares[1](i, l);
+                A_false_value.mShares[0](0, l) = A_vector.mShares[0](i, l);
+                A_false_value.mShares[1](0, l) = A_vector.mShares[1](i, l);
+                A_false_value.mShares[0](1, l) = A_vector.mShares[0](i+step_size, l);
+                A_false_value.mShares[1](1, l) = A_vector.mShares[1](i+step_size, l);
+            }
+            //fx
+            A_true_value.mShares[0](0, A_vector_i64cols) = fx_i_plus_j.mShares[0](0, 0);
+            A_true_value.mShares[1](0, A_vector_i64cols) = fx_i_plus_j.mShares[1](0, 0);
+            A_true_value.mShares[0](1, A_vector_i64cols) = fx_i.mShares[0](0, 0);
+            A_true_value.mShares[1](1, A_vector_i64cols) = fx_i.mShares[1](0, 0);
+            A_false_value.mShares[0](0, A_vector_i64cols) = fx_i.mShares[0](0, 0);
+            A_false_value.mShares[1](0, A_vector_i64cols) = fx_i.mShares[1](0, 0);
+            A_false_value.mShares[0](1, A_vector_i64cols) = fx_i_plus_j.mShares[0](0, 0);
+            A_false_value.mShares[1](1, A_vector_i64cols) = fx_i_plus_j.mShares[1](0, 0);
+            //flag
+            A_true_value.mShares[0](0, A_vector_i64cols + 1) = flag_sorted_auged.mShares[0](i+step_size, 0);
+            A_true_value.mShares[1](0, A_vector_i64cols + 1) = flag_sorted_auged.mShares[1](i+step_size, 0);
+            A_true_value.mShares[0](1, A_vector_i64cols + 1) = flag_sorted_auged.mShares[0](i, 0);
+            A_true_value.mShares[1](1, A_vector_i64cols + 1) = flag_sorted_auged.mShares[1](i, 0);
+            A_false_value.mShares[0](0, A_vector_i64cols + 1) = flag_sorted_auged.mShares[0](i, 0);
+            A_false_value.mShares[1](0, A_vector_i64cols + 1) = flag_sorted_auged.mShares[1](i, 0);
+            A_false_value.mShares[0](1, A_vector_i64cols + 1) = flag_sorted_auged.mShares[0](i+step_size, 0);
+            A_false_value.mShares[1](1, A_vector_i64cols + 1) = flag_sorted_auged.mShares[1](i+step_size, 0);
+
+            bool_cipher_selector(pIdx, cond1_concat, A_true_value, A_false_value, A_new_value, enc, eval, runtime);
+
+            //更新值
+            for(size_t l=0; l<A_vector_i64cols; l++){
+                A_vector.mShares[0](i, l) = A_new_value.mShares[0](0, l);
+                A_vector.mShares[1](i, l) = A_new_value.mShares[1](0, l);
+            }
+            fx_sorted_auged.mShares[0](i, 0) = A_new_value.mShares[0](0, A_vector_i64cols);
+            fx_sorted_auged.mShares[1](i, 0) = A_new_value.mShares[1](0, A_vector_i64cols);
+            flag_sorted_auged.mShares[0](i, 0) = A_new_value.mShares[0](0, A_vector_i64cols + 1);
+            flag_sorted_auged.mShares[1](i, 0) = A_new_value.mShares[1](0, A_vector_i64cols + 1);
+
+            for(size_t l=0; l<A_vector_i64cols; l++){
+                A_vector.mShares[0](i+step_size, l) = A_new_value.mShares[0](1, l);
+                A_vector.mShares[1](i+step_size, l) = A_new_value.mShares[1](1, l);
+            }
+            fx_sorted_auged.mShares[0](i+step_size, 0) =  A_new_value.mShares[0](1, A_vector_i64cols);
+            fx_sorted_auged.mShares[1](i+step_size, 0) = A_new_value.mShares[1](1, A_vector_i64cols);
+            flag_sorted_auged.mShares[0](i+step_size, 0) = A_new_value.mShares[0](1, A_vector_i64cols + 1);
+            flag_sorted_auged.mShares[1](i+step_size, 0) = A_new_value.mShares[1](1, A_vector_i64cols + 1);
+        }
+        step_size = step_size / 2;
+    }
+    t2 = std::chrono::high_resolution_clock::now();
+    double step3_distribute_loop_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"oblivious_distribute_step3_distribute_loop", step3_distribute_loop_time});
+
+    // 计算总时间
+    auto total_end = std::chrono::high_resolution_clock::now();
+    double total_time = std::chrono::duration<double, std::milli>(total_end - total_start).count();
+    timing_results.push_back({"oblivious_distribute_total", total_time});
+
+    // 将时间测量结果写入文件（仅 role 0 写入）
+    if (pIdx == 0) {
+        std::string filename = "./join_timing_results_role0.txt";
+        std::ofstream outFile(filename, std::ios::app);
+        if (outFile.is_open()) {
+            outFile << "--- oblivious_distribute Internal Timing (Role " << pIdx << ") ---" << std::endl;
+            outFile << std::fixed << std::setprecision(3);
+            for(const auto& result : timing_results) {
+                outFile << "  " << result.first << ": " << result.second << " ms" << std::endl;
+            }
+            outFile << "----------------------------------------" << std::endl;
+            outFile << std::endl;
+            outFile.close();
+        }
+    }
+        
+        return;
+    }
+/*
 void oblivious_distribute(int pIdx, std::vector<sbMatrix> &T_prime, sbMatrix &flag, sbMatrix &fx, i64Matrix &s_plain, 
     sbMatrix &A_vector, sbMatrix &flag_sorted_auged,
     Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
@@ -2421,8 +3371,192 @@ void oblivious_distribute(int pIdx, std::vector<sbMatrix> &T_prime, sbMatrix &fl
 
     return ;
 }
+*/
 
+//optimized:permsort(si)
+void align_table(int pIdx, std::vector<sbMatrix> &T, std::vector<si64Matrix> &T_aligned,
+    Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
 
+    // 时间测量变量
+    auto total_start = std::chrono::high_resolution_clock::now();
+    std::vector<std::pair<std::string, double>> timing_results;
+    
+    int m=T[0].rows();
+    int key_num = T[0].i64Cols();
+    int max_other_num = T[1].i64Cols();
+
+    //step 1: set e.ii
+    auto t1 = std::chrono::high_resolution_clock::now();
+
+    sbMatrix q_k_concat(2*m, 64);
+    bool_init_false(pIdx, q_k_concat);
+
+        //step 1.1 same_attr
+    sbMatrix false_matrix(1,1);
+    bool_init_false(pIdx, false_matrix);
+    sbMatrix same_attr_partial(m-1, 1);
+    compare_consecutive_rows_bool(pIdx, T[0], same_attr_partial, enc, eval, runtime);
+    sbMatrix same_attr(m, 1);
+    same_attr.mShares[0](0, 0) = false_matrix.mShares[0](0, 0);
+    same_attr.mShares[1](0, 0) = false_matrix.mShares[1](0, 0);
+    std::memcpy(same_attr.mShares[0].data() + 1, same_attr_partial.mShares[0].data(), (m-1) * sizeof(same_attr_partial.mShares[0](0, 0)));
+    std::memcpy(same_attr.mShares[1].data() + 1, same_attr_partial.mShares[1].data(), (m-1) * sizeof(same_attr_partial.mShares[1](0, 0)));
+    
+    sbMatrix zero(2, 64), one(2, 64);
+    bool_init_false(pIdx, zero);
+    bool_init_true(pIdx, one);
+
+    sbMatrix same_attr_i(2, 1), current_q_k(2, 64), q_k_plus(2, 64);
+    sbMatrix true_value_1(2, 64), q_k_mid(2, 64);
+    sbMatrix cond(1, 1), q_mid(1, 64);
+    sbMatrix alpha_1_i(1, 64),alpha_1_minus_one(1, 64),one_one(1, 64);
+    bool_init_true(pIdx, one_one);
+    sbMatrix cond_concat(2, 1), true_value_2(2, 64), q_k_new(2, 64);
+    for(size_t i=0; i<m; i++){
+        same_attr_i.mShares[0](0, 0) = same_attr.mShares[0](i, 0);
+        same_attr_i.mShares[1](0, 0) = same_attr.mShares[1](i, 0);
+        same_attr_i.mShares[0](1, 0) = same_attr.mShares[0](i, 0);
+        same_attr_i.mShares[1](1, 0) = same_attr.mShares[1](i, 0);
+
+        if(i == 0) {
+            current_q_k = zero;
+        } else {
+            current_q_k.mShares[0](0, 0) = q_k_concat.mShares[0](i-1, 0);
+            current_q_k.mShares[1](0, 0) = q_k_concat.mShares[1](i-1, 0);
+            current_q_k.mShares[0](1, 0) = q_k_concat.mShares[0](i+m-1, 0);
+            current_q_k.mShares[1](1, 0) = q_k_concat.mShares[1](i+m-1, 0);
+        }
+        bool_cipher_add(pIdx, current_q_k, one, q_k_plus, enc, eval, runtime);
+
+        true_value_1.mShares[0](0, 0) = q_k_plus.mShares[0](0, 0);
+        true_value_1.mShares[1](0, 0) = q_k_plus.mShares[1](0, 0);
+        true_value_1.mShares[0](1, 0) = current_q_k.mShares[0](1, 0);
+        true_value_1.mShares[1](1, 0) = current_q_k.mShares[1](1, 0);
+
+        //if same :q++, k不变 else :q=0,k=0
+        bool_cipher_selector(pIdx, same_attr_i, true_value_1, zero, q_k_mid, enc, eval, runtime);
+
+        //if  q_new>alpha_1-1 : q=0 ,k++ ; else q=0,k不变
+        q_mid.mShares[0](0, 0) = q_k_mid.mShares[0](0, 0);
+        q_mid.mShares[1](0, 0) = q_k_mid.mShares[1](0, 0);
+        alpha_1_i.mShares[0](0, 0) = T[2].mShares[0](i, 0);
+        alpha_1_i.mShares[1](0, 0) = T[2].mShares[1](i, 0);
+        bool_cipher_sub(pIdx, alpha_1_i, one_one, alpha_1_minus_one, enc, eval, runtime);
+        bool_cipher_lt(pIdx, alpha_1_minus_one, q_mid, cond, enc, eval, runtime);
+
+        cond_concat.mShares[0](0, 0) = cond.mShares[0](0, 0);
+        cond_concat.mShares[1](0, 0) = cond.mShares[1](0, 0);
+        cond_concat.mShares[0](1, 0) = cond.mShares[0](0, 0);
+        cond_concat.mShares[1](1, 0) = cond.mShares[1](0, 0);
+
+        true_value_2.mShares[0](0, 0) = zero.mShares[0](0, 0);
+        true_value_2.mShares[1](0, 0) = zero.mShares[1](0, 0);
+        true_value_2.mShares[0](1, 0) = q_k_plus.mShares[0](1, 0);
+        true_value_2.mShares[1](1, 0) = q_k_plus.mShares[1](1, 0);
+
+        bool_cipher_selector(pIdx, cond_concat, true_value_2, q_k_mid, q_k_new, enc, eval, runtime);
+
+        q_k_concat.mShares[0](i, 0) = q_k_new.mShares[0](0, 0);
+        q_k_concat.mShares[1](i, 0) = q_k_new.mShares[1](0, 0);
+        q_k_concat.mShares[0](i+m, 0) = q_k_new.mShares[0](1, 0);
+        q_k_concat.mShares[1](i+m, 0) = q_k_new.mShares[1](1, 0);
+
+    }
+
+   
+        //step 1.2 bool2arith(q,k,alpha_2, T[0], T[1])
+    si64Matrix q_si(m, 1), k_si(m, 1);
+    si64Matrix ii_si(m, 1);
+    si64Matrix alpha_2_si(m, 1);
+
+    sbMatrix concat_all(m, 64*3+64*max_other_num+64*key_num);
+    for(size_t i=0; i< m; i++){
+        concat_all.mShares[0](i, 0) = q_k_concat.mShares[0](i, 0);
+        concat_all.mShares[1](i, 0) = q_k_concat.mShares[1](i, 0);
+        concat_all.mShares[0](i, 1) = q_k_concat.mShares[0](i+m, 0);
+        concat_all.mShares[1](i, 1) = q_k_concat.mShares[1](i+m, 0);
+        concat_all.mShares[0](i, 2) = T[3].mShares[0](i, 0);
+        concat_all.mShares[1](i, 2) = T[3].mShares[1](i, 0);
+        for(size_t j=0; j<key_num; j++){
+            concat_all.mShares[0](i, 3+j) = T[0].mShares[0](i, j);
+            concat_all.mShares[1](i, 3+j) = T[0].mShares[1](i, j);
+        }
+        for(size_t j=0; j<max_other_num; j++){
+            concat_all.mShares[0](i, 3+key_num+j) = T[1].mShares[0](i, j);
+            concat_all.mShares[1](i, 3+key_num+j) = T[1].mShares[1](i, j);
+        }
+    }
+
+    si64Matrix concat_all_si(m, 3+max_other_num+key_num);
+    bool2arith(pIdx, concat_all, concat_all_si, enc, eval, runtime);
+
+    q_si.mShares[0] = concat_all_si.mShares[0].block(0, 0, m, 1);
+    q_si.mShares[1] = concat_all_si.mShares[1].block(0, 0, m, 1);
+    k_si.mShares[0] = concat_all_si.mShares[0].block(0, 1, m, 1);
+    k_si.mShares[1] = concat_all_si.mShares[1].block(0, 1, m, 1);
+    alpha_2_si.mShares[0] = concat_all_si.mShares[0].block(0, 2, m, 1);
+    alpha_2_si.mShares[1] = concat_all_si.mShares[1].block(0, 2, m, 1);
+  
+    cipher_mul(pIdx, q_si, alpha_2_si, ii_si, eval, enc, runtime);
+    ii_si = ii_si + k_si;
+    auto t2 = std::chrono::high_resolution_clock::now();
+    double step1_set_e_ii_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"align_table_step1_set_e_ii", step1_set_e_ii_time});
+
+    //step 2:permsort(si)
+    t1 = std::chrono::high_resolution_clock::now();
+    //sort by T[0] ii_si T[1]
+    si64Matrix entry_key(m, 1+key_num+max_other_num);
+    //T[1]
+    entry_key.mShares[0].block(0, 0, m, max_other_num) = concat_all_si.mShares[0].block(0, 3+key_num, m, max_other_num);
+    entry_key.mShares[1].block(0, 0, m, max_other_num) = concat_all_si.mShares[1].block(0, 3+key_num, m, max_other_num);
+    //ii_si
+    entry_key.mShares[0].block(0, max_other_num, m, 1) = ii_si.mShares[0].block(0, 0, m, 1);
+    entry_key.mShares[1].block(0, max_other_num, m, 1) = ii_si.mShares[1].block(0, 0, m, 1);
+    //T[0]
+    entry_key.mShares[0].block(0, 1+max_other_num, m, key_num) = concat_all_si.mShares[0].block(0, 3, m, key_num);
+    entry_key.mShares[1].block(0, 1+max_other_num, m, key_num) = concat_all_si.mShares[1].block(0, 3, m, key_num);
+
+    si64Matrix entry_key_sorted(m, 1+key_num+max_other_num), perm(m, 1);
+    genPerm(pIdx, entry_key, perm, enc, eval, runtime);
+    applyPerm(pIdx, perm, entry_key, entry_key_sorted, enc, eval, runtime);
+    
+    T_aligned.resize(2);
+    T_aligned[0].resize(m, key_num);
+    T_aligned[1].resize(m, max_other_num);
+    T_aligned[0].mShares[0].block(0, 0, m, key_num) = entry_key_sorted.mShares[0].block(0, 1+max_other_num, m, key_num);
+    T_aligned[0].mShares[1].block(0, 0, m, key_num) = entry_key_sorted.mShares[1].block(0, 1+max_other_num, m, key_num);
+    T_aligned[1].mShares[0].block(0, 0, m, max_other_num) = entry_key_sorted.mShares[0].block(0, 0, m, max_other_num);
+    T_aligned[1].mShares[1].block(0, 0, m, max_other_num) = entry_key_sorted.mShares[1].block(0, 0, m, max_other_num);
+
+    t2 = std::chrono::high_resolution_clock::now();
+    double step2_sort_j_ii_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"align_table_step2_sort_j_ii", step2_sort_j_ii_time});
+
+    // 计算总时间
+    auto total_end = std::chrono::high_resolution_clock::now();
+    double total_time = std::chrono::duration<double, std::milli>(total_end - total_start).count();
+    timing_results.push_back({"align_table_total", total_time});
+
+    // 将时间测量结果写入文件（仅 role 0 写入）
+    if (pIdx == 0) {
+        std::string filename = "./join_timing_results_role0.txt";
+        std::ofstream outFile(filename, std::ios::app);
+        if (outFile.is_open()) {
+            outFile << "--- align_table Internal Timing (Role " << pIdx << ") ---" << std::endl;
+            outFile << std::fixed << std::setprecision(3);
+            for(const auto& result : timing_results) {
+                outFile << "  " << result.first << ": " << result.second << " ms" << std::endl;
+            }
+            outFile << "----------------------------------------" << std::endl;
+            outFile << std::endl;
+            outFile.close();
+        }
+    }
+
+        return ;
+    }
+/*
 void align_table(int pIdx, std::vector<sbMatrix> &T, std::vector<sbMatrix> &T_aligned,
     Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
     
@@ -2681,6 +3815,7 @@ void align_table(int pIdx, std::vector<sbMatrix> &T, std::vector<sbMatrix> &T_al
     return ;
     
 }
+*/
 
 void join(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64Matrix> &T_1_other,
      std::vector<si64Matrix> &T_2_key, std::vector<si64Matrix> &T_2_other,
@@ -2694,10 +3829,11 @@ void join(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64Matrix> &T
     int key_num = T_1_key.size();
     int other_1_num = T_1_other.size();
     int other_2_num = T_2_other.size();
+    int max_other_num = std::max(other_1_num, other_2_num);
     
     // 测量 augment_table 时间
     auto t1 = std::chrono::high_resolution_clock::now();
-    std::vector<sbMatrix> T_1_auged(4),T_2_auged(4);
+    std::vector<si64Matrix> T_1_auged(4),T_2_auged(4);
     augment_table(pIdx, T_1_key, T_1_other, T_2_key, T_2_other, T_1_auged, T_2_auged, enc, eval, runtime);
     auto t2 = std::chrono::high_resolution_clock::now();
     double augment_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
@@ -2725,67 +3861,56 @@ void join(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64Matrix> &T
 
     // 测量 align_table 时间
     t1 = std::chrono::high_resolution_clock::now();
-    std::vector<sbMatrix> T_2_aligned(2);
+    std::vector<si64Matrix> T_2_aligned(2);
     align_table(pIdx,T_2_expanded, T_2_aligned, enc, eval, runtime);
     t2 = std::chrono::high_resolution_clock::now();
     double align_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
     timing_results.push_back({"align_table", align_time});
 
+    // 测量 concat join 时间
+    t1 = std::chrono::high_resolution_clock::now();
     
     T_joined.resize(key_num+other_1_num+other_2_num);
-
-    int T_joined_sb_rows = (key_num+other_1_num+other_2_num)*m;
-    sbMatrix T_joined_sb_concat((key_num+other_1_num+other_2_num)*m, 64);
-    si64Matrix T_joined_si_concat((key_num+other_1_num+other_2_num)*m, 1);
-    //std::vector<sbMatrix> T_joined_sb(key_num+other_1_num+other_2_num);
     for(size_t i=0; i<key_num+other_1_num+other_2_num; i++){
-        //T_joined_sb[i].resize(m, 64);
         T_joined[i].resize(m, 1);
     }
 
+    sbMatrix T1_joined_sb_concat(m, 64*(key_num+other_1_num));
+    si64Matrix T1_joined_si_concat(m, key_num+other_1_num);
+
     for(size_t i=0; i<m; i++){
         for(size_t l=0; l<key_num; l++){
-            T_joined_sb_concat.mShares[0](i+l*m, 0) = T_1_expanded[0].mShares[0](i, l);
-            T_joined_sb_concat.mShares[1](i+l*m, 0) = T_1_expanded[0].mShares[1](i, l);
+            T1_joined_sb_concat.mShares[0](i, l) = T_1_expanded[0].mShares[0](i, l);
+            T1_joined_sb_concat.mShares[1](i, l) = T_1_expanded[0].mShares[1](i, l);
         }
         //if(pIdx == 0){std::cout<<"0.1"<<std::endl;}
         for(size_t l=0; l<other_1_num; l++){
-            T_joined_sb_concat.mShares[0](i+key_num*m+l*m, 0) = T_1_expanded[1].mShares[0](i, l);
-            T_joined_sb_concat.mShares[1](i+key_num*m+l*m, 0) = T_1_expanded[1].mShares[1](i, l);
+            T1_joined_sb_concat.mShares[0](i, l+key_num) = T_1_expanded[1].mShares[0](i, l);
+            T1_joined_sb_concat.mShares[1](i, l+key_num) = T_1_expanded[1].mShares[1](i, l);
         }
-        //if(pIdx == 0){std::cout<<"0.2"<<std::endl;}
-        for(size_t l=0; l<other_2_num; l++){
-            T_joined_sb_concat.mShares[0](i+key_num*m+other_1_num*m+l*m, 0) = T_2_aligned[1].mShares[0](i, l);
-            T_joined_sb_concat.mShares[1](i+key_num*m+other_1_num*m+l*m, 0) = T_2_aligned[1].mShares[1](i, l);
-        }
-        //if(pIdx == 0){std::cout<<"0.3"<<std::endl;}
+        
     }
     
-    // 测量 bool2arith 循环时间
-    t1 = std::chrono::high_resolution_clock::now();
-    
-    bool2arith(pIdx, T_joined_sb_concat, T_joined_si_concat, enc, eval, runtime);
-    // //TODO: vector
-    // for(int i=0; i<key_num+other_1_num+other_2_num; i++){
-    //     bool2arith(pIdx, T_joined_sb[i], T_joined[i], enc, eval, runtime);
-    // }
+    bool2arith(pIdx, T1_joined_sb_concat, T1_joined_si_concat, enc, eval, runtime);
+
+
     for(size_t i=0; i<key_num; i++){
-        std::memcpy(T_joined[i].mShares[0].data(), T_joined_si_concat.mShares[0].data() + i*m, m * sizeof(T_joined_si_concat.mShares[0](0, 0)));
-        std::memcpy(T_joined[i].mShares[1].data(), T_joined_si_concat.mShares[1].data() + i*m, m * sizeof(T_joined_si_concat.mShares[1](0, 0)));
+        T_joined[i].mShares[0].block(0, 0, m, 1) = T1_joined_si_concat.mShares[0].block(0, key_num-i-1, m, 1);
+        T_joined[i].mShares[1].block(0, 0, m, 1) = T1_joined_si_concat.mShares[1].block(0, key_num-i-1, m, 1);
     }
     for(size_t i=0; i<other_1_num; i++){
-        std::memcpy(T_joined[i+key_num].mShares[0].data(), T_joined_si_concat.mShares[0].data() + i*m + key_num*m, m * sizeof(T_joined_si_concat.mShares[0](0, 0)));
-        std::memcpy(T_joined[i+key_num].mShares[1].data(), T_joined_si_concat.mShares[1].data() + i*m + key_num*m, m * sizeof(T_joined_si_concat.mShares[1](0, 0)));
+        T_joined[i+key_num].mShares[0].block(0, 0, m, 1) = T1_joined_si_concat.mShares[0].block(0, key_num+other_1_num-i-1, m, 1);
+        T_joined[i+key_num].mShares[1].block(0, 0, m, 1) = T1_joined_si_concat.mShares[1].block(0, key_num+other_1_num-i-1, m, 1);
     }
     for(size_t i=0; i<other_2_num; i++){
-        std::memcpy(T_joined[i+key_num+other_1_num].mShares[0].data(), T_joined_si_concat.mShares[0].data() + i*m + key_num*m + other_1_num*m, m * sizeof(T_joined_si_concat.mShares[0](0, 0)));
-        std::memcpy(T_joined[i+key_num+other_1_num].mShares[1].data(), T_joined_si_concat.mShares[1].data() + i*m + key_num*m + other_1_num*m, m * sizeof(T_joined_si_concat.mShares[1](0, 0)));
+        T_joined[i+key_num+other_1_num].mShares[0].block(0, 0, m, 1) = T_2_aligned[1].mShares[0].block(0, max_other_num-i-1, m, 1);
+        T_joined[i+key_num+other_1_num].mShares[1].block(0, 0, m, 1) = T_2_aligned[1].mShares[1].block(0, max_other_num-i-1, m, 1);
     }
 
   
     t2 = std::chrono::high_resolution_clock::now();
-    double bool2arith_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
-    timing_results.push_back({"bool2arith_loop", bool2arith_time});
+    double concat_join_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    timing_results.push_back({"concat_join", concat_join_time});
 
     // 计算总时间
     auto total_end = std::chrono::high_resolution_clock::now();
