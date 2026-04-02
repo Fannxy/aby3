@@ -85,6 +85,7 @@ int main(int argc, char** argv) {
 		//odd_even_merge_sort_test(cmd);
 		join_test(cmd);
 		//filter_test(cmd);
+		//secret_rshift64_test(cmd);
 	}
   return 0;
 }

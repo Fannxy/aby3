@@ -1090,6 +1090,73 @@ void bool_shift_and_left(int pIdx, boolIndex &sharedA, size_t shift_len,
     return;
 }
 
+//ymn:shift k bits right
+void bool_cipher_secret_rshift64(int pIdx, aby3::sbMatrix &q_b, aby3::sbMatrix &k_b,
+                                 aby3::sbMatrix &y_b, aby3::Sh3Evaluator &eval,
+                                 aby3::Sh3Runtime &runtime) {
+    (void)pIdx;
+
+    if (q_b.rows() != k_b.rows()) {
+        THROW_RUNTIME_ERROR("bool_cipher_secret_rshift64: row mismatch.");
+    }
+    if (q_b.bitCount() != 64) {
+        THROW_RUNTIME_ERROR("bool_cipher_secret_rshift64: q_b must be 64 bits.");
+    }
+    if (k_b.bitCount() != 6) {
+        THROW_RUNTIME_ERROR("bool_cipher_secret_rshift64: k_b must be 6 bits.");
+    }
+
+    Sh3BinaryEvaluator binEng;
+    CircuitLibrary lib;
+    auto cir = lib.secret_rshift64_helper();
+
+    binEng.setCir(cir, q_b.rows(), eval.mShareGen);
+    binEng.setInput(0, q_b);
+    binEng.setInput(1, k_b);
+
+    auto dep = binEng.asyncEvaluate(runtime).then([&](Sh3Task self) {
+        y_b.resize(q_b.rows(), 64);
+        binEng.getOutput(0, y_b);
+    });
+    dep.get();
+}
+
+void bool_cipher_div_pow2(int pIdx, aby3::sbMatrix &q, aby3::sbMatrix &alpha2,
+                                 aby3::sbMatrix &res, aby3::Sh3Evaluator &eval,
+                                 aby3::Sh3Runtime &runtime) {
+
+    // Build k_b (n x 6) from one-hot alpha2 (n x 64):
+    // k_j = XOR_{i: bit_j(i)=1} alpha2_i
+    std::array<aby3::u64, 6> decodeMasks{};
+    for (aby3::u64 j = 0; j < 6; ++j) {
+        aby3::u64 mask = 0;
+        for (aby3::u64 i = 0; i < 64; ++i) {
+            if ((i >> j) & 1ull) mask |= (1ull << i);
+        }
+        decodeMasks[j] = mask;
+    }
+
+    aby3::sbMatrix k_b(q.rows(), 6);
+    k_b.mShares[0].setZero();
+    k_b.mShares[1].setZero();
+
+    for (aby3::u64 r = 0; r < (aby3::u64)q.rows(); ++r) {
+        for (aby3::u64 s = 0; s < 2; ++s) {
+            aby3::u64 alphaWord = static_cast<aby3::u64>(alpha2.mShares[s](r, 0));
+            aby3::u64 kWord = 0;
+
+            for (aby3::u64 j = 0; j < 6; ++j) {
+                // XOR-reduce selected one-hot bits on this share (linear in GF(2)).
+                aby3::u64 parity = static_cast<aby3::u64>(__builtin_parityll(alphaWord & decodeMasks[j]));
+                kWord |= (parity << j);
+            }
+            k_b.mShares[s](r, 0) = static_cast<aby3::i64>(kWord);
+        }
+    }
+
+    bool_cipher_secret_rshift64(pIdx, q, k_b, res, eval, runtime);
+}
+
 
 void bool_aggregation(int pIdx, aby3::sbMatrix &sharedA, aby3::sbMatrix &res,
                          aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,

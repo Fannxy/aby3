@@ -1,68 +1,91 @@
-#include <chrono>
-#include <vector>
-#include <iostream>
+
 #include <cryptoTools/Common/CLP.h>
-#include <cryptoTools/Network/IOService.h>
-#include <aby3/sh3/Sh3Encryptor.h>
-#include <aby3/sh3/Sh3Evaluator.h>
-#include <aby3/sh3/Sh3Runtime.h>
-#include <aby3/sh3/Sh3Types.h>
-#include "../aby3-RTR/BuildingBlocks.h"
-#include "../aby3-RTR/debug.h"
+#include <tests_cryptoTools/UnitTests.h>
+#include <map>
+#include <mpi.h>
+#include "aby3_tests/Test.h"
+#include "aby3_tests/aby3_tests.h"
+#include "aby3_tests/feddb_test.h"
+#include "eric.h"
 
 using namespace oc;
 using namespace aby3;
 
 int main(int argc, char** argv) {
   oc::CLP cmd(argc, argv);
+  // reinit the environment and then finalize the environment.
 
-  if (!cmd.isSet("BwTest")) {
-    return 0;
-  }
+  // set the role for this process.
+	if (cmd.isSet("Bool")){
+		bit_expand_test(cmd);
+		//bool_basic_test(cmd);
+		//bool_basic_test2(cmd);
+		//get_first_zero_test(cmd);
+		//bool_aggregation_test(cmd);
+		//share_conversion_test(cmd);
+	}
 
-  int role = -1;
-  if (cmd.isSet("role")) {
-    auto keys = cmd.getMany<int>("role");
-    role = keys[0];
-  }
-  if (role == -1) throw std::runtime_error("need -role");
+	if (cmd.isSet("Arith")){
+		arith_basic_test(cmd);
+	}
 
-  IOService ios;
-  Sh3Encryptor enc;
-  Sh3Evaluator eval;
-  Sh3Runtime runtime;
-  basic_setup((u64)role, ios, enc, eval, runtime);
+	if (cmd.isSet("Init")){
+		initialization_test(cmd);
+		correlation_test(cmd);
+	}
 
-  // 约 100MB 总传输量，在 100Mbps 下约 8 秒，便于观测带宽
-  const size_t total_bytes = 100 * 1024 * 1024;  // 100MB
-  //const size_t total_bytes = 10ULL * 1024 * 1024 * 1024;  // 10GB
-  const size_t elem_size = sizeof(i64);
-  const size_t total_elems = total_bytes / elem_size;
-  const size_t block_elems = 1 << 20;  // 1M i64 per block
-  const size_t num_rounds = (total_elems + block_elems - 1) / block_elems;
+	if(cmd.isSet("Comm")){
+		communication_test(cmd);
+	}
 
-  if (role == 0) {
-    debug_info("RUN Bandwidth TEST: 3-party ring transfer, total ~100MB");
-  }
+	if(cmd.isSet("Shuffle")){
+		shuffle_test(cmd);
+		permutation_network_test(cmd);
+	}
 
-  std::vector<i64> send_buf(block_elems, (i64)role);
-  std::vector<i64> recv_buf(block_elems);
+	if(cmd.isSet("ORAM")){
+		pos_map_test(cmd);
+		sqrt_oram_test(cmd);
+	}
 
-  auto t0 = std::chrono::high_resolution_clock::now();
-  for (size_t r = 0; r < num_rounds; r++) {
-    size_t n = (r == num_rounds - 1) ? (total_elems - r * block_elems) : block_elems;
-    if (n == 0) break;
-    auto send_fu = runtime.mComm.mNext.asyncSendFuture(send_buf.data(), n);
-    auto recv_fu = runtime.mComm.mPrev.asyncRecv(recv_buf.data(), n);
-    send_fu.get();
-    recv_fu.get();
-  }
-  auto t1 = std::chrono::high_resolution_clock::now();
-  double sec = std::chrono::duration<double>(t1 - t0).count();
-  size_t bytes_done = total_elems * elem_size;
-  if (role == 0) {
-    std::cout << "Bandwidth test done: " << (bytes_done / (1024*1024)) << " MB in " << sec << " s, ~" << (bytes_done * 8.0 / 1e6 / sec) << " Mbps" << std::endl;
-  }
+	if(cmd.isSet("Graph")){
+		graph_loading_test(cmd);
+		adj_graph_loading_test(cmd);
+		graph_sort_test(cmd);
+	}
 
+	if(cmd.isSet("GraphQuery")){
+		graph_block_fetch_test(cmd);
+		basic_graph_query_test(cmd);
+		neighbors_find_test(cmd);
+		adj_basic_graph_query_test(cmd);
+		node_edge_list_basic_graph_query_test(cmd);	
+	}
+
+	if(cmd.isSet("Sort")){
+		bc_sort_test(cmd);
+		bc_sort_corner_test(cmd);
+		bc_sort_multiple_times(cmd);
+		quick_sort_test(cmd);
+		// quick_sort_with_duplicate_elements_test(cmd); // too slow
+		odd_even_merge_test(cmd);
+		arith_merge_sort_test(cmd);
+		arith_sort_test(cmd);
+		arith_sort_with_values_test(cmd);
+	}
+
+	if(cmd.isSet("Feddb")){
+		//oblivious_idx_select_test(cmd);
+		//genperm_test(cmd);
+		//feddb_shuffle_test(cmd);
+		//persist_test(cmd);
+		//index_agg_test(cmd);
+		//group_by_common_test(cmd);
+		//group_by_test(cmd);
+		//odd_even_merge_sort_test(cmd);
+		join_test(cmd);
+		//filter_test(cmd);
+		//secret_rshift64_test(cmd);
+	}
   return 0;
 }

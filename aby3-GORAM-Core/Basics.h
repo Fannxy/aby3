@@ -310,6 +310,17 @@ void bool_shift_and_left(int pIdx, boolIndex &sharedA, size_t shift_len,
                          boolIndex &res_shift, boolIndex &res_left);
 
 
+// ymn:q_b: [rows x 64], k_b: [rows x 6], y_b: [rows x 64], and y_b = q_b >> k_b.
+void bool_cipher_secret_rshift64(int pIdx, aby3::sbMatrix &q_b, aby3::sbMatrix &k_b,
+                                 aby3::sbMatrix &y_b, aby3::Sh3Evaluator &eval,
+                                 aby3::Sh3Runtime &runtime);
+
+// ymn :Compute res = q / alpha2 where alpha2 is one-hot encoded (alpha2 = 2^k).
+void bool_cipher_div_pow2(int pIdx, aby3::sbMatrix &q, aby3::sbMatrix &alpha2,
+                                 aby3::sbMatrix &res, aby3::Sh3Evaluator &eval,
+                                 aby3::Sh3Runtime &runtime);
+
+
 void arith_cipher_lt(int pIdx, aby3::si64Matrix &sharedA, aby3::si64Matrix &sharedB,
                      aby3::sbMatrix &res, aby3::Sh3Encryptor &enc,
                      aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
@@ -324,6 +335,9 @@ void arith_cipher_max_min_split(int pIdx, aby3::si64Matrix &sharedA, aby3::si64M
                       aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);
 //ymn
 void arith_cols_expand(aby3::si64Matrix &sharedA, aby3::si64Matrix &res);
+int cipher_eq_rows(int pIdx, aby3::si64Matrix &intA, aby3::si64Matrix &intB,
+                aby3::sbMatrix &rowEq,
+                aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval,  aby3::Sh3Runtime &runtime);
 void compare_consecutive_rows_arith(int pIdx, aby3::si64Matrix &matrix,
                                      aby3::sbMatrix &eq_result,
                                      aby3::Sh3Encryptor &enc, aby3::Sh3Evaluator &eval, aby3::Sh3Runtime &runtime);

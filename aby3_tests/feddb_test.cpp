@@ -1377,3 +1377,60 @@ int filter_test(CLP &cmd){
 
     return 0;
 }
+
+int secret_rshift64_test(CLP &cmd){
+    int role = -1;
+    if (cmd.isSet("role")) {
+        auto keys = cmd.getMany<int>("role");
+        role = keys[0];
+    }
+    if (role == -1) {
+        throw std::runtime_error(LOCATION);
+    }
+    if (role == 0) {
+        debug_info("RUN SECRET_RSHIFT64 TEST");
+    }
+
+    // setup communications.
+    IOService ios;
+    Sh3Encryptor enc;
+    Sh3Evaluator eval;
+    Sh3Runtime runtime;
+    basic_setup((u64)role, ios, enc, eval, runtime);
+
+    i64Matrix q(2, 1);
+    i64Matrix k(2, 1);
+    i64Matrix y(2, 1);
+    
+    q(0,0)=15;
+    q(1,0)=24;
+
+    k(0,0)=1;
+    k(1,0)=4;
+
+    y(0,0)=15;
+    y(1,0)=6;
+
+    sbMatrix q_Shared(2, 64);
+    sbMatrix k_Shared(2, 6);
+    sbMatrix y_Shared(2, 64);
+
+    if (role == 0) {
+        enc.localBinMatrix(runtime, q, q_Shared).get();
+        enc.localBinMatrix(runtime, k, k_Shared).get();
+      
+    } else {
+        enc.remoteBinMatrix(runtime, q_Shared).get();
+        enc.remoteBinMatrix(runtime, k_Shared).get();
+    }
+
+    //bool_cipher_secret_rshift64(role, q_Shared, k_Shared, y_Shared, eval, runtime);
+    bool_cipher_div_pow2(role, q_Shared, k_Shared, y_Shared, eval, runtime);
+    i64Matrix y_test(2, 1);
+    enc.revealAll(runtime, y_Shared, y_test).get();
+    if (role == 0) {
+        check_result("Secrect shift Test",y_test, y);
+    }
+    return 0;
+
+}

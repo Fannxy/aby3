@@ -37,7 +37,14 @@ if(NOT TARGET mpi)
                     $<INSTALL_INTERFACE:>)
 endif()
 
+#openmp
+# find_package(OpenMP)
+# if(OpenMP_CXX_FOUND)
+#     target_link_libraries(aby3-Feddb-Core OpenMP::OpenMP_CXX)
+# endif()
+
 target_link_libraries(aby3-Feddb-Core aby3 jsoncpp mpi)
+####
 
 
 # file(GLOB_RECURSE SRCS *.cpp)

@@ -41,6 +41,12 @@ namespace aby3
 			const BetaBundle & b,
 			const BetaBundle & c);
 
+		// ymn:Secret right shift circuit:
+		// input0: 64-bit value q (LSB -> MSB)
+		// input1: 6-bit shift amount k (LSB -> MSB, range [0, 63])
+		// output0: 64-bit value q >> k (logical shift)
+		BetaCircuit* secret_rshift64_helper();
+
     };
 
 }

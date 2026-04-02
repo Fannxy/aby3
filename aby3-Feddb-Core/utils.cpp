@@ -3,42 +3,79 @@
 using namespace oc;
 using namespace aby3;
 
-void prefixsum(int pIdx, si64Matrix &v, si64Matrix &result){
+// void prefixsum(int pIdx, si64Matrix &v, si64Matrix &result){
 
-    size_t v_len = v.rows();
-    size_t result_len = v_len;
+//     size_t v_len = v.rows();
+//     size_t result_len = v_len;
 
-    result.resize(result_len, v.cols());
-    i64 sum_0=0,sum_1=0;
-    for(size_t i=0; i<v_len; i++){
-        sum_0 += v.mShares[0](i, 0);
-        sum_1 += v.mShares[1](i, 0);
-        result.mShares[0](i, 0) = sum_0;
-        result.mShares[1](i, 0) = sum_1;
+//     result.resize(result_len, v.cols());
+//     i64 sum_0=0,sum_1=0;
+//     for(size_t i=0; i<v_len; i++){
+//         sum_0 += v.mShares[0](i, 0);
+//         sum_1 += v.mShares[1](i, 0);
+//         result.mShares[0](i, 0) = sum_0;
+//         result.mShares[1](i, 0) = sum_1;
+//     }
+
+//     return;
+// }
+
+void prefixsum(int pIdx, si64Matrix &v, si64Matrix &result) {
+    size_t n = v.rows();
+    if (n <= 1) {
+        result = v;
+        return;
     }
 
-    return;
+    result = v; 
+
+    for (int stride = 1; stride < n; stride <<= 1) {
+        
+        for (int i = n - 1; i >= stride; i--) {
+            result.mShares[0](i, 0) += result.mShares[0](i - stride, 0);
+            result.mShares[1](i, 0) += result.mShares[1](i - stride, 0);
+        }
+
+    }
 }
 
 
 
-void prefixsum_with_initial_elements(int pIdx, si64Matrix &v, si64Matrix &result, si64Matrix &initial_elements){
-    size_t v_len = v.rows();
-    size_t result_len = v_len;
+// void prefixsum_with_initial_elements(int pIdx, si64Matrix &v, si64Matrix &result, si64Matrix &initial_elements){
+//     size_t v_len = v.rows();
+//     size_t result_len = v_len;
 
-    size_t last = initial_elements.rows();
-    result.resize(result_len, v.cols());
+//     size_t last = initial_elements.rows();
+//     result.resize(result_len, v.cols());
     
-    i64 sum_0=initial_elements.mShares[0](last-1, 0),sum_1=initial_elements.mShares[1](last-1, 0);
-    for(size_t i=0; i<v_len; i++){
-        sum_0 += v.mShares[0](i, 0);
-        sum_1 += v.mShares[1](i, 0);
-        result.mShares[0](i, 0) = sum_0;
-        result.mShares[1](i, 0) = sum_1;
+//     i64 sum_0=initial_elements.mShares[0](last-1, 0),sum_1=initial_elements.mShares[1](last-1, 0);
+//     for(size_t i=0; i<v_len; i++){
+//         sum_0 += v.mShares[0](i, 0);
+//         sum_1 += v.mShares[1](i, 0);
+//         result.mShares[0](i, 0) = sum_0;
+//         result.mShares[1](i, 0) = sum_1;
 
+//     }
+
+//     return;
+// }
+
+void prefixsum_with_initial_elements(int pIdx, si64Matrix &v, si64Matrix &result, si64Matrix &initial_elements) {
+    size_t v_len = v.rows();
+    if (v_len == 0) return;
+
+
+    prefixsum(pIdx, v, result);
+
+    size_t last_idx = initial_elements.rows() - 1;
+    i64 offset_0 = initial_elements.mShares[0](last_idx, 0);
+    i64 offset_1 = initial_elements.mShares[1](last_idx, 0);
+
+
+    for (size_t i = 0; i < v_len; i++) {
+        result.mShares[0](i, 0) += offset_0;
+        result.mShares[1](i, 0) += offset_1;
     }
-
-    return;
 }
 
 void prefixsum_inv(int pIdx, si64Matrix &v, si64Matrix &result){
@@ -201,15 +238,20 @@ void permutate(int pIdx, si64Matrix &data, si64Matrix &res, std::vector<size_t> 
     size_t len = data.rows();
     size_t cols = data.cols();
     res.resize(len, cols);
-    for (size_t i = 0; i < len; i++) {
-        size_t new_pos = permutation[i];
-        if (new_pos < len) {
-            for(size_t j=0;j<cols;j++){
-                res.mShares[0](new_pos, j) = data.mShares[0](i, j);
-                res.mShares[1](new_pos, j) = data.mShares[1](i, j);
+ 
+    const size_t rowBytes = cols * sizeof(data.mShares[0](0,0));
+   
+    for(size_t s = 0; s < 2; s++){
+        const auto* src = data.mShares[s].data();
+        auto* dst = res.mShares[s].data();
+        for(size_t i = 0; i < len; i++){
+            size_t new_pos = permutation[i];
+            if (new_pos < len){
+                std::memcpy(dst + new_pos * cols, src + i * cols, rowBytes);
             }
         }
     }
+
     return ;
 }
 
@@ -221,12 +263,26 @@ void permutate(int pIdx, std::vector<si64Matrix> &data, std::vector<si64Matrix> 
         res[i].resize(unit_len, 1);
     }
 
+    const size_t rowBytes =  sizeof(data[0].mShares[0](0,0));
+
     for (size_t i = 0; i < len; i++) {
-        for(size_t j = 0; j < unit_len; j++) {
-            size_t new_pos = permutation[j];
-            if (new_pos < unit_len) {
-                res[i].mShares[0](new_pos, 0) = data[i].mShares[0](j, 0);
-                res[i].mShares[1](new_pos, 0) = data[i].mShares[1](j, 0);
+        // for(size_t j = 0; j < unit_len; j++) {
+        //     size_t new_pos = permutation[j];
+        //     if (new_pos < unit_len) {
+        //         res[i].mShares[0](new_pos, 0) = data[i].mShares[0](j, 0);
+        //         res[i].mShares[1](new_pos, 0) = data[i].mShares[1](j, 0);
+        //     }
+        // }
+        for(size_t s = 0; s < 2; s++){
+            const auto* src = data[i].mShares[s].data();
+            auto* dst = res[i].mShares[s].data();
+            for(size_t j = 0; j < unit_len; j++){
+                size_t new_pos = permutation[j];
+                if (new_pos < unit_len){
+                    // cols==1 时，mShares[s].data() 是长度为 unit_len 的连续 i64 数组
+                    // 这里要从源向量的第 j 个位置拷贝到目标的 new_pos 位置。
+                    std::memcpy(dst + new_pos, src + j, rowBytes);
+                }
             }
         }
     }
@@ -237,16 +293,20 @@ void permutate(int pIdx, si64Matrix &data, si64Matrix &res, i64Matrix  &permutat
     size_t len = data.rows();
     size_t cols = data.cols();
     res.resize(len, cols);
-    
-    for (size_t i = 0; i < len; i++) {
-        size_t new_pos = permutation(i,0);
-        if (new_pos < len) {
-            for(size_t j=0;j<cols;j++){
-                res.mShares[0](new_pos, j) = data.mShares[0](i, j);
-                res.mShares[1](new_pos, j) = data.mShares[1](i, j);
+
+    const size_t rowBytes = cols * sizeof(data.mShares[0](0,0));
+   
+    for(size_t s = 0; s < 2; s++){
+        const auto* src = data.mShares[s].data();
+        auto* dst = res.mShares[s].data();
+        for(size_t i = 0; i < len; i++){
+            size_t new_pos =  permutation(i,0);
+            if (new_pos < len){
+                std::memcpy(dst + new_pos * cols, src + i * cols, rowBytes);
             }
         }
     }
+    
     return ;
 }
 
@@ -272,17 +332,35 @@ void set_const_share(int pIdx, i64 const_value, si64Matrix &res, Sh3Encryptor& e
     size_t len = res.rows();
     size_t cols = res.cols();
     i64Matrix const_value_matrix(len, cols);
-    for(size_t i=0; i<len; i++){
-        for(size_t j=0; j<cols; j++){
-            const_value_matrix(i, j) = const_value;
-        }
-    }
+    std::fill_n(const_value_matrix.data(), len*cols, const_value);
+
+    // for(size_t i=0; i<len; i++){
+    //     for(size_t j=0; j<cols; j++){
+    //         const_value_matrix(i, j) = const_value;
+    //     }
+    // }
     
     if(pIdx==0){
         enc.localIntMatrix(runtime, const_value_matrix, res).get();
     }
     else{
         enc.remoteIntMatrix(runtime, res).get();
+    }
+    
+    return ;
+}
+
+void set_const_share_bool(int pIdx, i64 const_value, sbMatrix &res, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+    size_t len = res.rows();
+    size_t cols = res.i64Cols();
+    i64Matrix const_value_matrix(len, cols);
+    std::fill_n(const_value_matrix.data(), len*cols, const_value);
+    
+    if(pIdx==0){
+        enc.localBinMatrix(runtime, const_value_matrix, res).get();
+    }
+    else{
+        enc.remoteBinMatrix(runtime, res).get();
     }
     
     return ;

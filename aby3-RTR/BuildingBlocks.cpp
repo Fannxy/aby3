@@ -703,6 +703,7 @@ int cipher_eq(int pIdx, si64Matrix &intA, si64Matrix &intB, sbMatrix &res, Sh3Ev
 }
 
 
+
 int circuit_cipher_eq(int pIdx, si64Matrix &intA, si64Matrix &intB, sbMatrix &res, Sh3Evaluator &eval, Sh3Runtime &runtime){
 
   // 1. set the difference between intA and intB

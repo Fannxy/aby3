@@ -221,3 +221,4 @@ void compare_consecutive_rows_arith(int pIdx, aby3::si64Matrix &matrix, aby3::sb
     //eq_result(rows*cols, 1))
     return;
 }
+

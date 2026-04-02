@@ -426,4 +426,61 @@ namespace aby3
 			cd.addGate(a.mWires[i], b.mWires[i], oc::GateType::Nor, c.mWires[i]);
 		}
 	}
+
+	//ymn:secret_rshift64_helper
+	oc::BetaCircuit* CircuitLibrary::secret_rshift64_helper()
+	{
+		auto key = hash(__FUNCTION__);
+		auto iter = mCirMap.find(key);
+
+		if (iter == mCirMap.end())
+		{
+			auto* cd = new BetaCircuit;
+			BetaBundle q(64), k(6), y(64);
+			cd->addInputBundle(q);
+			cd->addInputBundle(k);
+			cd->addOutputBundle(y);
+
+			BetaBundle stage = q;
+			for (u64 j = 0; j < 6; ++j)
+			{
+				const u64 s = 1ull << j;
+				BetaBundle shifted(64);
+				cd->addTempWireBundle(shifted);
+
+				for (u64 i = 0; i < 64; ++i)
+				{
+					if (i + s < 64)
+					{
+						cd->addCopy(stage.mWires[i + s], shifted.mWires[i]);
+					}
+					else
+					{
+						cd->addConst(shifted.mWires[i], 0);
+					}
+				}
+
+				BetaBundle selector(1);
+				selector.mWires[0] = k.mWires[j];
+				BetaBundle muxTemp(3);
+				cd->addTempWireBundle(muxTemp);
+
+				if (j + 1 == 6)
+				{
+					multiplex_build(*cd, shifted, stage, selector, y, muxTemp);
+				}
+				else
+				{
+					BetaBundle next(64);
+					cd->addTempWireBundle(next);
+					multiplex_build(*cd, shifted, stage, selector, next, muxTemp);
+					stage = next;
+				}
+			}
+
+			iter = mCirMap.insert(std::make_pair(key, cd)).first;
+		}
+
+		return iter->second;
+	}
 }
