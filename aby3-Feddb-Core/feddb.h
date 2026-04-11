@@ -7,6 +7,7 @@
 #include "../aby3/sh3/Sh3Converter.h"
 #include "../aby3/aby3-Feddb-Core/genperm.h"
 #include <cmath>
+#include <cstdio>
 
 
 
@@ -31,68 +32,50 @@ void shuffle(int pIdx, std::vector<aby3::si64Matrix>& T, std::vector<aby3::si64M
 //si64 & sb
 template<typename MatrixType>
 void persist_cipher(int pIdx, const std::string &table_name, std::vector<MatrixType> &T){
-    std::string filename = "./aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".txt";
-    
-    std::ofstream outFile(filename);
-    if (!outFile.is_open()) {
+    std::string filename = "./aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".bin";
+
+    FILE* fp = fopen(filename.c_str(), "wb");
+    if (!fp) {
         std::cerr << "Error: Unable to open file " << filename << " for writing" << std::endl;
         return;
     }
-    
-    
+
     int cols = T.size();
-    outFile << "Matrix cols: " << cols << std::endl;
     int rows = T[0].rows();
-    outFile << "Matrix rows: " << rows << std::endl;
+    fwrite(&cols, sizeof(int), 1, fp);
+    fwrite(&rows, sizeof(int), 1, fp);
 
     for(size_t i = 0; i < T.size(); i++){
-        outFile << "Matrix_" << i << " shares[0]:" << std::endl;
-    //T.mShares[0]和T.mShares[1]分别写入
-        for (int j = 0; j < rows; j++) {
-            outFile << T[i].mShares[0](j, 0) << std::endl;
-        }
-        outFile << "Matrix_" << i << " shares[1]:" << std::endl;
-        for (int j = 0; j < rows; j++) {
-            outFile << T[i].mShares[1](j, 0) << std::endl;
-        }
+        fwrite(T[i].mShares[0].data(), sizeof(T[i].mShares[0](0, 0)), rows, fp);
+        fwrite(T[i].mShares[1].data(), sizeof(T[i].mShares[1](0, 0)), rows, fp);
     }
 
-    outFile.close();
-
+    fclose(fp);
     return;
 }
 
 template<typename MatrixType>
 void read_cipher(int pIdx, const std::string &table_name, std::vector<MatrixType> &T){
-    std::string filename = "./aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".txt";
-    
-    std::ifstream inFile(filename);
-    if (!inFile.is_open()) {
+    std::string filename = "./aby3-Feddb-tmpfile/cipher/" + table_name + "_" + std::to_string(pIdx) + ".bin";
+
+    FILE* fp = fopen(filename.c_str(), "rb");
+    if (!fp) {
         std::cerr << "Error: Unable to open file " << filename << " for reading" << std::endl;
         return;
     }
 
-    std::string dummy;
-    int cols;
-    inFile >> dummy >> dummy >> cols;
+    int cols, rows;
+    fread(&cols, sizeof(int), 1, fp);
+    fread(&rows, sizeof(int), 1, fp);
     T.resize(cols);
-    
-    int rows;
-    inFile >> dummy >> dummy >> rows;  
+
     for(size_t i = 0; i < T.size(); i++){
         T[i].resize(rows, 1);
-        inFile >> dummy >> dummy;
-        for (int j = 0; j < rows; j++) {
-            inFile >> T[i].mShares[0](j, 0);
-        }
-
-        inFile >> dummy >> dummy;
-        for (int j = 0; j < rows; j++) {
-            inFile >> T[i].mShares[1](j, 0);
-        }
+        fread(T[i].mShares[0].data(), sizeof(T[i].mShares[0](0, 0)), rows, fp);
+        fread(T[i].mShares[1].data(), sizeof(T[i].mShares[1](0, 0)), rows, fp);
     }
 
-    inFile.close();
+    fclose(fp);
     return;
 }
 
@@ -100,7 +83,10 @@ void persist_plain(int pIdx, const std::string &table_name, std::vector<aby3::i6
 
 void read_plain(int pIdx, const std::string &table_name, std::vector<aby3::i64Matrix> &T);
 
-void oblivious_idx_select(int pIdx, aby3::si64Matrix &v, aby3::si64Matrix &idx, aby3::si64Matrix &result,              
+void oblivious_idx_select(int pIdx, aby3::si64Matrix &v, aby3::si64Matrix &idx, aby3::si64Matrix &result,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+void oblivious_idx_select(int pIdx, std::vector<aby3::si64Matrix> &v_vec, aby3::si64Matrix &idx, std::vector<aby3::si64Matrix> &results,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 void index_agg(int pIdx, aby3::si64Matrix &equalFlag, aby3::i64Matrix &idx,std::vector<aby3::si64Matrix> &data_key,aby3::si64Matrix &data_val,std::vector<aby3::si64Matrix> &finalRes,
@@ -155,5 +141,10 @@ void join(int pIdx, std::vector<aby3::si64Matrix> &T_1_key, std::vector<aby3::si
 void filter(int pIdx, std::vector<aby3::si64Matrix> &T, int filColIdx, int value, bool is_scalar, std::string op_str,
     std::vector<aby3::si64Matrix> &T_filtered,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
- 
+
+void semi_join(int pIdx, std::vector<aby3::si64Matrix> &T_1_key, std::vector<aby3::si64Matrix> &T_1_other,
+    std::vector<aby3::si64Matrix> &T_2_key, std::vector<aby3::si64Matrix> &T_2_other,
+    std::vector<aby3::si64Matrix> &T_semi_joined,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
 #endif

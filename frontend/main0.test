@@ -83,9 +83,10 @@ int main(int argc, char** argv) {
 		//group_by_common_test(cmd);
 		//group_by_test(cmd);
 		//odd_even_merge_sort_test(cmd);
-		join_test(cmd);
+		//join_test(cmd);
 		//filter_test(cmd);
 		//secret_rshift64_test(cmd);
+		semi_join_test(cmd);
 	}
   return 0;
 }

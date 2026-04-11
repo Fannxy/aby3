@@ -30,3 +30,5 @@ int join_test(oc::CLP &cmd);
 int filter_test(oc::CLP &cmd);
 
 int secret_rshift64_test(oc::CLP &cmd);
+
+int semi_join_test(oc::CLP &cmd);

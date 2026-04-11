@@ -83,7 +83,72 @@ int oblivious_idx_select_test(CLP &cmd) {
     if(role == 0){
         check_result("OblIdx Test", res_test, res_plain);
     }
-    
+
+    // ========== vector<si64Matrix> version test ==========
+    if (role == 0) {
+        debug_info("RUN OblIdx Vector TEST");
+    }
+
+    // 构造3列数据: data[0]={1,4,9,16,25}, data[1]={10,20,30,40,50}, data[2]={100,200,300,400,500}
+    size_t v_data_size = 5;
+    size_t v_idx_size = 4;
+    size_t v_num_cols = 3;
+
+    std::vector<i64Matrix> v_data_plain(v_num_cols);
+    v_data_plain[0].resize(v_data_size, 1);
+    v_data_plain[0](0,0)=1;  v_data_plain[0](1,0)=4;  v_data_plain[0](2,0)=9;  v_data_plain[0](3,0)=16; v_data_plain[0](4,0)=25;
+    v_data_plain[1].resize(v_data_size, 1);
+    v_data_plain[1](0,0)=10; v_data_plain[1](1,0)=20; v_data_plain[1](2,0)=30; v_data_plain[1](3,0)=40; v_data_plain[1](4,0)=50;
+    v_data_plain[2].resize(v_data_size, 1);
+    v_data_plain[2](0,0)=100;v_data_plain[2](1,0)=200;v_data_plain[2](2,0)=300;v_data_plain[2](3,0)=400;v_data_plain[2](4,0)=500;
+
+    // idx={2,1,3,2}, 期望结果: col0={9,4,16,9}, col1={30,20,40,30}, col2={300,200,400,300}
+    i64Matrix v_idx_plain(v_idx_size, 1);
+    v_idx_plain(0,0)=2; v_idx_plain(1,0)=1; v_idx_plain(2,0)=3; v_idx_plain(3,0)=2;
+
+    std::vector<i64Matrix> v_res_expected(v_num_cols);
+    v_res_expected[0].resize(v_idx_size, 1);
+    v_res_expected[0](0,0)=9;  v_res_expected[0](1,0)=4;  v_res_expected[0](2,0)=16; v_res_expected[0](3,0)=9;
+    v_res_expected[1].resize(v_idx_size, 1);
+    v_res_expected[1](0,0)=30; v_res_expected[1](1,0)=20; v_res_expected[1](2,0)=40; v_res_expected[1](3,0)=30;
+    v_res_expected[2].resize(v_idx_size, 1);
+    v_res_expected[2](0,0)=300;v_res_expected[2](1,0)=200;v_res_expected[2](2,0)=400;v_res_expected[2](3,0)=300;
+
+    // encrypt
+    std::vector<si64Matrix> v_data_shared(v_num_cols);
+    si64Matrix v_idx_shared(v_idx_size, 1);
+    for(size_t c = 0; c < v_num_cols; c++){
+        v_data_shared[c].resize(v_data_size, 1);
+        if (role == 0) {
+            enc.localIntMatrix(runtime, v_data_plain[c], v_data_shared[c]).get();
+        } else {
+            enc.remoteIntMatrix(runtime, v_data_shared[c]).get();
+        }
+    }
+    if (role == 0) {
+        enc.localIntMatrix(runtime, v_idx_plain, v_idx_shared).get();
+    } else {
+        enc.remoteIntMatrix(runtime, v_idx_shared).get();
+    }
+
+    // call vector version
+    std::vector<si64Matrix> v_res_shared;
+    oblivious_idx_select(role, v_data_shared, v_idx_shared, v_res_shared, enc, eval, runtime);
+
+    // verify
+    if(role == 0){
+        for(size_t c = 0; c < v_num_cols; c++){
+            i64Matrix v_res_test(v_idx_size, 1);
+            enc.revealAll(runtime, v_res_shared[c], v_res_test).get();
+            check_result("OblIdx Vector Test col" + std::to_string(c), v_res_test, v_res_expected[c]);
+        }
+    } else {
+        for(size_t c = 0; c < v_num_cols; c++){
+            i64Matrix v_res_test(v_idx_size, 1);
+            enc.revealAll(runtime, v_res_shared[c], v_res_test).get();
+        }
+    }
+
     return 0;
 }
 
@@ -613,118 +678,119 @@ int persist_test(CLP &cmd){
 }
 
 //TODO key_col expand test
-// int index_agg_test(CLP &cmd){
-//     int role = -1;
-//     if (cmd.isSet("role")) {
-//         auto keys = cmd.getMany<int>("role");
-//         role = keys[0];
-//     }
-//     if (role == -1) {
-//         throw std::runtime_error(LOCATION);
-//     }
+int index_agg_test(CLP &cmd){
+    int role = -1;
+    if (cmd.isSet("role")) {
+        auto keys = cmd.getMany<int>("role");
+        role = keys[0];
+    }
+    if (role == -1) {
+        throw std::runtime_error(LOCATION);
+    }
 
-//     if (role == 0) {
-//         debug_info("RUN INDEX_AGG TEST");
-//     }
+    if (role == 0) {
+        debug_info("RUN INDEX_AGG TEST");
+    }
 
-//     // setup communications.
-//     IOService ios;
-//     Sh3Encryptor enc;
-//     Sh3Evaluator eval;
-//     Sh3Runtime runtime;
-//     basic_setup((u64)role, ios, enc, eval, runtime);
+    // setup communications.
+    IOService ios;
+    Sh3Encryptor enc;
+    Sh3Evaluator eval;
+    Sh3Runtime runtime;
+    basic_setup((u64)role, ios, enc, eval, runtime);
 
-//     size_t TEST_SIZE = 8;
-//     std::vector<i64Matrix> input_data(2);
-//     input_data[0].resize(TEST_SIZE,1);
-//     input_data[1].resize(TEST_SIZE,1);
+    size_t TEST_SIZE = 8;
+    std::vector<i64Matrix> input_data(2);
+    input_data[0].resize(TEST_SIZE,1);
+    input_data[1].resize(TEST_SIZE,1);
 
-//     input_data[0](0,0)=1;
-//     input_data[0](1,0)=3;
-//     input_data[0](2,0)=5;
-//     input_data[0](3,0)=4;
-//     input_data[0](4,0)=3;
-//     input_data[0](5,0)=2;
-//     input_data[0](6,0)=2;
-//     input_data[0](7,0)=3;
+    input_data[0](0,0)=1;
+    input_data[0](1,0)=3;
+    input_data[0](2,0)=5;
+    input_data[0](3,0)=4;
+    input_data[0](4,0)=3;
+    input_data[0](5,0)=2;
+    input_data[0](6,0)=2;
+    input_data[0](7,0)=3;
 
-//     for(int i=0; i< TEST_SIZE; i++){
-//         input_data[1](i,0)=i;
-//     }
+    for(int i=0; i< TEST_SIZE; i++){
+        input_data[1](i,0)=i;
+    }
 
-//     std::vector<si64Matrix> dataShared(2);
-//     dataShared[0].resize(TEST_SIZE,1);
-//     dataShared[1].resize(TEST_SIZE,1);
-//     if (role == 0) {
-//         enc.localIntMatrix(runtime, input_data[0], dataShared[0]).get();
-//         enc.localIntMatrix(runtime, input_data[1], dataShared[1]).get();
-//     } else {
-//         enc.remoteIntMatrix(runtime, dataShared[0]).get();
-//         enc.remoteIntMatrix(runtime, dataShared[1]).get();
-//     }
+    std::vector<si64Matrix> dataShared_key(1);
+    si64Matrix dataShared_val(TEST_SIZE,1);
+    dataShared_key[0].resize(TEST_SIZE,1);
 
-//     i64Matrix idx(TEST_SIZE,1);
-//     idx(0,0)=0;
-//     idx(1,0)=5;
-//     idx(2,0)=6;
-//     idx(3,0)=1;
-//     idx(4,0)=4;
-//     idx(5,0)=7;
-//     idx(6,0)=3;
-//     idx(7,0)=2;
+    if (role == 0) {
+        enc.localIntMatrix(runtime, input_data[0], dataShared_key[0]).get();
+        enc.localIntMatrix(runtime, input_data[1], dataShared_val).get();
+    } else {
+        enc.remoteIntMatrix(runtime, dataShared_key[0]).get();
+        enc.remoteIntMatrix(runtime, dataShared_val).get();
+    }
 
-//     i64Matrix equalFlag(TEST_SIZE,1);
-//     equalFlag(0,0)=0;
-//     equalFlag(1,0)=0;
-//     equalFlag(2,0)=1;
-//     equalFlag(3,0)=0;
-//     equalFlag(4,0)=1;
-//     equalFlag(5,0)=1;
-//     equalFlag(6,0)=0;
-//     equalFlag(7,0)=0;
+    i64Matrix idx(TEST_SIZE,1);
+    idx(0,0)=0;
+    idx(1,0)=5;
+    idx(2,0)=6;
+    idx(3,0)=1;
+    idx(4,0)=4;
+    idx(5,0)=7;
+    idx(6,0)=3;
+    idx(7,0)=2;
 
-//     si64Matrix equalFlagShared(TEST_SIZE,1);
-//     if (role == 0) {
-//         enc.localIntMatrix(runtime, equalFlag, equalFlagShared).get();
-//     } else {
-//         enc.remoteIntMatrix(runtime, equalFlagShared).get();
-//     }
+    i64Matrix equalFlag(TEST_SIZE,1);
+    equalFlag(0,0)=0;
+    equalFlag(1,0)=0;
+    equalFlag(2,0)=1;
+    equalFlag(3,0)=0;
+    equalFlag(4,0)=1;
+    equalFlag(5,0)=1;
+    equalFlag(6,0)=0;
+    equalFlag(7,0)=0;
 
-//     std::vector<si64Matrix> test_res(2),test_res_sorted(2);
-//     index_agg(role, equalFlagShared, idx, dataShared, test_res, enc, eval, runtime);
-//     int resRows=test_res[0].rows();
-//     test_res_sorted[0].resize(resRows,1);
-//     test_res_sorted[1].resize(resRows,1);
+    si64Matrix equalFlagShared(TEST_SIZE,1);
+    if (role == 0) {
+        enc.localIntMatrix(runtime, equalFlag, equalFlagShared).get();
+    } else {
+        enc.remoteIntMatrix(runtime, equalFlagShared).get();
+    }
 
-//     si64Matrix perm(resRows,1);
-//     genPerm(role, test_res[0], perm, enc, eval, runtime);
-//     i64Matrix perm_plain(resRows,1);
-//     enc.revealAll(runtime, perm, perm_plain).get();
-//     permutate(role, test_res[0], test_res_sorted[0], perm_plain);
-//     permutate(role, test_res[1], test_res_sorted[1], perm_plain);
+    std::vector<si64Matrix> test_res(2),test_res_sorted(2);
+    index_agg(role, equalFlagShared, idx, dataShared_key, dataShared_val, test_res, enc, eval, runtime);
+    int resRows=test_res[0].rows();
+    test_res_sorted[0].resize(resRows,1);
+    test_res_sorted[1].resize(resRows,1);
 
-//     i64Matrix res_key(resRows,1),res_val(resRows,1);
-//     res_key(0,0)=2;
-//     res_key(1,0)=3;
-//     res_key(2,0)=4;
-//     res_key(3,0)=5;
+    si64Matrix perm(resRows,1);
+    genPerm(role, test_res[0], perm, enc, eval, runtime);
+    i64Matrix perm_plain(resRows,1);
+    enc.revealAll(runtime, perm, perm_plain).get();
+    permutate(role, test_res[0], test_res_sorted[0], perm_plain);
+    permutate(role, test_res[1], test_res_sorted[1], perm_plain);
 
-//     res_val(0,0)=11;
-//     res_val(1,0)=12;
-//     res_val(2,0)=3;
-//     res_val(3,0)=2;
+    i64Matrix res_key(resRows,1),res_val(resRows,1);
+    res_key(0,0)=2;
+    res_key(1,0)=3;
+    res_key(2,0)=4;
+    res_key(3,0)=5;
 
-//     i64Matrix test_res_key(resRows,1),test_res_val(resRows,1);
-//     enc.revealAll(runtime, test_res_sorted[0], test_res_key).get();
-//     enc.revealAll(runtime, test_res_sorted[1], test_res_val).get();
-//     if (role == 0) {
-//         check_result("Index Agg Test-key",test_res_key, res_key);
-//         check_result("Index Agg Test-val",test_res_val, res_val);
-//     }
+    res_val(0,0)=11;
+    res_val(1,0)=12;
+    res_val(2,0)=3;
+    res_val(3,0)=2;
 
-//     return 0;
+    i64Matrix test_res_key(resRows,1),test_res_val(resRows,1);
+    enc.revealAll(runtime, test_res_sorted[0], test_res_key).get();
+    enc.revealAll(runtime, test_res_sorted[1], test_res_val).get();
+    if (role == 0) {
+        check_result("Index Agg Test-key",test_res_key, res_key);
+        check_result("Index Agg Test-val",test_res_val, res_val);
+    }
 
-// }
+    return 0;
+
+}
 
 int group_by_common_test(CLP &cmd){
     int role = -1;
@@ -1433,4 +1499,131 @@ int secret_rshift64_test(CLP &cmd){
     }
     return 0;
 
+}
+
+int semi_join_test(CLP &cmd){
+    int role = -1;
+    if (cmd.isSet("role")) {
+        auto keys = cmd.getMany<int>("role");
+        role = keys[0];
+    }
+    if (role == -1) {
+        throw std::runtime_error(LOCATION);
+    }
+
+    if (role == 0) {
+        debug_info("RUN SEMI JOIN TEST");
+    }
+
+    // setup communications.
+    IOService ios;
+    Sh3Encryptor enc;
+    Sh3Evaluator eval;
+    Sh3Runtime runtime;
+    basic_setup((u64)role, ios, enc, eval, runtime);
+
+    // T_1: 5 rows, 2 key cols, 1 other col
+    // T_2: 6 rows, 2 key cols, 1 other col (other not used in semi-join result)
+    size_t len1 = 5, len2 = 6;
+
+    std::vector<i64Matrix> T_1_key(2), T_1_other(1);
+    std::vector<i64Matrix> T_2_key(2), T_2_other(1);
+
+    T_1_key[0].resize(len1, 1); T_1_key[1].resize(len1, 1);
+    T_1_other[0].resize(len1, 1);
+    T_2_key[0].resize(len2, 1); T_2_key[1].resize(len2, 1);
+    T_2_other[0].resize(len2, 1);
+
+    // T_1: (key0, key1, other0)
+    // row0: (1, 2, 14)  -> key (1,2) in T_2 -> KEEP
+    // row1: (1, 2,  2)  -> key (1,2) in T_2 -> KEEP
+    // row2: (2, 2,  4)  -> key (2,2) NOT in T_2 -> ZERO
+    // row3: (3, 3,  4)  -> key (3,3) in T_2 -> KEEP
+    // row4: (4, 1,  2)  -> key (4,1) in T_2 -> KEEP
+    T_1_key[0](0,0)=1; T_1_key[0](1,0)=1; T_1_key[0](2,0)=2; T_1_key[0](3,0)=3; T_1_key[0](4,0)=4;
+    T_1_key[1](0,0)=2; T_1_key[1](1,0)=2; T_1_key[1](2,0)=2; T_1_key[1](3,0)=3; T_1_key[1](4,0)=1;
+    T_1_other[0](0,0)=2; T_1_other[0](1,0)=14; T_1_other[0](2,0)=4; T_1_other[0](3,0)=4; T_1_other[0](4,0)=2;
+
+    // T_2: keys that exist
+    // (1,2), (2,3), (3,3), (3,3), (4,1), (4,2)
+    T_2_key[0](0,0)=1; T_2_key[0](1,0)=2; T_2_key[0](2,0)=3; T_2_key[0](3,0)=3; T_2_key[0](4,0)=4; T_2_key[0](5,0)=4;
+    T_2_key[1](0,0)=2; T_2_key[1](1,0)=3; T_2_key[1](2,0)=3; T_2_key[1](3,0)=3; T_2_key[1](4,0)=1; T_2_key[1](5,0)=2;
+    T_2_other[0](0,0)=0; T_2_other[0](1,0)=1; T_2_other[0](2,0)=4; T_2_other[0](3,0)=5; T_2_other[0](4,0)=2; T_2_other[0](5,0)=0;
+
+    // Expected semi-join result: T_1 rows where key exists in T_2, else zeroed
+    // result cols: key0, key1, other0
+    std::vector<i64Matrix> T_expected(3);
+    for(int i = 0; i < 3; i++) T_expected[i].resize(len1, 1);
+    // row0: kept (1,2,14)
+    T_expected[0](0,0)=1; T_expected[1](0,0)=2; T_expected[2](0,0)=2;
+    // row1: kept (1,2,2)
+    T_expected[0](1,0)=1; T_expected[1](1,0)=2; T_expected[2](1,0)=14;
+    // row2: zeroed (2,2) not in T_2
+    T_expected[0](2,0)=0; T_expected[1](2,0)=0; T_expected[2](2,0)=0;
+    // row3: kept (3,3,4)
+    T_expected[0](3,0)=3; T_expected[1](3,0)=3; T_expected[2](3,0)=4;
+    // row4: kept (4,1,2)
+    T_expected[0](4,0)=4; T_expected[1](4,0)=1; T_expected[2](4,0)=2;
+
+    // Encrypt
+    std::vector<si64Matrix> T_1_keyShared(2), T_1_otherShared(1);
+    std::vector<si64Matrix> T_2_keyShared(2), T_2_otherShared(1);
+    T_1_keyShared[0].resize(len1, 1); T_1_keyShared[1].resize(len1, 1);
+    T_1_otherShared[0].resize(len1, 1);
+    T_2_keyShared[0].resize(len2, 1); T_2_keyShared[1].resize(len2, 1);
+    T_2_otherShared[0].resize(len2, 1);
+
+    if (role == 0) {
+        enc.localIntMatrix(runtime, T_1_key[0], T_1_keyShared[0]).get();
+        enc.localIntMatrix(runtime, T_1_key[1], T_1_keyShared[1]).get();
+        enc.localIntMatrix(runtime, T_1_other[0], T_1_otherShared[0]).get();
+        enc.localIntMatrix(runtime, T_2_key[0], T_2_keyShared[0]).get();
+        enc.localIntMatrix(runtime, T_2_key[1], T_2_keyShared[1]).get();
+        enc.localIntMatrix(runtime, T_2_other[0], T_2_otherShared[0]).get();
+    } else {
+        enc.remoteIntMatrix(runtime, T_1_keyShared[0]).get();
+        enc.remoteIntMatrix(runtime, T_1_keyShared[1]).get();
+        enc.remoteIntMatrix(runtime, T_1_otherShared[0]).get();
+        enc.remoteIntMatrix(runtime, T_2_keyShared[0]).get();
+        enc.remoteIntMatrix(runtime, T_2_keyShared[1]).get();
+        enc.remoteIntMatrix(runtime, T_2_otherShared[0]).get();
+    }
+
+    // Run semi_join
+    std::vector<si64Matrix> T_semi_joined;
+    semi_join(role, T_1_keyShared, T_1_otherShared, T_2_keyShared, T_2_otherShared, T_semi_joined, enc, eval, runtime);
+
+    // Reveal results
+    std::vector<i64Matrix> T_result(3);
+    for(int i = 0; i < 3; i++){
+        T_result[i].resize(len1, 1);
+        enc.revealAll(runtime, T_semi_joined[i], T_result[i]).get();
+    }
+
+    // Check
+    if (role == 0) {
+        bool check_flag = true;
+        for (int i = 0; i < 3; i++) {
+            for (size_t j = 0; j < len1; j++) {
+                if (T_result[i](j, 0) != T_expected[i](j, 0)) {
+                    check_flag = false;
+                }
+            }
+        }
+        if (check_flag) {
+            debug_info("\033[32m SEMI JOIN CHECK SUCCESS ! \033[0m\n");
+        } else {
+            debug_info("\033[31m SEMI JOIN CHECK ERROR ! \033[0m\n");
+            debug_info("Expected result: ");
+            for (int i = 0; i < 3; i++) {
+                debug_output_matrix(T_expected[i]);
+            }
+            debug_info("Actual result: ");
+            for (int i = 0; i < 3; i++) {
+                debug_output_matrix(T_result[i]);
+            }
+        }
+    }
+
+    return 0;
 }

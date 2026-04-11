@@ -3,6 +3,8 @@
 #include <random>
 #include <thread>
 #include <algorithm>
+#include <fstream>
+#include <iomanip>
 #include <mpi.h>
 #include <tests_cryptoTools/UnitTests.h>
 
@@ -21,7 +23,7 @@ using namespace aby3;
 
 int main(int argc, char** argv) {
     oc::CLP cmd(argc, argv);
-    
+
 
     int role = -1;
     if (cmd.isSet("role")) {
@@ -32,7 +34,15 @@ int main(int argc, char** argv) {
         throw std::runtime_error(LOCATION);
     }
 
+    std::string timefile = "";
+    if (cmd.isSet("timefile")) {
+        auto tf = cmd.getMany<std::string>("timefile");
+        timefile = tf[0];
+    }
+
     std::cout << "start aby3: " << std::to_string(role) << std::endl;
+
+    auto t_total_start = std::chrono::high_resolution_clock::now();
 
     // setup communications.
     IOService ios;
@@ -43,118 +53,24 @@ int main(int argc, char** argv) {
     basic_setup((u64)role, ios, enc, eval, runtime);
 
 //create
-    std::vector<i64Matrix> customer_0(2);
-    i64Matrix customer_0_unit_size(1, 1);
-    if (role == (1 - 1)%3 ){
-        std::string path = "/root/plantest/benchmarks/tpch_test/8192/db/1/data/update/customer_0.csv" ;
-        std::ifstream file(path);
-        if (!file.is_open()) {
-            throw std::runtime_error("Failed to open file: " + path);
-        }
-
-        std::string customer_0_line;
-        std::vector<std::vector<i64>> customer_0_data_rows;
-        
-        //read data from path
-        while (std::getline(file, customer_0_line)) {
-            if (customer_0_line.empty()) continue;
-            
-            std::vector<i64> row;
-            std::istringstream iss(customer_0_line);
-            std::string token;
-            
-            while (std::getline(iss, token, ',')) {
-                if (!token.empty()) {
-                    row.push_back(std::stoll(token));
-                }
-            }
-            
-            if (!row.empty()) {
-                customer_0_data_rows.push_back(row);
-            }
-        }
-        file.close();
-        
-        if (customer_0_data_rows.empty()) {
-            throw std::runtime_error("No data found in file: " + path);
-        }
-        
-        size_t customer_0_num_cols = customer_0_data_rows[0].size();
-        size_t customer_0_num_rows = customer_0_data_rows.size();
-
-        
-        customer_0_unit_size(0, 0) = customer_0_num_rows ;
-        large_data_sending(role, customer_0_unit_size, runtime, true);
-        large_data_sending(role, customer_0_unit_size, runtime, false);
-        
-        for (size_t col = 0; col < customer_0_num_cols; col++) {
-            customer_0[col].resize(customer_0_num_rows, 1); 
-            for (size_t row = 0; row < customer_0_num_rows; row++) {
-                customer_0[col](row, 0) = customer_0_data_rows[row][col];
-            }
-        }
-        
-    }
-    else if(role == (1)%3){
-        large_data_receiving(role, customer_0_unit_size, runtime, true);
-    }
-    else if(role == (1 + 1)%3){
-        large_data_receiving(role, customer_0_unit_size, runtime, false);
-    }
-    
-//close
-    std::vector<i64Matrix> customer_close_to_joined_1_plain_cols;
-    std::vector<si64Matrix> customer_close_to_joined_1_cipher_cols;
-
-    std::vector<int> customer_close_to_joined_1_plain_cols_idx = {};
-    std::vector<int> customer_close_to_joined_1_cipher_cols_idx = {0, 1};
-
-    for(const auto &idx : customer_close_to_joined_1_plain_cols_idx){
-        if(role == (1 - 1)%3){    
-            large_data_sending(role, customer_0[idx], runtime, true);
-            large_data_sending(role, customer_0[idx], runtime, false);
-        }
-        else if(role == (1)%3){
-            customer_0[idx].resize(customer_0_unit_size(0, 0), 1);
-            large_data_receiving(role, customer_0[idx], runtime, true);
-        }
-        else if(role == (1 + 1)%3){
-            customer_0[idx].resize(customer_0_unit_size(0, 0), 1);
-            large_data_receiving(role, customer_0[idx], runtime, false);
-        }
-        customer_close_to_joined_1_plain_cols.push_back(customer_0[idx]);
-    }
-
-
-    for (const auto &idx : customer_close_to_joined_1_cipher_cols_idx){
-        si64Matrix customer_close_to_joined_1_i(customer_0_unit_size(0, 0), 1);
-        if (role == (1 - 1)%3){
-            enc.localIntMatrix(runtime, customer_0[idx], customer_close_to_joined_1_i).get();
-        } else {
-            enc.remoteIntMatrix(runtime, customer_close_to_joined_1_i).get();
-        }
-        customer_close_to_joined_1_cipher_cols.push_back(customer_close_to_joined_1_i);
-    }
-
-//create
-    std::vector<i64Matrix> orders_2(3);
-    i64Matrix orders_2_unit_size(1, 1);
+    std::vector<i64Matrix> lineitem_filtered_2(3);
+    i64Matrix lineitem_filtered_2_unit_size(1, 1);
     if (role == (2 - 1)%3 ){
-        std::string path = "/root/plantest/benchmarks/tpch_test/8192/db/2/data/update/orders_2.csv" ;
+        std::string path = "/root/plantest/benchmarks/tpch_test/32768/db/2/data/update/lineitem_filtered_2.csv" ;
         std::ifstream file(path);
         if (!file.is_open()) {
             throw std::runtime_error("Failed to open file: " + path);
         }
 
-        std::string orders_2_line;
-        std::vector<std::vector<i64>> orders_2_data_rows;
+        std::string lineitem_filtered_2_line;
+        std::vector<std::vector<i64>> lineitem_filtered_2_data_rows;
         
         //read data from path
-        while (std::getline(file, orders_2_line)) {
-            if (orders_2_line.empty()) continue;
+        while (std::getline(file, lineitem_filtered_2_line)) {
+            if (lineitem_filtered_2_line.empty()) continue;
             
             std::vector<i64> row;
-            std::istringstream iss(orders_2_line);
+            std::istringstream iss(lineitem_filtered_2_line);
             std::string token;
             
             while (std::getline(iss, token, ',')) {
@@ -164,279 +80,428 @@ int main(int argc, char** argv) {
             }
             
             if (!row.empty()) {
-                orders_2_data_rows.push_back(row);
+                lineitem_filtered_2_data_rows.push_back(row);
             }
         }
         file.close();
         
-        if (orders_2_data_rows.empty()) {
+        if (lineitem_filtered_2_data_rows.empty()) {
             throw std::runtime_error("No data found in file: " + path);
         }
         
-        size_t orders_2_num_cols = orders_2_data_rows[0].size();
-        size_t orders_2_num_rows = orders_2_data_rows.size();
+        size_t lineitem_filtered_2_num_cols = lineitem_filtered_2_data_rows[0].size();
+        size_t lineitem_filtered_2_num_rows = lineitem_filtered_2_data_rows.size();
 
         
-        orders_2_unit_size(0, 0) = orders_2_num_rows ;
-        large_data_sending(role, orders_2_unit_size, runtime, true);
-        large_data_sending(role, orders_2_unit_size, runtime, false);
+        lineitem_filtered_2_unit_size(0, 0) = lineitem_filtered_2_num_rows ;
+        large_data_sending(role, lineitem_filtered_2_unit_size, runtime, true);
+        large_data_sending(role, lineitem_filtered_2_unit_size, runtime, false);
         
-        for (size_t col = 0; col < orders_2_num_cols; col++) {
-            orders_2[col].resize(orders_2_num_rows, 1); 
-            for (size_t row = 0; row < orders_2_num_rows; row++) {
-                orders_2[col](row, 0) = orders_2_data_rows[row][col];
+        for (size_t col = 0; col < lineitem_filtered_2_num_cols; col++) {
+            lineitem_filtered_2[col].resize(lineitem_filtered_2_num_rows, 1); 
+            for (size_t row = 0; row < lineitem_filtered_2_num_rows; row++) {
+                lineitem_filtered_2[col](row, 0) = lineitem_filtered_2_data_rows[row][col];
             }
         }
         
     }
     else if(role == (2)%3){
-        large_data_receiving(role, orders_2_unit_size, runtime, true);
+        large_data_receiving(role, lineitem_filtered_2_unit_size, runtime, true);
     }
     else if(role == (2 + 1)%3){
-        large_data_receiving(role, orders_2_unit_size, runtime, false);
+        large_data_receiving(role, lineitem_filtered_2_unit_size, runtime, false);
     }
     
 //close
-    std::vector<i64Matrix> orders_close_to_joined_3_plain_cols;
-    std::vector<si64Matrix> orders_close_to_joined_3_cipher_cols;
+    std::vector<i64Matrix> lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols;
+    std::vector<si64Matrix> lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols;
 
-    std::vector<int> orders_close_to_joined_3_plain_cols_idx = {};
-    std::vector<int> orders_close_to_joined_3_cipher_cols_idx = {0, 1, 2};
+    std::vector<int> lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_idx = {};
+    std::vector<int> lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_idx = {0, 1, 2};
 
-    for(const auto &idx : orders_close_to_joined_3_plain_cols_idx){
-        if(role == (2 - 1)%3){    
-            large_data_sending(role, orders_2[idx], runtime, true);
-            large_data_sending(role, orders_2[idx], runtime, false);
+    // 合并 plain 列通信：先 pack 成一个大矩阵，一次通信，再 unpack 回各列
+    if (!lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_idx.empty()) {
+        size_t lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_rows = lineitem_filtered_2_unit_size(0, 0);
+        size_t lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_count = lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_idx.size();
+        i64Matrix lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_count *  lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_rows, 1);
+
+        if (role == (2 - 1) % 3) {
+            for (u64 i = 0; i < lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_count; ++i) {
+                const auto &idx = lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_idx[i];
+                std::memcpy(
+                    lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged.data() + i * lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_rows,
+                    lineitem_filtered_2[idx].data(),
+                    lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_rows * sizeof(lineitem_filtered_2[idx](0, 0)));
+            }
+        }
+
+        if (role == (2 - 1) % 3) {
+            large_data_sending(role, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged, runtime, true);
+            large_data_sending(role, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged, runtime, false);
+        } else if (role == (2) % 3) {
+            lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged.resize(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_count * lineitem_filtered_2_unit_size(0, 0), 1);
+            large_data_receiving(role, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged, runtime, true);
+        } else if (role == (2 + 1) % 3) {
+            lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged.resize(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_count * lineitem_filtered_2_unit_size(0, 0), 1);
+            large_data_receiving(role, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged, runtime, false);
+        }
+
+        for (u64 i = 0; i < lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_count; ++i) {
+            i64Matrix lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_col(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_rows, 1);
+            std::memcpy(
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_col.data(),
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged.data() + i * lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_rows,
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_rows * sizeof(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_merged(0, 0)));
+            lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols.push_back(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_col);
+        }
+    }
+    //只有有数据的那个role会有lineitem_filtered_2[idx]的数据，其他的只会有lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols
+
+    /*
+    //合在一起
+    for(const auto &idx : lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_idx){
+        if(role == (2 - 1)%3){
+            large_data_sending(role, lineitem_filtered_2[idx], runtime, true);
+            large_data_sending(role, lineitem_filtered_2[idx], runtime, false);
         }
         else if(role == (2)%3){
-            orders_2[idx].resize(orders_2_unit_size(0, 0), 1);
-            large_data_receiving(role, orders_2[idx], runtime, true);
+            lineitem_filtered_2[idx].resize(lineitem_filtered_2_unit_size(0, 0), 1);
+            large_data_receiving(role, lineitem_filtered_2[idx], runtime, true);
         }
         else if(role == (2 + 1)%3){
-            orders_2[idx].resize(orders_2_unit_size(0, 0), 1);
-            large_data_receiving(role, orders_2[idx], runtime, false);
+            lineitem_filtered_2[idx].resize(lineitem_filtered_2_unit_size(0, 0), 1);
+            large_data_receiving(role, lineitem_filtered_2[idx], runtime, false);
         }
-        orders_close_to_joined_3_plain_cols.push_back(orders_2[idx]);
+        lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols.push_back(lineitem_filtered_2[idx]);
     }
+    */
 
 
-    for (const auto &idx : orders_close_to_joined_3_cipher_cols_idx){
-        si64Matrix orders_close_to_joined_3_i(orders_2_unit_size(0, 0), 1);
-        if (role == (2 - 1)%3){
-            enc.localIntMatrix(runtime, orders_2[idx], orders_close_to_joined_3_i).get();
+    // 合并 cipher 列加密：先 pack 成一个大矩阵，一次 local/remote，再 unpack 回各列
+    if (!lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_idx.empty()) {
+        size_t lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows = lineitem_filtered_2_unit_size(0, 0);
+        size_t lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_count = lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_idx.size();
+
+        i64Matrix lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_plain_merged(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_count * lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows, 1);
+        si64Matrix lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_merged(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_count * lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows, 1);
+
+        if (role == (2 - 1) % 3) {
+            for (u64 i = 0; i < lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_count; ++i) {
+                const auto &idx = lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_idx[i];
+                std::memcpy(
+                    lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_plain_merged.data() + i * lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows,
+                    lineitem_filtered_2[idx].data(),
+                    lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows * sizeof(lineitem_filtered_2[idx](0, 0)));
+            }
+            enc.localIntMatrix(runtime, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_plain_merged, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_merged).get();
         } else {
-            enc.remoteIntMatrix(runtime, orders_close_to_joined_3_i).get();
+            enc.remoteIntMatrix(runtime, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_merged).get();
         }
-        orders_close_to_joined_3_cipher_cols.push_back(orders_close_to_joined_3_i);
+
+        for (u64 i = 0; i < lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_count; ++i) {
+            si64Matrix lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_i(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows, 1);
+            std::memcpy(
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_i.mShares[0].data(),
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_merged.mShares[0].data() + i * lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows,
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows * sizeof(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_merged.mShares[0](0, 0)));
+            std::memcpy(
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_i.mShares[1].data(),
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_merged.mShares[1].data() + i * lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows,
+                lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_rows * sizeof(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_merged.mShares[1](0, 0)));
+            lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols.push_back(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_i);
+        }
     }
 
-//join
+    /*
+    for (const auto &idx : lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_idx){
+        si64Matrix lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_i(lineitem_filtered_2_unit_size(0, 0), 1);
+        if (role == (2 - 1)%3){
+            enc.localIntMatrix(runtime, lineitem_filtered_2[idx], lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_i).get();
+        } else {
+            enc.remoteIntMatrix(runtime, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_i).get();
+        }
+        lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols.push_back(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_i);
+    }
+    */
+
+//create
+    std::vector<i64Matrix> orders_filtered_filtered_6(3);
+    i64Matrix orders_filtered_filtered_6_unit_size(1, 1);
+    if (role == (1 - 1)%3 ){
+        std::string path = "/root/plantest/benchmarks/tpch_test/32768/db/1/data/update/orders_filtered_filtered_6.csv" ;
+        std::ifstream file(path);
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open file: " + path);
+        }
+
+        std::string orders_filtered_filtered_6_line;
+        std::vector<std::vector<i64>> orders_filtered_filtered_6_data_rows;
+        
+        //read data from path
+        while (std::getline(file, orders_filtered_filtered_6_line)) {
+            if (orders_filtered_filtered_6_line.empty()) continue;
+            
+            std::vector<i64> row;
+            std::istringstream iss(orders_filtered_filtered_6_line);
+            std::string token;
+            
+            while (std::getline(iss, token, ',')) {
+                if (!token.empty()) {
+                    row.push_back(std::stoll(token));
+                }
+            }
+            
+            if (!row.empty()) {
+                orders_filtered_filtered_6_data_rows.push_back(row);
+            }
+        }
+        file.close();
+        
+        if (orders_filtered_filtered_6_data_rows.empty()) {
+            throw std::runtime_error("No data found in file: " + path);
+        }
+        
+        size_t orders_filtered_filtered_6_num_cols = orders_filtered_filtered_6_data_rows[0].size();
+        size_t orders_filtered_filtered_6_num_rows = orders_filtered_filtered_6_data_rows.size();
+
+        
+        orders_filtered_filtered_6_unit_size(0, 0) = orders_filtered_filtered_6_num_rows ;
+        large_data_sending(role, orders_filtered_filtered_6_unit_size, runtime, true);
+        large_data_sending(role, orders_filtered_filtered_6_unit_size, runtime, false);
+        
+        for (size_t col = 0; col < orders_filtered_filtered_6_num_cols; col++) {
+            orders_filtered_filtered_6[col].resize(orders_filtered_filtered_6_num_rows, 1); 
+            for (size_t row = 0; row < orders_filtered_filtered_6_num_rows; row++) {
+                orders_filtered_filtered_6[col](row, 0) = orders_filtered_filtered_6_data_rows[row][col];
+            }
+        }
+        
+    }
+    else if(role == (1)%3){
+        large_data_receiving(role, orders_filtered_filtered_6_unit_size, runtime, true);
+    }
+    else if(role == (1 + 1)%3){
+        large_data_receiving(role, orders_filtered_filtered_6_unit_size, runtime, false);
+    }
+    
+//close
+    std::vector<i64Matrix> orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols;
+    std::vector<si64Matrix> orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols;
+
+    std::vector<int> orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_idx = {};
+    std::vector<int> orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_idx = {0, 1, 2};
+
+    // 合并 plain 列通信：先 pack 成一个大矩阵，一次通信，再 unpack 回各列
+    if (!orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_idx.empty()) {
+        size_t orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_rows = orders_filtered_filtered_6_unit_size(0, 0);
+        size_t orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_count = orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_idx.size();
+        i64Matrix orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_count *  orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_rows, 1);
+
+        if (role == (1 - 1) % 3) {
+            for (u64 i = 0; i < orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_count; ++i) {
+                const auto &idx = orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_idx[i];
+                std::memcpy(
+                    orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged.data() + i * orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_rows,
+                    orders_filtered_filtered_6[idx].data(),
+                    orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_rows * sizeof(orders_filtered_filtered_6[idx](0, 0)));
+            }
+        }
+
+        if (role == (1 - 1) % 3) {
+            large_data_sending(role, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged, runtime, true);
+            large_data_sending(role, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged, runtime, false);
+        } else if (role == (1) % 3) {
+            orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged.resize(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_count * orders_filtered_filtered_6_unit_size(0, 0), 1);
+            large_data_receiving(role, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged, runtime, true);
+        } else if (role == (1 + 1) % 3) {
+            orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged.resize(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_count * orders_filtered_filtered_6_unit_size(0, 0), 1);
+            large_data_receiving(role, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged, runtime, false);
+        }
+
+        for (u64 i = 0; i < orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_count; ++i) {
+            i64Matrix orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_col(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_rows, 1);
+            std::memcpy(
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_col.data(),
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged.data() + i * orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_rows,
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_rows * sizeof(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_merged(0, 0)));
+            orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols.push_back(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_col);
+        }
+    }
+    //只有有数据的那个role会有orders_filtered_filtered_6[idx]的数据，其他的只会有orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols
+
+    /*
+    //合在一起
+    for(const auto &idx : orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_idx){
+        if(role == (1 - 1)%3){
+            large_data_sending(role, orders_filtered_filtered_6[idx], runtime, true);
+            large_data_sending(role, orders_filtered_filtered_6[idx], runtime, false);
+        }
+        else if(role == (1)%3){
+            orders_filtered_filtered_6[idx].resize(orders_filtered_filtered_6_unit_size(0, 0), 1);
+            large_data_receiving(role, orders_filtered_filtered_6[idx], runtime, true);
+        }
+        else if(role == (1 + 1)%3){
+            orders_filtered_filtered_6[idx].resize(orders_filtered_filtered_6_unit_size(0, 0), 1);
+            large_data_receiving(role, orders_filtered_filtered_6[idx], runtime, false);
+        }
+        orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols.push_back(orders_filtered_filtered_6[idx]);
+    }
+    */
+
+
+    // 合并 cipher 列加密：先 pack 成一个大矩阵，一次 local/remote，再 unpack 回各列
+    if (!orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_idx.empty()) {
+        size_t orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows = orders_filtered_filtered_6_unit_size(0, 0);
+        size_t orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_count = orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_idx.size();
+
+        i64Matrix orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_plain_merged(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_count * orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows, 1);
+        si64Matrix orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_merged(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_count * orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows, 1);
+
+        if (role == (1 - 1) % 3) {
+            for (u64 i = 0; i < orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_count; ++i) {
+                const auto &idx = orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_idx[i];
+                std::memcpy(
+                    orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_plain_merged.data() + i * orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows,
+                    orders_filtered_filtered_6[idx].data(),
+                    orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows * sizeof(orders_filtered_filtered_6[idx](0, 0)));
+            }
+            enc.localIntMatrix(runtime, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_plain_merged, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_merged).get();
+        } else {
+            enc.remoteIntMatrix(runtime, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_merged).get();
+        }
+
+        for (u64 i = 0; i < orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_count; ++i) {
+            si64Matrix orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_i(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows, 1);
+            std::memcpy(
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_i.mShares[0].data(),
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_merged.mShares[0].data() + i * orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows,
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows * sizeof(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_merged.mShares[0](0, 0)));
+            std::memcpy(
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_i.mShares[1].data(),
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_merged.mShares[1].data() + i * orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows,
+                orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_rows * sizeof(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_merged.mShares[1](0, 0)));
+            orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols.push_back(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_i);
+        }
+    }
+
+    /*
+    for (const auto &idx : orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_idx){
+        si64Matrix orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_i(orders_filtered_filtered_6_unit_size(0, 0), 1);
+        if (role == (1 - 1)%3){
+            enc.localIntMatrix(runtime, orders_filtered_filtered_6[idx], orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_i).get();
+        } else {
+            enc.remoteIntMatrix(runtime, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_i).get();
+        }
+        orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols.push_back(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_i);
+    }
+    */
+
+//semi-join
 
    //left/right_rel to all_cipher
-   std::vector<si64Matrix> customer_close_to_joined_1;
-   both2cipher(role, customer_close_to_joined_1_plain_cols_idx, customer_close_to_joined_1_cipher_cols_idx, customer_close_to_joined_1_plain_cols, customer_close_to_joined_1_cipher_cols
-               , customer_close_to_joined_1, enc, eval, runtime);
-   std::vector<si64Matrix> orders_close_to_joined_3;
-   both2cipher(role, orders_close_to_joined_3_plain_cols_idx, orders_close_to_joined_3_cipher_cols_idx, orders_close_to_joined_3_plain_cols, orders_close_to_joined_3_cipher_cols
-               , orders_close_to_joined_3, enc, eval, runtime);
+   std::vector<si64Matrix> orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7;
+   both2cipher(role, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols_idx, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols_idx, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_plain_cols, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_cipher_cols
+               , orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7, enc, eval, runtime);
+   std::vector<si64Matrix> lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3;
+   both2cipher(role, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols_idx, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols_idx, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_plain_cols, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_cipher_cols
+               , lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3, enc, eval, runtime);
 
 
    //other_idxs
-   std::vector<int> customer_close_to_joined_1_join_idxs = {0} ;
-   std::vector<int> orders_close_to_joined_3_join_idxs = {0} ;
-   std::vector<int> customer_close_to_joined_1_other_idxs, orders_close_to_joined_3_other_idxs;
+   std::vector<int> orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_join_idxs = {0} ;
+   std::vector<int> lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_join_idxs = {0} ;
+   std::vector<int> orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_other_idxs, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_other_idxs;
 
-   if(customer_close_to_joined_1_join_idxs.size() != orders_close_to_joined_3_join_idxs.size()){
+   if(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_join_idxs.size() != lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_join_idxs.size()){
       throw std::runtime_error("join key_cols is not consistent") ;
    }
 
-   for(size_t i = 0; i < customer_close_to_joined_1.size(); i++){
-      if (std::find(customer_close_to_joined_1_join_idxs.begin(),
-                    customer_close_to_joined_1_join_idxs.end(),
-                    static_cast<int>(i)) == customer_close_to_joined_1_join_idxs.end()) {
-         customer_close_to_joined_1_other_idxs.push_back(static_cast<int>(i));
+   for(size_t i = 0; i < orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7.size(); i++){
+      if (std::find(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_join_idxs.begin(),
+                    orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_join_idxs.end(),
+                    static_cast<int>(i)) == orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_join_idxs.end()) {
+         orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_other_idxs.push_back(static_cast<int>(i));
       }
    }
 
-   for(size_t i = 0; i < orders_close_to_joined_3.size(); i++){
-      if (std::find(orders_close_to_joined_3_join_idxs.begin(),
-                    orders_close_to_joined_3_join_idxs.end(),
-                    static_cast<int>(i)) == orders_close_to_joined_3_join_idxs.end()) {
-         orders_close_to_joined_3_other_idxs.push_back(static_cast<int>(i));
+   for(size_t i = 0; i < lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3.size(); i++){
+      if (std::find(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_join_idxs.begin(),
+                    lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_join_idxs.end(),
+                    static_cast<int>(i)) == lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_join_idxs.end()) {
+         lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_other_idxs.push_back(static_cast<int>(i));
       }
    }
 
    //分别得到两方的key和other列
-   std::vector<si64Matrix> customer_close_to_joined_1_key, customer_close_to_joined_1_other;
-   std::vector<si64Matrix> orders_close_to_joined_3_key, orders_close_to_joined_3_other;
-   for(size_t i = 0; i < customer_close_to_joined_1_join_idxs.size(); i++){
-      customer_close_to_joined_1_key.push_back(customer_close_to_joined_1[customer_close_to_joined_1_join_idxs[i]]);
+   std::vector<si64Matrix> orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_key, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_other;
+   std::vector<si64Matrix> lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_key, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_other;
+   for(size_t i = 0; i < orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_join_idxs.size(); i++){
+      orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_key.push_back(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7[orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_join_idxs[i]]);
    }
-   for(size_t i = 0; i < customer_close_to_joined_1_other_idxs.size(); i++){
-      customer_close_to_joined_1_other.push_back(customer_close_to_joined_1[customer_close_to_joined_1_other_idxs[i]]);
+   for(size_t i = 0; i < orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_other_idxs.size(); i++){
+      orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_other.push_back(orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7[orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_other_idxs[i]]);
    }
-   for(size_t i = 0; i < orders_close_to_joined_3_join_idxs.size(); i++){
-      orders_close_to_joined_3_key.push_back(orders_close_to_joined_3[orders_close_to_joined_3_join_idxs[i]]);
+   for(size_t i = 0; i < lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_join_idxs.size(); i++){
+      lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_key.push_back(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3[lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_join_idxs[i]]);
    }
-   for(size_t i = 0; i < orders_close_to_joined_3_other_idxs.size(); i++){
-      orders_close_to_joined_3_other.push_back(orders_close_to_joined_3[orders_close_to_joined_3_other_idxs[i]]);
-   }
-
-   //join
-   std::vector<i64Matrix> joined_4_plain_cols = {};
-   std::vector<si64Matrix> joined_4_cipher_cols ;
-
-   join(role, customer_close_to_joined_1_key, customer_close_to_joined_1_other, 
-      orders_close_to_joined_3_key, orders_close_to_joined_3_other,
-      joined_4_cipher_cols, enc, eval, runtime);
-
-
-   int joined_4_size = customer_close_to_joined_1_join_idxs.size() + customer_close_to_joined_1_other_idxs.size() + orders_close_to_joined_3_other_idxs.size() ;
-   std::vector<int> joined_4_plain_cols_idx = {} ;
-   std::vector<int> joined_4_cipher_cols_idx(joined_4_size);
-   for(size_t i = 0; i < joined_4_size; i++){
-      joined_4_cipher_cols_idx[i] = i ;
+   for(size_t i = 0; i < lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_other_idxs.size(); i++){
+      lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_other.push_back(lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3[lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_other_idxs[i]]);
    }
 
-  //filter(全转成密文的版本)
-    std::vector<si64Matrix> joined_4;
-    both2cipher(role, joined_4_plain_cols_idx, joined_4_cipher_cols_idx, joined_4_plain_cols, joined_4_cipher_cols
-        , joined_4, enc, eval, runtime);
+   //semi-join
+   std::vector<i64Matrix> orders_filtered_filtered_semi_join_8_plain_cols = {};
+   std::vector<si64Matrix> orders_filtered_filtered_semi_join_8_cipher_cols ;
+
+   semi_join(role, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_key, orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_other,
+      lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_key, lineitem_filtered_close_to_orders_filtered_filtered_semi_join_3_other,
+      orders_filtered_filtered_semi_join_8_cipher_cols, enc, eval, runtime);
 
 
-    std::vector<i64Matrix> joined_filtered_5_plain_cols = {};
-    std::vector<si64Matrix> joined_filtered_5_cipher_cols;
-    std::vector<int> joined_filtered_5_plain_cols_idx = {} ;
-    std::vector<int> joined_filtered_5_cipher_cols_idx;
-
-    //就把3和{{{OTHER_COL}}}写成一个就好
-    //bool joined_filtered_5_is_scalar = true ; 
-    filter(role, joined_4, 3, 3, 
-        true, "=", joined_filtered_5_cipher_cols,
-        enc, eval, runtime);
-
-    
-    //输出必然是全密文的
-    for(size_t i = 0; i <  joined_filtered_5_cipher_cols.size() ; i++){
-        joined_filtered_5_cipher_cols_idx.push_back(i);
-    }
-
-    //agg_count
-    //input所有列先全部转成密文
-    std::vector<si64Matrix> joined_filtered_5;
-    both2cipher(role, joined_filtered_5_plain_cols_idx, joined_filtered_5_cipher_cols_idx, joined_filtered_5_plain_cols, joined_filtered_5_cipher_cols
-                , joined_filtered_5, enc, eval, runtime);
-
-
-    std::vector<int> joined_filtered_5_group_idxs = {0} ;
-    
-    std::vector<si64Matrix> joined_filtered_5_group_cols;
-    std::vector<si64Matrix> grouped_c_count_joined_filtered_6_group_cols;
-    si64Matrix grouped_c_count_joined_filtered_6_cnt_col;
-
-    for(size_t i = 0; i < joined_filtered_5_group_idxs.size(); i++){
-        joined_filtered_5_group_cols.push_back(joined_filtered_5[joined_filtered_5_group_idxs[i]]);
-    }
-    group_count(role, joined_filtered_5_group_cols, grouped_c_count_joined_filtered_6_group_cols,
-                    grouped_c_count_joined_filtered_6_cnt_col, enc, eval, runtime);
-
-    
-    std::vector<i64Matrix> grouped_c_count_joined_filtered_6_plain_cols = {};
-    std::vector<si64Matrix> grouped_c_count_joined_filtered_6_cipher_cols ;
-    grouped_c_count_joined_filtered_6_cipher_cols = grouped_c_count_joined_filtered_6_group_cols;
-    grouped_c_count_joined_filtered_6_cipher_cols.push_back(grouped_c_count_joined_filtered_6_cnt_col);
-
-    std::vector<int> grouped_c_count_joined_filtered_6_plain_cols_idx = {} ;
-    std::vector<int> grouped_c_count_joined_filtered_6_cipher_cols_idx;
-    for(size_t i = 0; i < grouped_c_count_joined_filtered_6_cipher_cols.size(); i++){
-        grouped_c_count_joined_filtered_6_cipher_cols_idx.push_back(i);
-    }
-
-
-   
-
+   int orders_filtered_filtered_semi_join_8_size = orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_join_idxs.size() + orders_filtered_filtered_close_to_orders_filtered_filtered_semi_join_7_other_idxs.size() ;
+   std::vector<int> orders_filtered_filtered_semi_join_8_plain_cols_idx = {} ;
+   std::vector<int> orders_filtered_filtered_semi_join_8_cipher_cols_idx(orders_filtered_filtered_semi_join_8_size);
+   for(size_t i = 0; i < orders_filtered_filtered_semi_join_8_size; i++){
+      orders_filtered_filtered_semi_join_8_cipher_cols_idx[i] = i ;
+   }
 
 //project
 
-    std::map<int, int> c_orders_7_select_map = {{0, 0}, {1, 1}} ;
+    std::map<int, int> orders_filtered_filtered_semi_join_projected_9_select_map = {{1, 0}} ;
 
-    std::vector<int> grouped_c_count_joined_filtered_6_select_idx;
-    for(const auto &pair : c_orders_7_select_map){
-        grouped_c_count_joined_filtered_6_select_idx.push_back(pair.first);
+    std::vector<int> orders_filtered_filtered_semi_join_8_select_idx;
+    for(const auto &pair : orders_filtered_filtered_semi_join_projected_9_select_map){
+        orders_filtered_filtered_semi_join_8_select_idx.push_back(pair.first);
     }
-    std::vector<int> grouped_c_count_joined_filtered_6_plain_select_idx ;
-    std::vector<int> grouped_c_count_joined_filtered_6_cipher_select_idx ;
+    std::vector<int> orders_filtered_filtered_semi_join_8_plain_select_idx ;
+    std::vector<int> orders_filtered_filtered_semi_join_8_cipher_select_idx ;
 
-    std::vector<si64Matrix> c_orders_7_cipher_cols;
-    std::vector<i64Matrix> c_orders_7_plain_cols ;
+    std::vector<si64Matrix> orders_filtered_filtered_semi_join_projected_9_cipher_cols;
+    std::vector<i64Matrix> orders_filtered_filtered_semi_join_projected_9_plain_cols ;
 
     //select_idx : plain / cipher
-    for(size_t i = 0 ; i < grouped_c_count_joined_filtered_6_plain_cols_idx.size() ; i++){
-        if(std::find(grouped_c_count_joined_filtered_6_select_idx.begin(), grouped_c_count_joined_filtered_6_select_idx.end(), grouped_c_count_joined_filtered_6_plain_cols_idx[i]) != grouped_c_count_joined_filtered_6_select_idx.end()){
-            grouped_c_count_joined_filtered_6_plain_select_idx.push_back(grouped_c_count_joined_filtered_6_plain_cols_idx[i]);
-            c_orders_7_plain_cols.push_back(grouped_c_count_joined_filtered_6_plain_cols[i]);
+    for(size_t i = 0 ; i < orders_filtered_filtered_semi_join_8_plain_cols_idx.size() ; i++){
+        if(std::find(orders_filtered_filtered_semi_join_8_select_idx.begin(), orders_filtered_filtered_semi_join_8_select_idx.end(), orders_filtered_filtered_semi_join_8_plain_cols_idx[i]) != orders_filtered_filtered_semi_join_8_select_idx.end()){
+            orders_filtered_filtered_semi_join_8_plain_select_idx.push_back(orders_filtered_filtered_semi_join_8_plain_cols_idx[i]);
+            orders_filtered_filtered_semi_join_projected_9_plain_cols.push_back(orders_filtered_filtered_semi_join_8_plain_cols[i]);
         }
     }
 
-    for(size_t i = 0 ; i < grouped_c_count_joined_filtered_6_cipher_cols_idx.size() ; i++){
-        if(std::find(grouped_c_count_joined_filtered_6_select_idx.begin(), grouped_c_count_joined_filtered_6_select_idx.end(), grouped_c_count_joined_filtered_6_cipher_cols_idx[i]) != grouped_c_count_joined_filtered_6_select_idx.end()){
-            grouped_c_count_joined_filtered_6_cipher_select_idx.push_back(grouped_c_count_joined_filtered_6_cipher_cols_idx[i]);
-            c_orders_7_cipher_cols.push_back(grouped_c_count_joined_filtered_6_cipher_cols[i]);
-        }
-    }
-    
-
-    std::vector<int> c_orders_7_plain_cols_idx;
-    std::vector<int> c_orders_7_cipher_cols_idx;
-    for(const auto &idx : grouped_c_count_joined_filtered_6_plain_select_idx){
-        c_orders_7_plain_cols_idx.push_back(c_orders_7_select_map[idx]);
-    }
-
-    for(const auto &idx : grouped_c_count_joined_filtered_6_cipher_select_idx){
-        c_orders_7_cipher_cols_idx.push_back(c_orders_7_select_map[idx]);
-    }
-    
-
-
-
-//project
-
-    std::map<int, int> c_orders_projected_8_select_map = {{1, 0}} ;
-
-    std::vector<int> c_orders_7_select_idx;
-    for(const auto &pair : c_orders_projected_8_select_map){
-        c_orders_7_select_idx.push_back(pair.first);
-    }
-    std::vector<int> c_orders_7_plain_select_idx ;
-    std::vector<int> c_orders_7_cipher_select_idx ;
-
-    std::vector<si64Matrix> c_orders_projected_8_cipher_cols;
-    std::vector<i64Matrix> c_orders_projected_8_plain_cols ;
-
-    //select_idx : plain / cipher
-    for(size_t i = 0 ; i < c_orders_7_plain_cols_idx.size() ; i++){
-        if(std::find(c_orders_7_select_idx.begin(), c_orders_7_select_idx.end(), c_orders_7_plain_cols_idx[i]) != c_orders_7_select_idx.end()){
-            c_orders_7_plain_select_idx.push_back(c_orders_7_plain_cols_idx[i]);
-            c_orders_projected_8_plain_cols.push_back(c_orders_7_plain_cols[i]);
-        }
-    }
-
-    for(size_t i = 0 ; i < c_orders_7_cipher_cols_idx.size() ; i++){
-        if(std::find(c_orders_7_select_idx.begin(), c_orders_7_select_idx.end(), c_orders_7_cipher_cols_idx[i]) != c_orders_7_select_idx.end()){
-            c_orders_7_cipher_select_idx.push_back(c_orders_7_cipher_cols_idx[i]);
-            c_orders_projected_8_cipher_cols.push_back(c_orders_7_cipher_cols[i]);
+    for(size_t i = 0 ; i < orders_filtered_filtered_semi_join_8_cipher_cols_idx.size() ; i++){
+        if(std::find(orders_filtered_filtered_semi_join_8_select_idx.begin(), orders_filtered_filtered_semi_join_8_select_idx.end(), orders_filtered_filtered_semi_join_8_cipher_cols_idx[i]) != orders_filtered_filtered_semi_join_8_select_idx.end()){
+            orders_filtered_filtered_semi_join_8_cipher_select_idx.push_back(orders_filtered_filtered_semi_join_8_cipher_cols_idx[i]);
+            orders_filtered_filtered_semi_join_projected_9_cipher_cols.push_back(orders_filtered_filtered_semi_join_8_cipher_cols[i]);
         }
     }
     
 
-    std::vector<int> c_orders_projected_8_plain_cols_idx;
-    std::vector<int> c_orders_projected_8_cipher_cols_idx;
-    for(const auto &idx : c_orders_7_plain_select_idx){
-        c_orders_projected_8_plain_cols_idx.push_back(c_orders_projected_8_select_map[idx]);
+    std::vector<int> orders_filtered_filtered_semi_join_projected_9_plain_cols_idx;
+    std::vector<int> orders_filtered_filtered_semi_join_projected_9_cipher_cols_idx;
+    for(const auto &idx : orders_filtered_filtered_semi_join_8_plain_select_idx){
+        orders_filtered_filtered_semi_join_projected_9_plain_cols_idx.push_back(orders_filtered_filtered_semi_join_projected_9_select_map[idx]);
     }
 
-    for(const auto &idx : c_orders_7_cipher_select_idx){
-        c_orders_projected_8_cipher_cols_idx.push_back(c_orders_projected_8_select_map[idx]);
+    for(const auto &idx : orders_filtered_filtered_semi_join_8_cipher_select_idx){
+        orders_filtered_filtered_semi_join_projected_9_cipher_cols_idx.push_back(orders_filtered_filtered_semi_join_projected_9_select_map[idx]);
     }
     
 
@@ -444,43 +509,97 @@ int main(int argc, char** argv) {
 
 //open
     if(role == (1) % 3){
-        for(size_t i = 0; i < c_orders_projected_8_cipher_cols.size(); i++){
-            large_data_sending(role, c_orders_projected_8_cipher_cols[i].mShares[0], runtime, false);
+        size_t orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count = orders_filtered_filtered_semi_join_projected_9_cipher_cols.size();
+        if (orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count > 0) {
+            size_t orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows = orders_filtered_filtered_semi_join_projected_9_cipher_cols[0].rows();
+            size_t orders_filtered_filtered_semi_join_projected_open_10_cipher_merge_rows = orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count * orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows;
+            si64Matrix orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge(orders_filtered_filtered_semi_join_projected_open_10_cipher_merge_rows, 1);
+            for(size_t i = 0; i < orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count; i++){
+                std::memcpy(
+                    orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge.mShares[0].data() + i * orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows,
+                    orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[0].data(),
+                    orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows * sizeof(orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[0](0, 0)));
+                std::memcpy(
+                    orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge.mShares[1].data() + i * orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows,
+                    orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[1].data(),
+                    orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows * sizeof(orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[1](0, 0)));
+            }
+            large_data_sending(role, orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge.mShares[0], runtime, false);
         }
+
+        /*
+        for(size_t i = 0; i < orders_filtered_filtered_semi_join_projected_9_cipher_cols.size(); i++){
+            large_data_sending(role, orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[0], runtime, false);
+        }
+        */
     }
     else if(role ==(1 - 1)%3){
-        //将cipher_cols恢复成明文
-        std::vector<i64Matrix> c_orders_projected_open_9_cipher_cols(c_orders_projected_8_cipher_cols.size());
-        for(size_t i = 0; i < c_orders_projected_open_9_cipher_cols.size(); i++){
-            c_orders_projected_open_9_cipher_cols[i].resize(c_orders_projected_8_cipher_cols[i].rows(), 1);
-            large_data_receiving(role, c_orders_projected_open_9_cipher_cols[i], runtime, false);
-            c_orders_projected_open_9_cipher_cols[i] += c_orders_projected_8_cipher_cols[i].mShares[0];
-            c_orders_projected_open_9_cipher_cols[i] += c_orders_projected_8_cipher_cols[i].mShares[1];
+        //将cipher_cols恢复成明文（合并通信后再拆分）
+        size_t orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count = orders_filtered_filtered_semi_join_projected_9_cipher_cols.size();
+        std::vector<i64Matrix> orders_filtered_filtered_semi_join_projected_open_10_cipher_cols(orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count);
+        if (orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count > 0) {
+            size_t orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows = orders_filtered_filtered_semi_join_projected_9_cipher_cols[0].rows();
+            size_t orders_filtered_filtered_semi_join_projected_open_10_cipher_merge_rows = orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count * orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows;
+
+            si64Matrix orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge(orders_filtered_filtered_semi_join_projected_open_10_cipher_merge_rows, 1);
+            for(size_t i = 0; i < orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count; i++){
+                std::memcpy(
+                    orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge.mShares[0].data() + i * orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows,
+                    orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[0].data(),
+                    orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows * sizeof(orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[0](0, 0)));
+                std::memcpy(
+                    orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge.mShares[1].data() + i * orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows,
+                    orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[1].data(),
+                    orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows * sizeof(orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[1](0, 0)));
+            }
+
+            i64Matrix orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_recv_merge(orders_filtered_filtered_semi_join_projected_open_10_cipher_merge_rows, 1);
+            large_data_receiving(role, orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_recv_merge, runtime, false);
+            i64Matrix orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_merge = orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_recv_merge;
+            orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_merge += orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge.mShares[0];
+            orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_merge += orders_filtered_filtered_semi_join_projected_9_cipher_cols_merge.mShares[1];
+
+            for(size_t i = 0; i < orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_count; i++){
+                orders_filtered_filtered_semi_join_projected_open_10_cipher_cols[i].resize(orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows, 1);
+                std::memcpy(
+                    orders_filtered_filtered_semi_join_projected_open_10_cipher_cols[i].data(),
+                    orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_merge.data() + i * orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows,
+                    orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_rows * sizeof(orders_filtered_filtered_semi_join_projected_open_10_cipher_cols_merge(0, 0)));
+            }
         }
 
-        //全明文c_orders_projected_open_9
-        size_t c_orders_projected_open_9_size = c_orders_projected_8_plain_cols.size() + c_orders_projected_8_cipher_cols.size();
-        std::vector<i64Matrix> c_orders_projected_open_9(c_orders_projected_open_9_size);
+        /*
+        for(size_t i = 0; i < orders_filtered_filtered_semi_join_projected_open_10_cipher_cols.size(); i++){
+            orders_filtered_filtered_semi_join_projected_open_10_cipher_cols[i].resize(orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].rows(), 1);
+            large_data_receiving(role, orders_filtered_filtered_semi_join_projected_open_10_cipher_cols[i], runtime, false);
+            orders_filtered_filtered_semi_join_projected_open_10_cipher_cols[i] += orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[0];
+            orders_filtered_filtered_semi_join_projected_open_10_cipher_cols[i] += orders_filtered_filtered_semi_join_projected_9_cipher_cols[i].mShares[1];
+        }
+        */
+
+        //全明文orders_filtered_filtered_semi_join_projected_open_10
+        size_t orders_filtered_filtered_semi_join_projected_open_10_size = orders_filtered_filtered_semi_join_projected_9_plain_cols.size() + orders_filtered_filtered_semi_join_projected_9_cipher_cols.size();
+        std::vector<i64Matrix> orders_filtered_filtered_semi_join_projected_open_10(orders_filtered_filtered_semi_join_projected_open_10_size);
 
         //直接加入明文列
-        for(size_t i=0 ; i < c_orders_projected_8_plain_cols.size() ; i++){
-            c_orders_projected_open_9[c_orders_projected_8_plain_cols_idx[i]] = c_orders_projected_8_plain_cols[i];
+        for(size_t i=0 ; i < orders_filtered_filtered_semi_join_projected_9_plain_cols.size() ; i++){
+            orders_filtered_filtered_semi_join_projected_open_10[orders_filtered_filtered_semi_join_projected_9_plain_cols_idx[i]] = orders_filtered_filtered_semi_join_projected_9_plain_cols[i];
         }
         //加入恢复的密文列
-        for(size_t i=0 ; i < c_orders_projected_8_cipher_cols.size() ; i++){
-            c_orders_projected_open_9[c_orders_projected_8_cipher_cols_idx[i]] = c_orders_projected_open_9_cipher_cols[i];
+        for(size_t i=0 ; i < orders_filtered_filtered_semi_join_projected_9_cipher_cols.size() ; i++){
+            orders_filtered_filtered_semi_join_projected_open_10[orders_filtered_filtered_semi_join_projected_9_cipher_cols_idx[i]] = orders_filtered_filtered_semi_join_projected_open_10_cipher_cols[i];
         }
         
 
         //存储在STP下的i64Matrix
-        std::ofstream file("/root/plantest/benchmarks/tpch_test/8192/db/1/data/update/c_orders_projected_open_9.csv");
+        std::ofstream file("/root/plantest/benchmarks/tpch_test/32768/db/1/data/update/orders_filtered_filtered_semi_join_projected_open_10.csv");
         if (!file.is_open()) {
             throw std::runtime_error("Failed to open file: ");
         }
-        for(size_t j = 0; j < c_orders_projected_open_9[0].rows(); j++) {
-            for(size_t i = 0; i < c_orders_projected_open_9.size(); i++) {
-                file << c_orders_projected_open_9[i](j,0) ;
-                if(i < c_orders_projected_open_9.size()-1){
+        for(size_t j = 0; j < orders_filtered_filtered_semi_join_projected_open_10[0].rows(); j++) {
+            for(size_t i = 0; i < orders_filtered_filtered_semi_join_projected_open_10.size(); i++) {
+                file << orders_filtered_filtered_semi_join_projected_open_10[i](j,0) ;
+                if(i < orders_filtered_filtered_semi_join_projected_open_10.size()-1){
                     file << "," ;
                 }
             }
@@ -492,7 +611,19 @@ int main(int argc, char** argv) {
 
 
 
+    auto t_total_end = std::chrono::high_resolution_clock::now();
+    double run_time = std::chrono::duration<double>(t_total_end - t_total_start).count();
+
     std::cout << "done aby3: " << std::to_string(role) << std::endl;
+
+    if (role == 0 && !timefile.empty()) {
+        std::ofstream ofs(timefile);
+        if (ofs.is_open()) {
+            ofs << std::fixed << std::setprecision(3);
+            ofs << "Run Time: " << run_time << " s" << std::endl;
+            ofs.close();
+        }
+    }
 
     return 0;
 }

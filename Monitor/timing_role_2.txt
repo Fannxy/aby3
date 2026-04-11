@@ -1,0 +1,9 @@
+basic_setup: 0.420466 s
+create_eq_flags: 0.0887996 s
+close_eq_flags: 0.00186854 s
+create_sorted_by_key: 0.00462208 s
+close_sorted_by_key: 0.00170103 s
+index_agg: 0.0945661 s
+project: 4.815e-06 s
+open: 4.11e-07 s
+total: 0.612029 s

@@ -18,11 +18,7 @@ si64Matrix reshare_matrix(int pIdx, si64Matrix& x, int targetPartyIdx, Sh3Encryp
     i64Matrix r(n,cols);   
     std::fill_n(r.data(), n*cols, 0);
     si64Matrix r_share(n,cols);
-    // for(size_t i=0;i<n;i++){
-    //     for(size_t j=0;j<cols;j++){
-    //         r(i,j)=0;
-    //     }
-    // }
+
     if (pIdx == prevPartyIdx) {
         enc.localIntMatrix(runtime, r, r_share).get();
     } else {
@@ -111,21 +107,7 @@ void genBitPerm(int pIdx, si64Matrix &k_j, si64Matrix &perm, Sh3Encryptor& enc, 
     prefixsum(pIdx, f0, s0);
     prefixsum_with_initial_elements(pIdx, f1, s1, s0);
     s_sub = s1 - s0;
-    //DEBUG
-    // i64Matrix s0_plain(n,1),s1_plain(n,1);
-    // enc.revealAll(runtime, s0, s0_plain).get();
-    // enc.revealAll(runtime, s1, s1_plain).get();
-    // std::cout << "s0: " << std::endl;
-    // for(size_t i=0;i<n;i++){
-    //     std::cout << s0_plain(i,0) << " ";
-    // }
-    // std::cout << std::endl;
-    // std::cout << "s1: " << std::endl;
-    // for(size_t i=0;i<n;i++){
-    //     std::cout << s1_plain(i,0) << " ";
-    // }
-    // std::cout << std::endl;
-    //----s0,s1 correct
+    
 
     // for(size_t i=0;i<n;i++){
     //     s_sub.mShares[0](i,0) = s1.mShares[0](i,0) - s0.mShares[0](i,0);
@@ -198,12 +180,7 @@ void applyPerm(int pIdx, si64Matrix &perm, si64Matrix &k_j, si64Matrix &k_j_prim
         }
         
         else if(pIdx==(id+1)%3){
-            // for(size_t i=0;i<len;i++){
-            //     for(size_t j=0;j<cols;j++){
-            //         next_perm.mShares[0](i, j) = 0;
-            //         next_perm.mShares[1](i, j) = 0;
-            //     }
-            // }
+
             const size_t total = len * cols;
             std::fill_n(next_perm.mShares[0].data(), total, 0);
             std::fill_n(next_perm.mShares[1].data(), total, 0);

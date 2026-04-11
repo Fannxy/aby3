@@ -40,8 +40,12 @@ sleep 2
 RUN_START=$(date +%s%N)
 # 运行 frontend 程序
 echo "启动 frontend 程序..."
-#./out/build/linux/frontend/frontend -prog -1 -role 0 ${args_list} &
-ssh h1 "cd /root/plantest/include/external-lib/aby3/; ./out/build/linux/frontend/frontend -prog -1 -role 0 ${args_list}" &
+TIMEFILE_ARG=""
+if [ ! -z "$FEDDB_ABY3_TIME_FILE" ]; then
+    TIMEFILE_ARG="-timefile $FEDDB_ABY3_TIME_FILE"
+fi
+
+ssh h1 "cd /root/plantest/include/external-lib/aby3/; ./out/build/linux/frontend/frontend -prog -1 -role 0 ${TIMEFILE_ARG} ${args_list}" &
 frontend_h1_pid=$!
 
 ssh h2 "cd /root/plantest/include/external-lib/aby3/; ./out/build/linux/frontend/frontend -prog -1 -role 1 ${args_list}" &
@@ -52,6 +56,9 @@ frontend_h3_pid=$!
 
 # 等待所有 frontend 程序完成
 wait;
+
+RUN_END=$(date +%s%N)
+RUN_DURATION=$(awk "BEGIN {printf \"%.3f\", ($RUN_END - $RUN_START) / 1000000000}")  # 转换为秒，保留3位小数
 
 # 停止监测脚本
 echo "停止监测脚本..."
@@ -65,18 +72,17 @@ sleep 3
 echo "监测完成，数据保存在 ${MONITOR_DIR}/ 目录下"
 
 
-RUN_END=$(date +%s%N)
-RUN_DURATION=$(awk "BEGIN {printf \"%.3f\", ($RUN_END - $RUN_START) / 1000000000}")  # 转换为秒，保留3位小数
+
 
 # 清理 frontend 进程
 pkill -f "frontend.*-role" || true
 
-# 写入时间结果到文件（如果环境变量设置了）
+# 计算总 dispatch 时间
+DISPATCH_END=$(date +%s%N)
+DISPATCH_DURATION=$(awk "BEGIN {printf \"%.3f\", ($DISPATCH_END - $BUILD_START) / 1000000000}")
+
+# 追加 build time 和 total dispatch time 到文件（Run Time 已由 frontend 写入）
 if [ ! -z "$FEDDB_ABY3_TIME_FILE" ]; then
-    cat > "$FEDDB_ABY3_TIME_FILE" << EOF
-Aby3 Dispatch Time Measurement
-===============================
-Build Time: $BUILD_DURATION s
-Run Time: $RUN_DURATION s
-EOF
+    echo "Build Time: $BUILD_DURATION s" >> "$FEDDB_ABY3_TIME_FILE"
+    echo "Total Dispatch Time: $DISPATCH_DURATION s" >> "$FEDDB_ABY3_TIME_FILE"
 fi
