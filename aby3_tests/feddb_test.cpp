@@ -792,6 +792,135 @@ int index_agg_test(CLP &cmd){
 
 }
 
+int index_agg_maxmin_test(CLP &cmd){
+    int role = -1;
+    if (cmd.isSet("role")) {
+        auto keys = cmd.getMany<int>("role");
+        role = keys[0];
+    }
+    if (role == -1) {
+        throw std::runtime_error(LOCATION);
+    }
+
+    if (role == 0) {
+        debug_info("RUN INDEX_AGG_MAXMIN TEST");
+    }
+
+    // setup communications.
+    IOService ios;
+    Sh3Encryptor enc;
+    Sh3Evaluator eval;
+    Sh3Runtime runtime;
+    basic_setup((u64)role, ios, enc, eval, runtime);
+
+    // Same fixture style as index_agg_test.
+    size_t TEST_SIZE = 8;
+    std::vector<i64Matrix> input_data(2);
+    input_data[0].resize(TEST_SIZE,1); // key
+    input_data[1].resize(TEST_SIZE,1); // val
+
+    input_data[0](0,0)=1;
+    input_data[0](1,0)=3;
+    input_data[0](2,0)=5;
+    input_data[0](3,0)=4;
+    input_data[0](4,0)=3;
+    input_data[0](5,0)=2;
+    input_data[0](6,0)=2;
+    input_data[0](7,0)=3;
+
+    for(int i=0; i< TEST_SIZE; i++){
+        input_data[1](i,0)=i;
+    }
+
+    std::vector<si64Matrix> dataShared_key(1);
+    si64Matrix dataShared_val(TEST_SIZE,1);
+    dataShared_key[0].resize(TEST_SIZE,1);
+
+    if (role == 0) {
+        enc.localIntMatrix(runtime, input_data[0], dataShared_key[0]).get();
+        enc.localIntMatrix(runtime, input_data[1], dataShared_val).get();
+    } else {
+        enc.remoteIntMatrix(runtime, dataShared_key[0]).get();
+        enc.remoteIntMatrix(runtime, dataShared_val).get();
+    }
+
+    // Public sorted order by key and segment flags.
+    i64Matrix idx(TEST_SIZE,1);
+    idx(0,0)=0;
+    idx(1,0)=5;
+    idx(2,0)=6;
+    idx(3,0)=1;
+    idx(4,0)=4;
+    idx(5,0)=7;
+    idx(6,0)=3;
+    idx(7,0)=2;
+
+    i64Matrix equalFlag(TEST_SIZE,1);
+    equalFlag(0,0)=0;
+    equalFlag(1,0)=0;
+    equalFlag(2,0)=1;
+    equalFlag(3,0)=0;
+    equalFlag(4,0)=1;
+    equalFlag(5,0)=1;
+    equalFlag(6,0)=0;
+    equalFlag(7,0)=0;
+
+    si64Matrix equalFlagShared(TEST_SIZE,1);
+    if (role == 0) {
+        enc.localIntMatrix(runtime, equalFlag, equalFlagShared).get();
+    } else {
+        enc.remoteIntMatrix(runtime, equalFlagShared).get();
+    }
+
+    // Run MAX and MIN.
+    std::vector<si64Matrix> max_res(2), min_res(2);
+    index_agg_maxmin(role, equalFlagShared, idx, dataShared_key, dataShared_val, true,  max_res, enc, eval, runtime);
+    index_agg_maxmin(role, equalFlagShared, idx, dataShared_key, dataShared_val, false, min_res, enc, eval, runtime);
+
+    auto sort_by_key = [&](std::vector<si64Matrix>& in_res, std::vector<si64Matrix>& out_res){
+        int resRows = in_res[0].rows();
+        out_res.resize(2);
+        out_res[0].resize(resRows,1);
+        out_res[1].resize(resRows,1);
+        si64Matrix perm(resRows,1);
+        genPerm(role, in_res[0], perm, enc, eval, runtime);
+        i64Matrix perm_plain(resRows,1);
+        enc.revealAll(runtime, perm, perm_plain).get();
+        permutate(role, in_res[0], out_res[0], perm_plain);
+        permutate(role, in_res[1], out_res[1], perm_plain);
+    };
+
+    std::vector<si64Matrix> max_sorted, min_sorted;
+    sort_by_key(max_res, max_sorted);
+    sort_by_key(min_res, min_sorted);
+
+    int outRows = max_sorted[0].rows();
+    i64Matrix max_key(outRows,1), max_val(outRows,1);
+    i64Matrix min_key(outRows,1), min_val(outRows,1);
+    enc.revealAll(runtime, max_sorted[0], max_key).get();
+    enc.revealAll(runtime, max_sorted[1], max_val).get();
+    enc.revealAll(runtime, min_sorted[0], min_key).get();
+    enc.revealAll(runtime, min_sorted[1], min_val).get();
+
+    // Expected:
+    // sorted keys: [1,2,3,4,5]
+    // vals by group: key1->{0}, key2->{5,6}, key3->{1,4,7}, key4->{3}, key5->{2}
+    // max: [0,6,7,3,2], min: [0,5,1,3,2]
+    i64Matrix expected_key(5,1), expected_max(5,1), expected_min(5,1);
+    expected_key(0,0)=1; expected_key(1,0)=2; expected_key(2,0)=3; expected_key(3,0)=4; expected_key(4,0)=5;
+    expected_max(0,0)=0; expected_max(1,0)=6; expected_max(2,0)=7; expected_max(3,0)=3; expected_max(4,0)=2;
+    expected_min(0,0)=0; expected_min(1,0)=5; expected_min(2,0)=1; expected_min(3,0)=3; expected_min(4,0)=2;
+
+    if (role == 0) {
+        check_result("Index Agg MAX Test-key", max_key, expected_key);
+        check_result("Index Agg MAX Test-val", max_val, expected_max);
+        check_result("Index Agg MIN Test-key", min_key, expected_key);
+        check_result("Index Agg MIN Test-val", min_val, expected_min);
+    }
+
+    return 0;
+}
+
 int group_by_common_test(CLP &cmd){
     int role = -1;
     if (cmd.isSet("role")) {
@@ -1622,6 +1751,173 @@ int semi_join_test(CLP &cmd){
             for (int i = 0; i < 3; i++) {
                 debug_output_matrix(T_result[i]);
             }
+        }
+    }
+
+    return 0;
+}
+
+int mul_and_sum_test(CLP &cmd){
+    int role = -1;
+    if (cmd.isSet("role")) {
+        auto keys = cmd.getMany<int>("role");
+        role = keys[0];
+    }
+    if (role == -1) {
+        throw std::runtime_error(LOCATION);
+    }
+
+    if (role == 0) {
+        debug_info("RUN MUL_AND_SUM TEST");
+    }
+
+    IOService ios;
+    Sh3Encryptor enc;
+    Sh3Evaluator eval;
+    Sh3Runtime runtime;
+    basic_setup((u64)role, ios, enc, eval, runtime);
+
+    // ---------- 子用例 1: 固定数据手算验证 ----------
+    // a = [1, 2, 3, 4, 5], b = [10, 20, 30, 40, 50]
+    // 期望 inner product = 1*10 + 2*20 + 3*30 + 4*40 + 5*50 = 10+40+90+160+250 = 550
+    {
+        size_t TEST_SIZE = 5;
+        i64Matrix a_plain(TEST_SIZE, 1), b_plain(TEST_SIZE, 1);
+        a_plain(0,0)=1; a_plain(1,0)=2; a_plain(2,0)=3; a_plain(3,0)=4; a_plain(4,0)=5;
+        b_plain(0,0)=10; b_plain(1,0)=20; b_plain(2,0)=30; b_plain(3,0)=40; b_plain(4,0)=50;
+
+        i64 expected = 0;
+        for (size_t i = 0; i < TEST_SIZE; i++) {
+            expected += a_plain(i, 0) * b_plain(i, 0);
+        }
+
+        si64Matrix a_shared(TEST_SIZE, 1), b_shared(TEST_SIZE, 1);
+        if (role == 0) {
+            enc.localIntMatrix(runtime, a_plain, a_shared).get();
+            enc.localIntMatrix(runtime, b_plain, b_shared).get();
+        } else {
+            enc.remoteIntMatrix(runtime, a_shared).get();
+            enc.remoteIntMatrix(runtime, b_shared).get();
+        }
+
+        si64Matrix sum_shared;
+        mul_and_sum(role, a_shared, b_shared, sum_shared, enc, eval, runtime);
+
+        i64Matrix sum_plain(1, 1);
+        enc.revealAll(runtime, sum_shared, sum_plain).get();
+
+        if (role == 0) {
+            i64Matrix expected_mat(1, 1);
+            expected_mat(0, 0) = expected;
+            check_result("MulAndSum Test - small fixed", sum_plain, expected_mat);
+        }
+    }
+
+    // ---------- 子用例 2: 含负数 / 跨零的随机数据 ----------
+    {
+        size_t TEST_SIZE = 64;
+        i64Matrix a_plain(TEST_SIZE, 1), b_plain(TEST_SIZE, 1);
+        std::mt19937_64 rng(12345);  // 固定种子，便于复现
+        for (size_t i = 0; i < TEST_SIZE; i++) {
+            a_plain(i, 0) = (i64)(rng() % 2001) - 1000;  // [-1000, 1000]
+            b_plain(i, 0) = (i64)(rng() % 2001) - 1000;
+        }
+        i64 expected = 0;
+        for (size_t i = 0; i < TEST_SIZE; i++) {
+            expected += a_plain(i, 0) * b_plain(i, 0);
+        }
+
+        si64Matrix a_shared(TEST_SIZE, 1), b_shared(TEST_SIZE, 1);
+        if (role == 0) {
+            enc.localIntMatrix(runtime, a_plain, a_shared).get();
+            enc.localIntMatrix(runtime, b_plain, b_shared).get();
+        } else {
+            enc.remoteIntMatrix(runtime, a_shared).get();
+            enc.remoteIntMatrix(runtime, b_shared).get();
+        }
+
+        si64Matrix sum_shared;
+        mul_and_sum(role, a_shared, b_shared, sum_shared, enc, eval, runtime);
+
+        i64Matrix sum_plain(1, 1);
+        enc.revealAll(runtime, sum_shared, sum_plain).get();
+
+        if (role == 0) {
+            i64Matrix expected_mat(1, 1);
+            expected_mat(0, 0) = expected;
+            check_result("MulAndSum Test - random signed (n=64)", sum_plain, expected_mat);
+        }
+    }
+
+    // ---------- 子用例 3: 与 cipher_mul + 累加 一致性对比 ----------
+    {
+        size_t TEST_SIZE = 32;
+        i64Matrix a_plain(TEST_SIZE, 1), b_plain(TEST_SIZE, 1);
+        std::mt19937_64 rng(0xC0FFEEULL);
+        for (size_t i = 0; i < TEST_SIZE; i++) {
+            a_plain(i, 0) = (i64)(rng() % 1000);
+            b_plain(i, 0) = (i64)(rng() % 1000);
+        }
+
+        si64Matrix a_shared(TEST_SIZE, 1), b_shared(TEST_SIZE, 1);
+        if (role == 0) {
+            enc.localIntMatrix(runtime, a_plain, a_shared).get();
+            enc.localIntMatrix(runtime, b_plain, b_shared).get();
+        } else {
+            enc.remoteIntMatrix(runtime, a_shared).get();
+            enc.remoteIntMatrix(runtime, b_shared).get();
+        }
+
+        // 路径 A: 优化版 mul_and_sum
+        si64Matrix sum_fast;
+        mul_and_sum(role, a_shared, b_shared, sum_fast, enc, eval, runtime);
+        i64Matrix sum_fast_plain(1, 1);
+        enc.revealAll(runtime, sum_fast, sum_fast_plain).get();
+
+        // 路径 B: cipher_mul 得到逐元素积，再在密文上累加成 1×1
+        si64Matrix prod_shared(TEST_SIZE, 1);
+        cipher_mul(role, a_shared, b_shared, prod_shared, eval, enc, runtime);
+        si64Matrix sum_ref(1, 1);
+        sum_ref.mShares[0](0, 0) = 0;
+        sum_ref.mShares[1](0, 0) = 0;
+        for (size_t i = 0; i < TEST_SIZE; i++) {
+            sum_ref.mShares[0](0, 0) += prod_shared.mShares[0](i, 0);
+            sum_ref.mShares[1](0, 0) += prod_shared.mShares[1](i, 0);
+        }
+        i64Matrix sum_ref_plain(1, 1);
+        enc.revealAll(runtime, sum_ref, sum_ref_plain).get();
+
+        if (role == 0) {
+            check_result("MulAndSum Test - matches cipher_mul+sum", sum_fast_plain, sum_ref_plain);
+        }
+    }
+
+    // ---------- 子用例 4: 边界 —— 长度为 1 的情形 ----------
+    {
+        size_t TEST_SIZE = 1;
+        i64Matrix a_plain(TEST_SIZE, 1), b_plain(TEST_SIZE, 1);
+        a_plain(0, 0) = -7;
+        b_plain(0, 0) = 11;
+
+        si64Matrix a_shared(TEST_SIZE, 1), b_shared(TEST_SIZE, 1);
+        if (role == 0) {
+            enc.localIntMatrix(runtime, a_plain, a_shared).get();
+            enc.localIntMatrix(runtime, b_plain, b_shared).get();
+        } else {
+            enc.remoteIntMatrix(runtime, a_shared).get();
+            enc.remoteIntMatrix(runtime, b_shared).get();
+        }
+
+        si64Matrix sum_shared;
+        mul_and_sum(role, a_shared, b_shared, sum_shared, enc, eval, runtime);
+
+        i64Matrix sum_plain(1, 1);
+        enc.revealAll(runtime, sum_shared, sum_plain).get();
+
+        if (role == 0) {
+            i64Matrix expected_mat(1, 1);
+            expected_mat(0, 0) = -77;
+            check_result("MulAndSum Test - n=1 boundary", sum_plain, expected_mat);
         }
     }
 

@@ -19,6 +19,8 @@ int persist_test(oc::CLP &cmd);
 
 int index_agg_test(oc::CLP &cmd);
 
+int index_agg_maxmin_test(oc::CLP &cmd);
+
 int group_by_common_test(oc::CLP &cmd);
 
 int group_by_test(oc::CLP &cmd);
@@ -32,3 +34,5 @@ int filter_test(oc::CLP &cmd);
 int secret_rshift64_test(oc::CLP &cmd);
 
 int semi_join_test(oc::CLP &cmd);
+
+int mul_and_sum_test(oc::CLP &cmd);

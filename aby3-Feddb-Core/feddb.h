@@ -41,7 +41,7 @@ void persist_cipher(int pIdx, const std::string &table_name, std::vector<MatrixT
     }
 
     int cols = T.size();
-    int rows = T[0].rows();
+    int rows = (cols > 0) ? static_cast<int>(T[0].rows()) : 0;
     fwrite(&cols, sizeof(int), 1, fp);
     fwrite(&rows, sizeof(int), 1, fp);
 
@@ -67,6 +67,11 @@ void read_cipher(int pIdx, const std::string &table_name, std::vector<MatrixType
     int cols, rows;
     fread(&cols, sizeof(int), 1, fp);
     fread(&rows, sizeof(int), 1, fp);
+    if (cols <= 0 || rows <= 0) {
+        T.clear();
+        fclose(fp);
+        return;
+    }
     T.resize(cols);
 
     for(size_t i = 0; i < T.size(); i++){
@@ -90,6 +95,14 @@ void oblivious_idx_select(int pIdx, std::vector<aby3::si64Matrix> &v_vec, aby3::
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 void index_agg(int pIdx, aby3::si64Matrix &equalFlag, aby3::i64Matrix &idx,std::vector<aby3::si64Matrix> &data_key,aby3::si64Matrix &data_val,std::vector<aby3::si64Matrix> &finalRes,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+// Segmented MAX/MIN aggregation over rows sorted by idx.
+// equalFlag[i] = 1 means row i belongs to the same group as row i-1.
+// is_max=true computes MAX, false computes MIN.
+void index_agg_maxmin(int pIdx, aby3::si64Matrix &equalFlag, aby3::i64Matrix &idx,
+    std::vector<aby3::si64Matrix> &data_key, aby3::si64Matrix &data_val, bool is_max,
+    std::vector<aby3::si64Matrix> &finalRes,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 void group_by_common(int pIdx, aby3::si64Matrix &key, aby3::si64Matrix &val, 
@@ -145,6 +158,12 @@ void filter(int pIdx, std::vector<aby3::si64Matrix> &T, int filColIdx, int value
 void semi_join(int pIdx, std::vector<aby3::si64Matrix> &T_1_key, std::vector<aby3::si64Matrix> &T_1_other,
     std::vector<aby3::si64Matrix> &T_2_key, std::vector<aby3::si64Matrix> &T_2_other,
     std::vector<aby3::si64Matrix> &T_semi_joined,
+    aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
+
+// 内积：sum_res = SUM_i (mul_0[i] * mul_1[i])。
+// 与 cipher_mul + 累加相比，本函数把元素级乘法份额的 reshare 阶段聚合成一次
+// 标量通信，因而通信量从 O(n) 个 i64 降到 O(1) 个 i64。输出 sum_res 为 1×1。
+void mul_and_sum(int pIdx, aby3::si64Matrix &mul_0, aby3::si64Matrix &mul_1, aby3::si64Matrix &sum_res,
     aby3::Sh3Encryptor& enc, aby3::Sh3Evaluator& eval, aby3::Sh3Runtime& runtime);
 
 #endif

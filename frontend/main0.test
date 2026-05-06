@@ -80,13 +80,16 @@ int main(int argc, char** argv) {
 		//feddb_shuffle_test(cmd);
 		//persist_test(cmd);
 		//index_agg_test(cmd);
+		//index_agg_maxmin_test(cmd);
 		//group_by_common_test(cmd);
 		//group_by_test(cmd);
 		//odd_even_merge_sort_test(cmd);
 		//join_test(cmd);
 		//filter_test(cmd);
 		//secret_rshift64_test(cmd);
-		semi_join_test(cmd);
+		//semi_join_test(cmd);
+		mul_and_sum_test(cmd);
 	}
+
   return 0;
 }

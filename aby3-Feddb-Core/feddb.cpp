@@ -189,7 +189,7 @@ void persist_plain(int pIdx, const std::string &table_name, std::vector<i64Matri
     }
 
     int cols = T.size();
-    int rows = T[0].rows();
+    int rows = (cols > 0) ? static_cast<int>(T[0].rows()) : 0;
     fwrite(&cols, sizeof(int), 1, fp);
     fwrite(&rows, sizeof(int), 1, fp);
 
@@ -213,6 +213,11 @@ void read_plain(int pIdx, const std::string &table_name, std::vector<i64Matrix> 
     int cols, rows;
     fread(&cols, sizeof(int), 1, fp);
     fread(&rows, sizeof(int), 1, fp);
+    if (cols <= 0 || rows <= 0) {
+        T.clear();
+        fclose(fp);
+        return;
+    }
     T.resize(cols);
 
     for(size_t i = 0; i < T.size(); i++){
@@ -736,6 +741,161 @@ void index_agg(int pIdx, si64Matrix &equalFlag, i64Matrix &idx,std::vector<si64M
         return;
 
     }
+
+void index_agg_maxmin(int pIdx, si64Matrix &equalFlag, i64Matrix &idx, std::vector<si64Matrix> &data_key, si64Matrix &data_val, bool is_max,
+    std::vector<si64Matrix> &finalRes, Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+
+    if (data_key.empty()) {
+        throw std::runtime_error("index_agg_maxmin: data_key is empty.");
+    }
+
+    int rows = data_key[0].rows();
+    if (rows == 0) {
+        finalRes.clear();
+        finalRes.resize(data_key.size() + 1);
+        return;
+    }
+
+    // Step 1: reorder by public idx (same as index_agg)
+    std::vector<si64Matrix> keycols(data_key.size());
+    for (size_t i = 0; i < data_key.size(); i++) {
+        keycols[i].resize(rows, 1);
+    }
+    si64Matrix valcol(rows, 1);
+
+    for (int i = 0; i < rows; i++) {
+        i64 idx_i = idx(i, 0);
+        if (idx_i < 0 || idx_i >= rows) {
+            throw std::runtime_error("index_agg_maxmin: idx out of range: " + std::to_string(idx_i));
+        }
+        for (size_t j = 0; j < data_key.size(); j++) {
+            keycols[j].mShares[0](i, 0) = data_key[j].mShares[0](idx_i, 0);
+            keycols[j].mShares[1](i, 0) = data_key[j].mShares[1](idx_i, 0);
+        }
+        valcol.mShares[0](i, 0) = data_val.mShares[0](idx_i, 0);
+        valcol.mShares[1](i, 0) = data_val.mShares[1](idx_i, 0);
+    }
+
+    // Parallel segmented prefix scan for MAX/MIN.
+    // equalFlag[i] = 1 means row i is in the same segment as row i-1.
+    // scan_eq tracks whether i and i-d are still in the same segment for current stride d.
+    si64Matrix scan_val(rows, 1), scan_eq(rows, 1);
+    std::memcpy(scan_val.mShares[0].data(), valcol.mShares[0].data(), rows * sizeof(i64));
+    std::memcpy(scan_val.mShares[1].data(), valcol.mShares[1].data(), rows * sizeof(i64));
+    scan_eq = equalFlag;
+    
+    si64Matrix one_all(rows, 1);
+    set_const_share(pIdx, 1, one_all, enc, eval, runtime);
+
+    for (int d = 1; d < rows; d <<= 1) {
+        int count = rows - d;
+        if (count <= 0) break;
+
+        si64Matrix left(count, 1), right(count, 1), same(count, 1), eq_left(count, 1), one(count, 1);
+        for (int s = 0; s < 2; s++) {
+            std::memcpy(left.mShares[s].data(), scan_val.mShares[s].data(), count * sizeof(i64));
+            std::memcpy(right.mShares[s].data(), scan_val.mShares[s].data() + d, count * sizeof(i64));
+            std::memcpy(same.mShares[s].data(), scan_eq.mShares[s].data() + d, count * sizeof(i64));
+            std::memcpy(eq_left.mShares[s].data(), scan_eq.mShares[s].data(), count * sizeof(i64));
+            std::memcpy(one.mShares[s].data(), one_all.mShares[s].data(), count * sizeof(i64));
+        }
+
+        // cmp = (right > left) for MAX, (left > right) for MIN
+        sbMatrix cmp_b(count, 1);
+        if (is_max) {
+            cipher_gt(pIdx, right, left, cmp_b, eval, runtime);
+        } else {
+            cipher_gt(pIdx, left, right, cmp_b, eval, runtime);
+        }
+        si64Matrix cmp(count, 1);
+        bool2arith(pIdx, cmp_b, cmp, enc, eval, runtime);
+
+        si64Matrix not_cmp = one - cmp;
+
+        // Round 1 (batched):
+        // a = right * cmp
+        // b = left  * (1-cmp)
+        // eq_new = eq_left * same
+        si64Matrix mul_l1(3 * count, 1), mul_r1(3 * count, 1), mul_o1(3 * count, 1);
+        for (int s = 0; s < 2; s++) {
+            std::memcpy(mul_l1.mShares[s].data(), right.mShares[s].data(), count * sizeof(i64));
+            std::memcpy(mul_r1.mShares[s].data(), cmp.mShares[s].data(), count * sizeof(i64));
+
+            std::memcpy(mul_l1.mShares[s].data() + count, left.mShares[s].data(), count * sizeof(i64));
+            std::memcpy(mul_r1.mShares[s].data() + count, not_cmp.mShares[s].data(), count * sizeof(i64));
+
+            std::memcpy(mul_l1.mShares[s].data() + 2 * count, eq_left.mShares[s].data(), count * sizeof(i64));
+            std::memcpy(mul_r1.mShares[s].data() + 2 * count, same.mShares[s].data(), count * sizeof(i64));
+        }
+        cipher_mul(pIdx, mul_l1, mul_r1, mul_o1, eval, enc, runtime);
+
+        si64Matrix cand(count, 1), eq_new(count, 1);
+        for (int s = 0; s < 2; s++) {
+            for (int i = 0; i < count; i++) {
+                cand.mShares[s](i, 0) = mul_o1.mShares[s](i, 0) + mul_o1.mShares[s](count + i, 0);
+                eq_new.mShares[s](i, 0) = mul_o1.mShares[s](2 * count + i, 0);
+            }
+        }
+
+        // Round 2 (batched):
+        // new_right = right + same * (cand - right)
+        si64Matrix delta = cand - right;
+        si64Matrix upd(count, 1);
+        cipher_mul(pIdx, delta, same, upd, eval, enc, runtime);
+        si64Matrix new_right = right + upd;
+
+        // Write back this stride
+        for (int s = 0; s < 2; s++) {
+            std::memcpy(scan_val.mShares[s].data() + d, new_right.mShares[s].data(), count * sizeof(i64));
+            std::memcpy(scan_eq.mShares[s].data() + d, eq_new.mShares[s].data(), count * sizeof(i64));
+        }
+    }
+
+    // Build segment-tail flag:
+    // tail[i] = 1 - equalFlag[i+1], tail[last] = 1
+    si64Matrix not_equal(rows, 1);
+    not_equal = one_all - equalFlag;
+    si64Matrix tail(rows, 1);
+    for (int s = 0; s < 2; s++) {
+        if (rows > 1) {
+            std::memcpy(tail.mShares[s].data(), not_equal.mShares[s].data() + 1, (rows - 1) * sizeof(i64));
+        }
+        tail.mShares[s](rows - 1, 0) = one_all.mShares[s](rows - 1, 0);
+    }
+
+    // Shuffle and reveal only tail flag for compaction
+    std::vector<si64Matrix> res(data_key.size() + 2), shuffled_res(data_key.size() + 2);
+    for (size_t i = 0; i < data_key.size(); i++) {
+        res[i] = keycols[i];
+    }
+    res[data_key.size()] = scan_val;     // aggregated MAX/MIN per row prefix
+    res[data_key.size() + 1] = tail;     // keep only segment tails
+
+    shuffle(pIdx, res, shuffled_res, enc, eval, runtime);
+
+    i64Matrix tail_plain(rows, 1);
+    enc.revealAll(runtime, shuffled_res[data_key.size() + 1], tail_plain).get();
+
+    std::vector<int> keep_idx;
+    keep_idx.reserve(rows);
+    for (int i = 0; i < rows; i++) {
+        if (tail_plain(i, 0) != 0) {
+            keep_idx.push_back(i);
+        }
+    }
+
+    int out_rows = static_cast<int>(keep_idx.size());
+    size_t out_cols = data_key.size() + 1;  // group keys + aggregated value
+    finalRes.resize(out_cols);
+    for (size_t j = 0; j < out_cols; j++) {
+        finalRes[j].resize(out_rows, 1);
+        for (int s = 0; s < 2; s++) {
+            for (int r = 0; r < out_rows; r++) {
+                finalRes[j].mShares[s](r, 0) = shuffled_res[j].mShares[s](keep_idx[r], 0);
+            }
+        }
+    }
+}
 
 
 
@@ -4361,5 +4521,80 @@ void semi_join(int pIdx, std::vector<si64Matrix> &T_1_key, std::vector<si64Matri
 
    }
 
+
+// 计算 SUM(mul_0[i] * mul_1[i]) —— 等价于两条向量的内积。
+//
+// 通信优化的关键观察：ABY3 的乘法协议中，每一方对每个元素先在本地求和
+//     c_local[i] = a0[i]*b0[i] + a0[i]*b1[i] + a1[i]*b0[i]
+// 这一步是纯本地计算（不需要通信），随后再加一个零分享并把 c_local 发给下家、
+// 从上家接收形成 2-out-of-3 复制分享。如果直接 cipher_mul + 累加，每个元素都要
+// 单独再分享一次，通信量为 O(n) 个 i64；而 SUM(a*b) 的最终结果是一个标量，
+// 我们可以把所有 c_local[i] 先在本地累加成单个 i64，再加一次零分享、只发一次
+// 标量，通信量降到 O(1) 个 i64。
+//
+// 输出 sum_res 为 1×1 的 si64Matrix（标量），其值等于 sum_i mul_0[i] * mul_1[i]。
+void mul_and_sum(int pIdx, si64Matrix &mul_0, si64Matrix &mul_1, si64Matrix &sum_res,
+    Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+
+    if (mul_0.size() != mul_1.size()) {
+        throw std::runtime_error("mul_and_sum: input size mismatch (mul_0=" +
+            std::to_string(mul_0.size()) + ", mul_1=" + std::to_string(mul_1.size()) + ")");
+    }
+
+    sum_res.resize(1, 1);
+    sum_res.mShares[0](0, 0) = 0;
+    sum_res.mShares[1](0, 0) = 0;
+
+    const u64 n = (u64)mul_0.size();
+    if (n == 0) {
+        return;
+    }
+
+    const i64* a0 = mul_0.mShares[0].data();
+    const i64* a1 = mul_0.mShares[1].data();
+    const i64* b0 = mul_1.mShares[0].data();
+    const i64* b1 = mul_1.mShares[1].data();
+
+    // 1) 本地计算每个位置的乘法份额（与 Sh3Evaluator::asyncMul 中的逐元素份额公式一致）。
+    //    这一步纯本地、各位置之间无依赖。
+    std::vector<i64> partial(n);
+    for (u64 i = 0; i < n; i++) {
+        partial[i] = a0[i] * b0[i] + a0[i] * b1[i] + a1[i] * b0[i];
+    }
+
+    // 2) 对 partial 做 log2(n) 层 pairwise 树形归约：每层把 partial[i] 与 partial[i+step]
+    //    合并到 partial[i]，步长 step 每层翻倍。同一层内的加法彼此独立，依赖深度
+    //    O(log n)，CPU 可以充分利用 ILP / SIMD 并行执行；相比线性 reduction
+    //    数据依赖链长度从 n 缩到 log n。
+    for (u64 step = 1; step < n; step <<= 1) {
+        const u64 stride = step << 1;
+        for (u64 i = 0; i + step < n; i += stride) {
+            partial[i] += partial[i + step];
+        }
+    }
+    i64 local_sum = partial[0];
+
+    // 3) 加一个零分享，整体仍是 SUM(a*b) 的有效分享但单方看不出信息。
+    local_sum += eval.mShareGen.getShare();
+
+    // 4) 单轮通信：把这一个 i64 发给下家，并从上家接收对应的 i64 作为另一个份额。
+    sum_res.mShares[0](0, 0) = local_sum;
+    runtime.mComm.mNext.asyncSendCopy(&local_sum, 1);
+    auto fu = runtime.mComm.mPrev.asyncRecv(sum_res.mShares[1].data(), 1);
+    fu.get();
+
+    return;
+}
+
+// void mul_and_sum(int pIdx, si64Matrix &mul_0, si64Matrix &mul_1, si64Matrix &sum_res,
+//     Sh3Encryptor& enc, Sh3Evaluator& eval, Sh3Runtime& runtime){
+
+//     si64Matrix mul_res(mul_0.rows(),1);
+//     cipher_mul(pIdx, mul_0, mul_1, mul_res, eval, enc, runtime);
+    
+//     arith_aggregation(pIdx, mul_res, sum_res, enc, eval, runtime,"ADD");
+
+//     return;
+// }
 
 
